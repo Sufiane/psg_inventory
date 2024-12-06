@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id        String  @id @default(uuid())
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  email     String  @unique
+  password  String
+  Sales     Sales[]
+
+  @@map("users")
+}
+
+enum Competition {
+  CHAMPIONS_LEAGUE
+  CHAMPIONSHIP
+  FRENCH_CUP
+  LEAGUE_CUP
+}
+
+model Matchs {
+  id           String        @id @default(uuid())
+  opponentId   String        @map("opponent_id")
+  atHome       Boolean       @map("at_home")
+  date         DateTime
+  competition  Competition
+  Sales        Sales[]
+  MatchResults MatchResults?
+
+  @@map("matchs")
+}
+
+model Opponents {
+  id   String @id @default(uuid())
+  name String
+
+  @@map("opponents")
+}
+
+model MatchResults {
+  id      String  @id @default(uuid())
+  matchId String  @unique() @map("match_id")
+  score   String
+  isWin   Boolean @map("is_win")
+  Match   Matchs  @relation(fields: [matchId], references: [id])
+
+  @@map("match_results")
+}
+
+enum SaleStatus {
+  PENDING
+  SOLD
+  CANCELLED
+}
+
+model Sales {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  matchId     String        @map("match_id")
+  listedPrice Int           @map("listed_price")
+  profit      Int
+  invest      Int           @default(0)
+  nbTickets   Int           @map("nb_tickets")
+  status      SaleStatus
+  SaleHistory SaleHistory[]
+  Match       Matchs        @relation(fields: [matchId], references: [id])
+  User        Users         @relation(fields: [userId], references: [id])
+
+  @@map("sales")
+}
+
+model SaleHistory {
+  id          String     @id @default(uuid())
+  saleId      String     @map("sale_id")
+  listedPrice Int        @map("listed_price")
+  profit      Int
+  status      SaleStatus
+
+  Sale Sales @relation(fields: [saleId], references: [id])
+
+  @@map("sale_history")
+}

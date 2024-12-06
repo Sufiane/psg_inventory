@@ -1,0 +1,61 @@
+{
+  "name": "psg_inventory",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "prisma": {
+    "schema": "src/prisma/schema.prisma"
+  },
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "npm run build && nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+  },
+  "dependencies": {
+    "@nestjs/common": "10.4.8",
+    "@nestjs/core": "10.4.8",
+    "@nestjs/platform-express": "10.4.8",
+    "@prisma/client": "6.0.1",
+    "bcrypt": "5.1.1",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.14.1",
+    "prisma": "6.0.1",
+    "radash": "12.1.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "10.4.7",
+    "@nestjs/schematics": "10.2.3",
+    "@types/bcrypt": "5.0.2",
+    "@types/node": "22.9.0",
+    "prettier": "3.3.3",
+    "typescript": "5.6.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      ".+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}
