@@ -31,7 +31,7 @@ enum Competition {
   LEAGUE_CUP
 }
 
-model Matchs {
+model Matches {
   id           String        @id @default(uuid())
   opponentId   String        @map("opponent_id")
   atHome       Boolean       @map("at_home")
@@ -40,7 +40,7 @@ model Matchs {
   Sales        Sales[]
   MatchResults MatchResults?
 
-  @@map("matchs")
+  @@map("matches")
 }
 
 model Opponents {
@@ -55,7 +55,7 @@ model MatchResults {
   matchId String  @unique() @map("match_id")
   score   String
   isWin   Boolean @map("is_win")
-  Match   Matchs  @relation(fields: [matchId], references: [id])
+  Match   Matches @relation(fields: [matchId], references: [id])
 
   @@map("match_results")
 }
@@ -67,22 +67,22 @@ enum SaleStatus {
 }
 
 model Sales {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  matchId     String        @map("match_id")
-  listedPrice Int           @map("listed_price")
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  matchId     String          @map("match_id")
+  listedPrice Int             @map("listed_price")
   profit      Int
-  invest      Int           @default(0)
-  nbTickets   Int           @map("nb_tickets")
+  invest      Int             @default(0)
+  nbTickets   Int             @map("nb_tickets")
   status      SaleStatus
-  SaleHistory SaleHistory[]
-  Match       Matchs        @relation(fields: [matchId], references: [id])
-  User        Users         @relation(fields: [userId], references: [id])
+  SaleHistory SaleHistories[]
+  Match       Matches         @relation(fields: [matchId], references: [id])
+  User        Users           @relation(fields: [userId], references: [id])
 
   @@map("sales")
 }
 
-model SaleHistory {
+model SaleHistories {
   id          String     @id @default(uuid())
   saleId      String     @map("sale_id")
   listedPrice Int        @map("listed_price")
@@ -91,5 +91,5 @@ model SaleHistory {
 
   Sale Sales @relation(fields: [saleId], references: [id])
 
-  @@map("sale_history")
+  @@map("sale_histories")
 }

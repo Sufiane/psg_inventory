@@ -16,14 +16,14 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
-CREATE TABLE "matchs" (
+CREATE TABLE "matches" (
     "id" TEXT NOT NULL,
     "opponent_id" TEXT NOT NULL,
     "at_home" BOOLEAN NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "competition" "Competition" NOT NULL,
 
-    CONSTRAINT "matchs_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "matches_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -59,14 +59,14 @@ CREATE TABLE "sales" (
 );
 
 -- CreateTable
-CREATE TABLE "sale_history" (
+CREATE TABLE "sale_histories" (
     "id" TEXT NOT NULL,
     "sale_id" TEXT NOT NULL,
     "listed_price" INTEGER NOT NULL,
     "profit" INTEGER NOT NULL,
     "status" "SaleStatus" NOT NULL,
 
-    CONSTRAINT "sale_history_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sale_histories_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -76,13 +76,13 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "match_results_match_id_key" ON "match_results"("match_id");
 
 -- AddForeignKey
-ALTER TABLE "match_results" ADD CONSTRAINT "match_results_match_id_fkey" FOREIGN KEY ("match_id") REFERENCES "matchs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "match_results" ADD CONSTRAINT "match_results_match_id_fkey" FOREIGN KEY ("match_id") REFERENCES "matches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sales" ADD CONSTRAINT "sales_match_id_fkey" FOREIGN KEY ("match_id") REFERENCES "matchs"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "sales" ADD CONSTRAINT "sales_match_id_fkey" FOREIGN KEY ("match_id") REFERENCES "matches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sales" ADD CONSTRAINT "sales_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sale_history" ADD CONSTRAINT "sale_history_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "sale_histories" ADD CONSTRAINT "sale_histories_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
