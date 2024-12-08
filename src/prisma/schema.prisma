@@ -43,12 +43,13 @@ model Matches {
   MatchResults MatchResults?
   Opponent     Opponents     @relation(fields: [opponentId], references: [id])
 
+  @@unique([date, opponentId])
   @@map("matches")
 }
 
 model Opponents {
   id      String    @id @default(uuid())
-  name    String
+  name    String    @unique()
   Matches Matches[]
 
   @@map("opponents")

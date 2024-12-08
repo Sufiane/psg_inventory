@@ -7,6 +7,9 @@ class EnvironmentVariables {
 
     @IsString()
     JWT_EXPIRES: string;
+
+    @IsString()
+    FOOTBALL_DATA_API_KEY: string
 }
 
 export function validate(env: Record<string, unknown>): EnvironmentVariables {

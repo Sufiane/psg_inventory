@@ -75,6 +75,12 @@ CREATE TABLE "sale_histories" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "matches_date_opponent_id_key" ON "matches"("date", "opponent_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "opponents_name_key" ON "opponents"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "match_results_match_id_key" ON "match_results"("match_id");
 
 -- AddForeignKey
