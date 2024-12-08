@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MatchesService as MatchsDbService } from '../../db/matches.service';
-import { getCurrentSeasonDate } from './matches.utils';
+import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 
 
 @Injectable()

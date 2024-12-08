@@ -2,13 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { UsersService } from '../db/users.service';
 import { omit } from 'radash';
 import { JwtService } from '@nestjs/jwt';
-import { Users } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { AuthenticatedUser } from '../shared/types/authenticated-user.type';
 
 @Injectable()
 export class AuthService {
-    constructor(private readonly usersDbService: UsersService, private readonly jwtService: JwtService) {
-    }
+    constructor(
+        private readonly usersDbService: UsersService,
+        private readonly jwtService: JwtService,
+    ) {}
 
     async hashPassword(passwordToHash: string): Promise<string> {
         const salt = await bcrypt.genSalt(10);
@@ -17,17 +19,20 @@ export class AuthService {
     }
 
 
-    async validateUser(email: string, password: string): Promise<Omit<Users, 'password'> | null> {
+    async validateUser(
+        email: string,
+        password: string,
+    ): Promise<AuthenticatedUser | null> {
         const user = await this.usersDbService.findOneByEmail(email);
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return null;
         }
 
-        return omit(user, ['password']);
+        return omit(user, ['password', 'updatedAt']);
     }
 
-    async login(user: Omit<Users, 'password'>) {
+    async login(user: AuthenticatedUser) {
         const payload = { email: user.email, sub: user.id };
 
         return {

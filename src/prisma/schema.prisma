@@ -14,12 +14,14 @@ datasource db {
 }
 
 model Users {
-  id        String  @id @default(uuid())
-  firstName String  @map("first_name")
-  lastName  String  @map("last_name")
-  email     String  @unique
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  email     String   @unique
   password  String
   Sales     Sales[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt() @map("updated_at")
 
   @@map("users")
 }
@@ -39,13 +41,15 @@ model Matches {
   competition  Competition
   Sales        Sales[]
   MatchResults MatchResults?
+  Opponent     Opponents     @relation(fields: [opponentId], references: [id])
 
   @@map("matches")
 }
 
 model Opponents {
-  id   String @id @default(uuid())
-  name String
+  id      String    @id @default(uuid())
+  name    String
+  Matches Matches[]
 
   @@map("opponents")
 }

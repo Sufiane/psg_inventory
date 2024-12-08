@@ -4,15 +4,15 @@ import { Public } from '../../shared/decorators/public.decorator';
 import { UsersService } from './users.service';
 import { LocalAuthGuard } from '../../shared/guards/local.guard';
 import { AuthService } from '../../auth/auth.service';
-import { Users } from '@prisma/client';
+import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('users')
 export class UsersController {
 
     constructor(
         private readonly usersService: UsersService,
-        private readonly authService: AuthService) {
-    }
+        private readonly authService: AuthService,
+    ) {}
 
     @Public()
     @Post('/')
@@ -24,7 +24,7 @@ export class UsersController {
     @UseGuards(LocalAuthGuard)
     @Post('login')
     login(
-        @Req() { user }: Request & { user: Omit<Users, 'password'> },
+        @Req() { user }: Request & { user: AuthenticatedUser },
     ): Promise<{ token: string }> {
         return this.authService.login(user);
     }

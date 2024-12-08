@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { User } from '../../shared/decorators/user.decorator';
-import { Users } from '@prisma/client';
 import { GetSaleDto } from './dto/get-sale.dto';
 import { SalesService } from './sales.service';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
+import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('sales')
 export class SalesController {
@@ -14,27 +14,33 @@ export class SalesController {
     }
 
     @Get('/:saleId')
-    getSale(@User() user: Users, @Param() { saleId }: GetSaleDto) {
+    getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {
         return this.salesService.getSale(user.id, saleId);
     }
 
     @Get('/')
-    getSales(@User() user: Users) {
+    getSales(@User() user: AuthenticatedUser) {
         return this.salesService.getSales(user.id);
     }
 
     @Post('/')
-    async addSale(@User() user: Users, @Body() payload: AddSaleDto): Promise<void> {
+    async addSale(
+        @User() user: AuthenticatedUser,
+        @Body() payload: AddSaleDto,
+    ): Promise<void> {
         await this.salesService.addSale(user.id, payload);
     }
 
     @Post('/update')
-    async updateSale(@User() user: Users, @Body() payload: UpdateSaleDto) {
+    async updateSale(@User() user: AuthenticatedUser, @Body() payload: UpdateSaleDto) {
         await this.salesService.updateSale(user.id, payload);
     }
 
     @Delete('/:saleId')
-    async deleteSale(@User() user: Users, @Param() { saleId }: DeleteSaleDto) {
+    async deleteSale(
+        @User() user: AuthenticatedUser,
+        @Param() { saleId }: DeleteSaleDto,
+    ) {
         await this.salesService.deleteSale(user.id, saleId);
     }
 }

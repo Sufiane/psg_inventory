@@ -15,7 +15,7 @@ export class MatchesService extends PrismaService {
             where.date.lte = dates.to;
         }
 
-        return this.matchs.findMany({
+        return this.matches.findMany({
             where: where,
             ...(withResult ? {
                 include: {
@@ -26,7 +26,7 @@ export class MatchesService extends PrismaService {
     }
 
     getOneMatch(id: string, withResult: boolean = false) {
-        return this.matchs.findUnique({
+        return this.matches.findUnique({
             ...(withResult ? {
                 include: {
                     MatchResults: true,

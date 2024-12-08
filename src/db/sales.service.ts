@@ -1,5 +1,5 @@
 import { PrismaService } from './prisma.service';
-import { SaleStatus } from '@prisma/client';
+import { Matches, Opponents, Sales, SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
 export class SalesService extends PrismaService {
@@ -69,7 +69,7 @@ export class SalesService extends PrismaService {
                 },
             });
 
-            await tx.saleHistory.create({
+            await tx.saleHistories.create({
                 data: {
                     saleId: currentSale.id,
                     listedPrice: currentSale.listedPrice,
@@ -82,7 +82,7 @@ export class SalesService extends PrismaService {
 
     async deleteSale(userId: string, saleId: string): Promise<void> {
         await this.$transaction(async (tx) => {
-            await tx.saleHistory.deleteMany({
+            await tx.saleHistories.deleteMany({
                 where: {
                     saleId,
                 },
@@ -95,5 +95,28 @@ export class SalesService extends PrismaService {
                 },
             });
         });
+    }
+
+    getOneByWithFullMatch(query: {
+        profit?: number,
+        listedPrice?: number,
+        invest?: number,
+        nbTickets?: number
+    }) {
+        return this.sales.findFirstOrThrow({
+            include: {
+                Match: {
+                    include: {
+                        Opponent: true,
+                    },
+                },
+            },
+            where: query,
+            orderBy: {
+                Match: {
+                    date: 'asc',
+                },
+            },
+        }) as Promise<Sales & { Match: Matches & { Opponent: Opponents } }>;
     }
 }
