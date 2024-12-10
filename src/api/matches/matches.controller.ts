@@ -6,11 +6,26 @@ import { GetMatchDto } from './dto/get-match.dto';
 @Controller('matches')
 export class MatchesController {
 
-    constructor(private readonly matchesService: MatchesService) {}
+    constructor(private readonly matchesService: MatchesService) {
+    }
 
     @Get('/current-season')
-    getCurrentSeason(@Query() { withResult }: GetCurrentSeasonDto) {
-        return this.matchesService.getCurrentSeason(withResult);
+    async getCurrentSeason(@Query() { withResult }: GetCurrentSeasonDto) {
+        const matches = await this.matchesService.getCurrentSeason(withResult);
+
+        return matches.map(match => {
+            return {
+                id: match.id,
+                date: match.date,
+                atHome: match.atHome,
+                competition: match.competition,
+                opponent: match.Opponent,
+                result: withResult ? {
+                    isWin: match.MatchResults?.isWin,
+                    score: match.MatchResults?.score,
+                } : undefined,
+            };
+        });
     }
 
     @Get('/:matchId')
@@ -20,7 +35,7 @@ export class MatchesController {
     ) {
         const result = await this.matchesService.getMatch(matchId, withResult);
 
-        if(!result) {
+        if (!result) {
             throw new BadRequestException('match_not_found');
         }
 

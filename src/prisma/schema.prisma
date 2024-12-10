@@ -76,7 +76,7 @@ model Sales {
   userId      String          @map("user_id")
   matchId     String          @map("match_id")
   listedPrice Int             @map("listed_price")
-  profit      Int
+  profit      Float
   invest      Int             @default(0)
   nbTickets   Int             @map("nb_tickets")
   status      SaleStatus

@@ -52,7 +52,7 @@ CREATE TABLE "sales" (
     "user_id" TEXT NOT NULL,
     "match_id" TEXT NOT NULL,
     "listed_price" INTEGER NOT NULL,
-    "profit" INTEGER NOT NULL,
+    "profit" DOUBLE PRECISION NOT NULL,
     "invest" INTEGER NOT NULL DEFAULT 0,
     "nb_tickets" INTEGER NOT NULL,
     "status" "SaleStatus" NOT NULL,

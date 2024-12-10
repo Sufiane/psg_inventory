@@ -11,6 +11,7 @@ export function formatAggregate(payload: AggregatePayload) {
         lowest: {
             profit: payload.min.profit ?? 0,
             price: payload.min.listedPrice ?? 0,
+            nbTickets: payload.min.nbTickets,
             match: {
                 opponent: payload.min.match.opponent,
                 date: payload.min.match.date,
@@ -21,6 +22,7 @@ export function formatAggregate(payload: AggregatePayload) {
         highest: {
             profit: payload.max.profit ?? 0,
             price: payload.max.listedPrice ?? 0,
+            nbTickets: payload.min.nbTickets,
             match: {
                 opponent: payload.max.match.opponent,
                 date: payload.max.match.date,

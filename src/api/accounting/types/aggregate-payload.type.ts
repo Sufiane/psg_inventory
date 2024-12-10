@@ -5,6 +5,13 @@ type MatchInfo = {
     competition: string;
 }
 
+type ExtremeSaleInfo = {
+    profit: number;
+    listedPrice: number;
+    nbTickets: number
+    match: MatchInfo;
+}
+
 export type AggregatePayload = {
     sum: {
         listedPrice: number;
@@ -16,14 +23,6 @@ export type AggregatePayload = {
         listedPrice: number;
         profit: number;
     };
-    min: {
-        profit: number;
-        listedPrice: number;
-        match: MatchInfo;
-    };
-    max: {
-        profit: number;
-        listedPrice: number;
-        match: MatchInfo;
-    };
+    min: ExtremeSaleInfo;
+    max: ExtremeSaleInfo;
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SalesService as SalesDbService } from '../../db/sales.service';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
+import { omit } from 'radash';
 
 const PSG_COMMISSION = 12;
 
@@ -14,8 +15,18 @@ export class SalesService {
         return this.salesDbService.getOneSale(userId, saleId);
     }
 
-    getSales(userId: string) {
-        return this.salesDbService.getSales(userId);
+    async getSales(userId: string) {
+        const sales = await this.salesDbService.getSales(userId);
+
+        return sales.map(sale => {
+            return {
+                ...omit(sale, ['Match', 'userId', 'matchId']),
+                opponent: {
+                    id: sale.Match.Opponent.id,
+                    name: sale.Match.Opponent.name,
+                },
+            };
+        });
     }
 
     async addSale(userId: string, payload: AddSaleDto): Promise<void> {
@@ -31,13 +42,13 @@ export class SalesService {
             userId,
             ...payload,
             profit: payload.listedPrice
-                ? this.getProfit(payload.listedPrice)
-                : undefined,
+                    ? this.getProfit(payload.listedPrice)
+                    : undefined,
         });
     }
 
     getProfit(price: number): number {
-        return price * (1 - PSG_COMMISSION);
+        return price * (100 - PSG_COMMISSION) / 100;
     }
 
     async deleteSale(userId: string, saleId: string) {

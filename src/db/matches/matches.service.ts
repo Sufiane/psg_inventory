@@ -19,21 +19,19 @@ export class MatchesService extends PrismaService {
 
         return this.matches.findMany({
             where: where,
-            ...(withResult ? {
-                include: {
-                    MatchResults: true,
-                },
-            } : {}),
+            include: {
+                Opponent: true,
+                MatchResults: withResult,
+            },
         });
     }
 
     getOneMatch(id: string, withResult: boolean = false) {
         return this.matches.findUnique({
-            ...(withResult ? {
-                include: {
-                    MatchResults: true,
-                },
-            } : {}),
+            include: {
+                Opponent: true,
+                MatchResults: withResult,
+            },
             where: {
                 id,
             },

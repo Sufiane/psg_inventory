@@ -14,9 +14,21 @@ export class SalesService extends PrismaService {
 
     getSales(userId: string) {
         return this.sales.findMany({
+            include: {
+                Match: {
+                    select: {
+                        Opponent: true,
+                    },
+                },
+            },
             where: {
                 userId,
             },
+            orderBy: {
+                Match: {
+                    date: 'asc',
+                }
+            }
         });
     }
 
@@ -43,6 +55,7 @@ export class SalesService extends PrismaService {
         nbTickets?: number,
         invest?: number,
         listedPrice?: number,
+        sold?: boolean,
     }): Promise<void> {
         const currentSale = await this.sales.findUnique({
             where: {
@@ -62,6 +75,7 @@ export class SalesService extends PrismaService {
                     nbTickets: payload.nbTickets,
                     invest: payload.invest,
                     listedPrice: payload.listedPrice,
+                    status: payload.sold ? SaleStatus.SOLD : SaleStatus.PENDING,
                 }),
                 where: {
                     id: payload.saleId,

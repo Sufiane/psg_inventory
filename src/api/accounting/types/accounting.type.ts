@@ -1,4 +1,4 @@
-export type CurrentSeasonAccounting = {
+export type Accounting = {
     totalSales: number;
     totalProfit: number;
     totalInvest: number;

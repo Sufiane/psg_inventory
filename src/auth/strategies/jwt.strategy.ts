@@ -20,15 +20,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // REMARKS: we could add a cache store, to store db responses to avoid
     // multiple db calls for the same user in a short period of time
     async validate(payload: {
-        id: number;
+        sub: string,
         email: string;
-    }): Promise<{ id: number; userEmail: string } | undefined> {
+    }): Promise<{ id: string; userEmail: string } | undefined> {
         const user = await this.usersDbService.findOneByEmail(payload.email);
 
         if (!user) {
             return undefined;
         }
 
-        return { id: payload.id, userEmail: payload.email };
+        return { id: payload.sub, userEmail: payload.email };
     }
 }

@@ -1,7 +1,10 @@
 import { IsBoolean, IsOptional } from 'class-validator';
+import { convertStringToBoolean } from '../../../shared/utils/string-to-boolean.utils';
+import { Transform } from 'class-transformer';
 
 export class GetCurrentSeasonDto {
-  @IsOptional()
-  @IsBoolean()
-  withResult?: boolean;
+    @Transform(({ value }) => convertStringToBoolean(value))
+    @IsOptional()
+    @IsBoolean()
+    withResult?: boolean;
 }

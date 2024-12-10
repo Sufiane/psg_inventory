@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CurrentSeasonAccounting } from './types/current-season-accounting.type';
+import { Accounting } from './types/accounting.type';
 import {
-    AccountingService as AccountingDbService
+    AccountingService as AccountingDbService,
 } from '../../db/accounting/accounting.service';
 import { SalesService as SalesDbService } from '../../db/sales.service';
-import { formatAggregate } from "./accounting.utils";
+import { formatAggregate } from './accounting.utils';
+import { TimePeriodAccounting } from './types/time-period-accounting.type';
+import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 
 @Injectable()
 export class AccountingService {
@@ -14,49 +16,59 @@ export class AccountingService {
     ) {
     }
 
-    async getCurrentSeason(userId: string): Promise<CurrentSeasonAccounting | null> {
-        const aggregate =
-            await this.accountingDbService.getCurrentSeasonAggregate(userId);
+    async getCurrentSeason(userId: string): Promise<TimePeriodAccounting> {
+        const seasonDate = getCurrentSeasonDate();
 
-        if (!aggregate) {
-            return null;
-        }
+        const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
+            await Promise.all(
+                [
+                    this.getAccounting(userId, 'realized', seasonDate),
+                    this.getAccounting(userId, 'unrealized', seasonDate),
+                    this.getAccounting(userId, 'pending', seasonDate),
+                ]);
 
-        const [lowestMatch, highestMatch] = await Promise.all([
-            this.salesDbService.getOneByWithFullMatch(
-                { profit: aggregate._min.profit ?? undefined }),
-            this.salesDbService.getOneByWithFullMatch(
-                { profit: aggregate._min.listedPrice ?? undefined }),
-        ]);
-
-        return formatAggregate({
-            sum: aggregate._sum,
-            avg: aggregate._avg,
-            min: {
-                ...aggregate._min,
-                match: {
-                    ...lowestMatch.Match,
-                    opponent: lowestMatch.Match.Opponent.name
-                }
-            },
-            max: {
-                ...aggregate._max,
-                match: {
-                    ...highestMatch.Match,
-                    opponent: highestMatch.Match.Opponent.name
-                }
-            },
-        })
+        return {
+            realized: realizedAccounting,
+            unrealized: unrealizedAccounting,
+            pending: pendingAccounting,
+        };
     }
 
+    // todo would be great to add unrealized profit
     async getAllTime(
         userId: string,
         userCreationDate: Date,
-    ): Promise<CurrentSeasonAccounting | null> {
-        const aggregate = await this.accountingDbService.getAllTimeAggregate(
+    ): Promise<TimePeriodAccounting> {
+        const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
+            await Promise.all(
+                [
+                    this.getAccounting(userId, 'realized', { start: userCreationDate }),
+                    this.getAccounting(userId, 'unrealized', { start: userCreationDate }),
+                    this.getAccounting(userId, 'pending', { start: userCreationDate }),
+                ]);
+
+        return {
+            realized: realizedAccounting,
+            unrealized: unrealizedAccounting,
+            pending: pendingAccounting,
+        };
+    }
+
+    async getAccounting(
+        userId: string,
+        status: 'realized' | 'pending' | 'unrealized',
+        date: {
+            start: Date,
+            end?: Date,
+        },
+    ): Promise<Accounting | null> {
+        const aggregate = await this.accountingDbService.getAccounting(
             userId,
-            userCreationDate,
+            status,
+            date.start,
+            date.end,
         );
+
 
         if (!aggregate) {
             return null;
@@ -66,7 +78,7 @@ export class AccountingService {
             this.salesDbService.getOneByWithFullMatch(
                 { profit: aggregate._min.profit ?? undefined }),
             this.salesDbService.getOneByWithFullMatch(
-                { profit: aggregate._min.listedPrice ?? undefined }),
+                { profit: aggregate._max.profit ?? undefined }),
         ]);
 
         return formatAggregate({
@@ -76,16 +88,16 @@ export class AccountingService {
                 ...aggregate._min,
                 match: {
                     ...lowestMatch.Match,
-                    opponent: lowestMatch.Match.Opponent.name
-                }
+                    opponent: lowestMatch.Match.Opponent.name,
+                },
             },
             max: {
                 ...aggregate._max,
                 match: {
                     ...highestMatch.Match,
-                    opponent: highestMatch.Match.Opponent.name
-                }
+                    opponent: highestMatch.Match.Opponent.name,
+                },
             },
-        })
+        });
     }
 }

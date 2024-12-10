@@ -1,40 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
-import { AccountingAggregate } from "./types/get-accounting.type";
+import { AccountingAggregate } from './types/get-accounting.type';
+import { omit } from 'radash';
+import { Prisma } from '.prisma/client';
+import { statusConverter } from './utils/status-converter.util';
 
 @Injectable()
 export class AccountingService extends PrismaService {
 
     async getAccounting(
         userId: string,
+        status: 'realized' | 'pending' | 'unrealized',
         from: Date,
-        to?: Date
+        to?: Date,
     ): Promise<AccountingAggregate | null> {
+        const fields: Prisma.SalesSumAggregateInputType = {
+            profit: true,
+            nbTickets: true,
+            invest: true,
+            listedPrice: true,
+        };
+
         const dbResult = await this.sales.aggregate(
             {
-                _sum: {
-                    profit: true,
-                    nbTickets: true,
-                    invest: true,
-                    listedPrice: true,
-                },
-                _avg: {
-                    profit: true,
-                    nbTickets: true,
-                    invest: true,
-                    listedPrice: true,
-                },
-                _min: {
-                    profit: true,
-                    listedPrice: true,
-                },
-                _max: {
-                    profit: true,
-                    listedPrice: true,
-                },
+                _sum: fields,
+                _avg: fields,
+                _min: omit(fields, ['invest']),
+                _max: omit(fields, ['invest']),
                 where: {
                     userId,
+                    status: statusConverter(status),
                     Match: {
                         date: {
                             gte: from,
@@ -52,18 +47,5 @@ export class AccountingService extends PrismaService {
         }
 
         return dbResult as unknown as Promise<AccountingAggregate>;
-    }
-
-    async getCurrentSeasonAggregate(userId: string): Promise<AccountingAggregate | null> {
-        const { start: seasonStart, end: seasonEnd } = getCurrentSeasonDate();
-
-        return this.getAccounting(userId, seasonStart, seasonEnd);
-    }
-
-    async getAllTimeAggregate(
-        userId: string,
-        userCreationDate: Date
-    ): Promise<AccountingAggregate | null> {
-        return this.getAccounting(userId, userCreationDate);
     }
 }
