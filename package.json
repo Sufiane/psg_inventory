@@ -18,7 +18,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand"
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "prepare": "husky"
   },
   "dependencies": {
     "@nestjs/common": "10.4.8",
@@ -49,6 +50,8 @@
     "@types/node": "22.9.0",
     "@types/passport-jwt": "4.0.1",
     "@types/passport-local": "1.0.38",
+    "husky": "9.1.7",
+    "lint-staged": "15.2.11",
     "prettier": "3.3.3",
     "typescript": "5.6.3"
   },
