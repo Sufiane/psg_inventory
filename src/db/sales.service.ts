@@ -27,8 +27,8 @@ export class SalesService extends PrismaService {
             orderBy: {
                 Match: {
                     date: 'asc',
-                }
-            }
+                },
+            },
         });
     }
 
@@ -56,6 +56,7 @@ export class SalesService extends PrismaService {
         invest?: number,
         listedPrice?: number,
         sold?: boolean,
+        status?: SaleStatus,
     }): Promise<void> {
         const currentSale = await this.sales.findUnique({
             where: {
@@ -132,5 +133,23 @@ export class SalesService extends PrismaService {
                 },
             },
         }) as Promise<Sales & { Match: Matches & { Opponent: Opponents } }>;
+    }
+
+    cancelMany() {
+        return this.sales.updateMany({
+            data: {
+                status: SaleStatus.CANCELLED,
+            },
+            where: {
+                Match: {
+                    is: {
+                        date: {
+                            lte: new Date(),
+                        },
+                    },
+                },
+                status: SaleStatus.PENDING,
+            },
+        });
     }
 }

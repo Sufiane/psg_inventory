@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { MatchesModule } from './api/matches/matches.module';
 import { SalesModule } from './api/sales/sales.module';
 import { AccountingModule } from './api/accounting/accounting.module';
+import { CronModule } from './crons/cron.module';
 
 @Module({
     imports: [
@@ -15,6 +16,7 @@ import { AccountingModule } from './api/accounting/accounting.module';
         MatchesModule,
         SalesModule,
         AccountingModule,
+        CronModule,
     ],
     providers: [
         {
