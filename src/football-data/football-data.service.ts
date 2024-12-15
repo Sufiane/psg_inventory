@@ -2,21 +2,29 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { ConfigService } from '@nestjs/config';
 import { TeamMatches } from './types/football-data-api.type';
 import { FormattedMatch } from '../shared/types/formatted-match.type';
+import qs from 'qs';
 
 @Injectable()
 export class FootballDataService {
     private readonly logger = new Logger(FootballDataService.name);
 
     constructor(
-        private readonly configService: ConfigService<{
-            FOOTBALL_DATA_API_KEY: string
-        }, true>,
-    ) {
-    }
+        private readonly configService: ConfigService<
+            {
+                FOOTBALL_DATA_API_KEY: string;
+            },
+            true
+        >,
+    ) {}
 
-    async getTeamMatches(teamId: number): Promise<FormattedMatch[]> {
+    async getTeamMatches(
+        teamId: number,
+        seasonStartYear?: number,
+    ): Promise<FormattedMatch[]> {
+        const query = seasonStartYear ? qs.stringify({ season: seasonStartYear }) : '';
+
         const apiResponse = await fetch(
-            `https://api.football-data.org/v4/teams/${teamId}/matches`,
+            `https://api.football-data.org/v4/teams/${teamId}/matches?${query}`,
             {
                 headers: {
                     'X-Auth-Token': this.configService.get('FOOTBALL_DATA_API_KEY'),
@@ -36,7 +44,7 @@ export class FootballDataService {
             throw new InternalServerErrorException('could_not_load_matches');
         }
 
-        const response = await apiResponse.json() as TeamMatches;
+        const response = (await apiResponse.json()) as TeamMatches;
 
         return response.matches.map((match) => {
             const isAtHome = match.homeTeam.id === teamId;
@@ -48,8 +56,8 @@ export class FootballDataService {
                 opponent: isAtHome ? match.awayTeam.name : match.homeTeam.name,
                 result: {
                     isWin: isAtHome
-                           ? match.score.winner === 'HOME_TEAM'
-                           : match.score.winner === 'AWAY_TEAM',
+                        ? match.score.winner === 'HOME_TEAM'
+                        : match.score.winner === 'AWAY_TEAM',
                     score: `${match.score.fullTime.home} - ${match.score.fullTime.away}`,
                 },
             };
