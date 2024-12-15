@@ -17,37 +17,27 @@ export class AccountingService {
     async getCurrentSeason(userId: string): Promise<TimePeriodAccounting> {
         const seasonDate = getCurrentSeasonDate();
 
-        const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
-            await Promise.all([
-                this.getAccounting(userId, 'realized', seasonDate),
-                this.getAccounting(userId, 'unrealized', seasonDate),
-                this.getAccounting(userId, 'pending', seasonDate),
-            ]);
+        return this.getSeason(userId, seasonDate);
+    }
 
-        return {
-            realized: realizedAccounting,
-            unrealized: unrealizedAccounting,
-            pending: pendingAccounting,
+    async getGivenSeason(
+        userId: string,
+        seasonStartYear: number,
+    ): Promise<TimePeriodAccounting> {
+        const dates = {
+            start: new Date(seasonStartYear, 7, 1),
+            end: new Date(seasonStartYear + 1, 6, 31),
         };
+
+        return this.getSeason(userId, dates);
     }
 
     async getAllTime(userId: string): Promise<TimePeriodAccounting> {
         const oldestMatchSale = await this.salesDbService.getOldestMatchSale(userId);
 
-        const date = { start: oldestMatchSale.Match.date };
-
-        const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
-            await Promise.all([
-                this.getAccounting(userId, 'realized', date),
-                this.getAccounting(userId, 'unrealized', date),
-                this.getAccounting(userId, 'pending', date),
-            ]);
-
-        return {
-            realized: realizedAccounting,
-            unrealized: unrealizedAccounting,
-            pending: pendingAccounting,
-        };
+        return this.getSeason(userId, {
+            start: oldestMatchSale.Match.date,
+        });
     }
 
     async getAccounting(
@@ -98,5 +88,26 @@ export class AccountingService {
                 },
             },
         });
+    }
+
+    async getSeason(
+        userId: string,
+        dates: {
+            start: Date;
+            end?: Date;
+        },
+    ): Promise<TimePeriodAccounting> {
+        const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
+            await Promise.all([
+                this.getAccounting(userId, 'realized', dates),
+                this.getAccounting(userId, 'unrealized', dates),
+                this.getAccounting(userId, 'pending', dates),
+            ]);
+
+        return {
+            realized: realizedAccounting,
+            unrealized: unrealizedAccounting,
+            pending: pendingAccounting,
+        };
     }
 }
