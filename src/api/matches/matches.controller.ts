@@ -1,16 +1,13 @@
 import {
     BadRequestException,
-    Body,
     Controller,
     Get,
     Param,
-    Post,
     Query,
 } from '@nestjs/common';
 import { QueryMatchDto } from './dto/query-match.dto';
 import { MatchesService } from './matches.service';
 import { GetMatchDto } from './dto/get-match.dto';
-import { LoadMatchesDto } from './dto/load-matches.dto';
 import { GetSeasonMatchesDto } from './dto/get-season-matches.dto';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
@@ -53,13 +50,5 @@ export class MatchesController {
         }
 
         return result;
-    }
-
-    // todo need to move this to an admin routes ?
-    @Post('load')
-    async loadMatches(@Body() { seasonStartYear }: LoadMatchesDto) {
-        await this.matchesService.loadMatches(
-            seasonStartYear ? parseInt(seasonStartYear, 10) : undefined,
-        );
     }
 }

@@ -34,11 +34,12 @@ export class AccountingService {
         };
     }
 
-    // todo would be great to add unrealized profit
     async getAllTime(
         userId: string,
         userCreationDate: Date,
     ): Promise<TimePeriodAccounting> {
+        // todo start date can't be user creation if match have been sold in the past before creation
+        // need to find the oldest sale created for the oldest match
         const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
             await Promise.all(
                 [

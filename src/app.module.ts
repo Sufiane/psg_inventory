@@ -8,6 +8,7 @@ import { MatchesModule } from './api/matches/matches.module';
 import { SalesModule } from './api/sales/sales.module';
 import { AccountingModule } from './api/accounting/accounting.module';
 import { CronModule } from './crons/cron.module';
+import { AdminModule } from './api/admin/admin.module';
 
 @Module({
     imports: [
@@ -17,6 +18,7 @@ import { CronModule } from './crons/cron.module';
         SalesModule,
         AccountingModule,
         CronModule,
+        AdminModule,
     ],
     providers: [
         {

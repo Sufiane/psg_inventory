@@ -3,6 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../db/users.service';
+import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
+import { omit } from 'radash';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -22,13 +24,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     async validate(payload: {
         sub: string,
         email: string;
-    }): Promise<{ id: string; userEmail: string } | undefined> {
+    }): Promise<AuthenticatedUser | undefined> {
         const user = await this.usersDbService.findOneByEmail(payload.email);
 
         if (!user) {
             return undefined;
         }
 
-        return { id: payload.sub, userEmail: payload.email };
+        return omit(user, ['password', 'updatedAt']);
     }
 }

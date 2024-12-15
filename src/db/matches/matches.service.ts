@@ -2,10 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { convertStringToCompetition } from './matches.utils';
+import { Competition } from '@prisma/client';
+import { Prisma } from '.prisma/client';
 
 @Injectable()
 export class MatchesService extends PrismaService {
-
     getMatches(dates: { from: Date, to?: Date }, withResult: boolean = false) {
         const where: { date: { gte: Date, lte?: Date } } = {
             date: {
@@ -76,6 +77,52 @@ export class MatchesService extends PrismaService {
                     },
                 });
             });
+        }
+    }
+
+    async createMatch(payload: {
+        date: string,
+        atHome: boolean,
+        opponent: string,
+        competition: Competition,
+        result?: {
+            isWin: boolean,
+            score: string,
+        }
+    }): Promise<void> {
+        try {
+            await this.matches.create({
+                data: {
+                    date: new Date(payload.date),
+                    atHome: payload.atHome,
+                    competition: payload.competition,
+                    Opponent: {
+                        connectOrCreate: {
+                            create: {
+                                name: payload.opponent,
+                            },
+                            where: {
+                                name: payload.opponent,
+                            },
+                        },
+                    },
+                    MatchResults: payload.result && {
+                        create: {
+                            isWin: payload.result.isWin,
+                            score: payload.result.score,
+                        },
+                    },
+                },
+            });
+        } catch (e) {
+            if (
+                e instanceof Prisma.PrismaClientKnownRequestError
+                && e.code === 'P2002'
+            ) {
+                return;
+            }
+
+            throw e;
         }
     }
 }
