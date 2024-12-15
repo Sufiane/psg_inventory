@@ -8,7 +8,6 @@ import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('users')
 export class UsersController {
-
     constructor(
         private readonly usersService: UsersService,
         private readonly authService: AuthService,

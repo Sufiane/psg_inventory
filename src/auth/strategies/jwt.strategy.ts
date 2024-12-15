@@ -22,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // REMARKS: we could add a cache store, to store db responses to avoid
     // multiple db calls for the same user in a short period of time
     async validate(payload: {
-        sub: string,
+        sub: string;
         email: string;
     }): Promise<AuthenticatedUser | undefined> {
         const user = await this.usersDbService.findOneByEmail(payload.email);

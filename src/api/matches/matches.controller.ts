@@ -1,10 +1,4 @@
-import {
-    BadRequestException,
-    Controller,
-    Get,
-    Param,
-    Query,
-} from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 import { QueryMatchDto } from './dto/query-match.dto';
 import { MatchesService } from './matches.service';
 import { GetMatchDto } from './dto/get-match.dto';

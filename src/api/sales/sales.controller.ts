@@ -9,9 +9,7 @@ import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('sales')
 export class SalesController {
-
-    constructor(private readonly salesService: SalesService) {
-    }
+    constructor(private readonly salesService: SalesService) {}
 
     @Get('/:saleId')
     getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {

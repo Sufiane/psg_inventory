@@ -9,8 +9,7 @@ export class UsersService {
     constructor(
         private readonly userDbService: UserDbService,
         private readonly authService: AuthService,
-    ) {
-    }
+    ) {}
 
     async create(payload: CreateUserDto): Promise<void> {
         const createPayload = omit(payload, ['password']);

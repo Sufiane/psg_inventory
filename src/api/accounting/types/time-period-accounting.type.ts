@@ -1,7 +1,7 @@
 import { Accounting } from './accounting.type';
 
 export type TimePeriodAccounting = {
-    realized: Accounting | null
-    unrealized: Accounting | null
-    pending: Accounting | null
-}
+    realized: Accounting | null;
+    unrealized: Accounting | null;
+    pending: Accounting | null;
+};

@@ -1,4 +1,4 @@
-import { AggregatePayload } from "./types/aggregate-payload.type";
+import { AggregatePayload } from './types/aggregate-payload.type';
 
 export function formatAggregate(payload: AggregatePayload) {
     return {

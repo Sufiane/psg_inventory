@@ -1,7 +1,8 @@
 import {
     IsBoolean,
     IsDateString,
-    IsEnum, IsObject,
+    IsEnum,
+    IsObject,
     IsOptional,
     IsString,
     Matches,

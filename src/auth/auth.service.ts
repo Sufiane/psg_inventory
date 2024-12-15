@@ -18,7 +18,6 @@ export class AuthService {
         return bcrypt.hash(passwordToHash, salt);
     }
 
-
     async validateUser(
         email: string,
         password: string,

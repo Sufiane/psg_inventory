@@ -5,10 +5,7 @@ import { add } from 'date-fns';
 
 @Injectable()
 export class MatchesService {
-    constructor(
-        private readonly matchsDbService: MatchsDbService,
-    ) {
-    }
+    constructor(private readonly matchsDbService: MatchsDbService) {}
 
     getSeasonMatches(seasonStartYear: string, withResult: boolean = false) {
         const startSeasonDate = new Date(`${seasonStartYear}-08-01`);
@@ -47,13 +44,11 @@ export class MatchesService {
             opponent: match.Opponent,
             result:
                 withResult && match.MatchResults
-                ? {
-                        isWin: match.MatchResults?.isWin,
-                        score: match.MatchResults?.score,
-                    }
-                : undefined,
+                    ? {
+                          isWin: match.MatchResults?.isWin,
+                          score: match.MatchResults?.score,
+                      }
+                    : undefined,
         };
     }
-
-
 }

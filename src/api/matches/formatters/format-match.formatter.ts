@@ -9,10 +9,10 @@ export const formatMatch = (match: any, withResult: boolean = false): FormattedM
         competition: match.competition,
         opponent: match.Opponent,
         result: withResult
-                ? {
-                isWin: match.MatchResults?.isWin,
-                score: match.MatchResults?.score,
-            }
-                : undefined,
+            ? {
+                  isWin: match.MatchResults?.isWin,
+                  score: match.MatchResults?.score,
+              }
+            : undefined,
     };
 };

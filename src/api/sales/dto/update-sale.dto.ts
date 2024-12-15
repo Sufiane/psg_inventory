@@ -9,5 +9,3 @@ export class UpdateSaleDto extends PartialType(AddSaleDto) {
     @IsBoolean()
     sold: boolean;
 }
-
-

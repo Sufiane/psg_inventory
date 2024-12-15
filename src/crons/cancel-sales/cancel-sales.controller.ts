@@ -5,8 +5,7 @@ import { Controller, Logger, Post } from '@nestjs/common';
 export class CancelSalesController {
     private readonly logger = new Logger(CancelSalesController.name);
 
-    constructor(private readonly service: CancelSalesService) {
-    }
+    constructor(private readonly service: CancelSalesService) {}
 
     @Post()
     async forceCancelSales() {

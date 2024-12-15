@@ -7,8 +7,7 @@ import { CreateMatchDto } from './dto/create-match.dto';
 @UseGuards(RolesGuard)
 @Controller('admin')
 export class AdminController {
-    constructor(private readonly adminService: AdminService) {
-    }
+    constructor(private readonly adminService: AdminService) {}
 
     @Post('/matches/load/current-season')
     async loadCurrentSeason(): Promise<void> {
@@ -22,6 +21,6 @@ export class AdminController {
 
     @Post('/matches')
     async createMatch(@Body() payload: CreateMatchDto): Promise<void> {
-        await this.adminService.createMatch(payload)
+        await this.adminService.createMatch(payload);
     }
 }

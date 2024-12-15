@@ -9,7 +9,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
     imports: [
-        DbModule, PassportModule,
+        DbModule,
+        PassportModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
@@ -29,5 +30,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     providers: [AuthService, LocalStrategy, JwtStrategy],
     exports: [AuthService],
 })
-export class AuthModule {
-}
+export class AuthModule {}

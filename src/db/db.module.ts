@@ -15,5 +15,4 @@ import { AccountingService } from './accounting/accounting.service';
     ],
     exports: [UsersService, SalesService, MatchesService, AccountingService],
 })
-export class DbModule {
-}
+export class DbModule {}

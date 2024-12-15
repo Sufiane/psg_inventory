@@ -27,5 +27,4 @@ import { AdminModule } from './api/admin/admin.module';
         },
     ],
 })
-export class AppModule {
-}
+export class AppModule {}

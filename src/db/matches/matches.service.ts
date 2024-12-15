@@ -7,8 +7,8 @@ import { Prisma } from '.prisma/client';
 
 @Injectable()
 export class MatchesService extends PrismaService {
-    getMatches(dates: { from: Date, to?: Date }, withResult: boolean = false) {
-        const where: { date: { gte: Date, lte?: Date } } = {
+    getMatches(dates: { from: Date; to?: Date }, withResult: boolean = false) {
+        const where: { date: { gte: Date; lte?: Date } } = {
             date: {
                 gte: dates.from,
             },
@@ -81,14 +81,14 @@ export class MatchesService extends PrismaService {
     }
 
     async createMatch(payload: {
-        date: string,
-        atHome: boolean,
-        opponent: string,
-        competition: Competition,
+        date: string;
+        atHome: boolean;
+        opponent: string;
+        competition: Competition;
         result?: {
-            isWin: boolean,
-            score: string,
-        }
+            isWin: boolean;
+            score: string;
+        };
     }): Promise<void> {
         try {
             await this.matches.create({
@@ -115,10 +115,7 @@ export class MatchesService extends PrismaService {
                 },
             });
         } catch (e) {
-            if (
-                e instanceof Prisma.PrismaClientKnownRequestError
-                && e.code === 'P2002'
-            ) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
                 return;
             }
 

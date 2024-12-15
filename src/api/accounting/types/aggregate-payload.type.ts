@@ -3,14 +3,14 @@ type MatchInfo = {
     date: Date;
     atHome: boolean;
     competition: string;
-}
+};
 
 type ExtremeSaleInfo = {
     profit: number;
     listedPrice: number;
-    nbTickets: number
+    nbTickets: number;
     match: MatchInfo;
-}
+};
 
 export type AggregatePayload = {
     sum: {
@@ -25,4 +25,4 @@ export type AggregatePayload = {
     };
     min: ExtremeSaleInfo;
     max: ExtremeSaleInfo;
-}
+};

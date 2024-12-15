@@ -1,21 +1,21 @@
 export type TeamMatches = {
-    "filters": {
-        "competitions": string; // "FL1,CL",
-        "permission": string; // "TIER_ONE",
-        "limit": number;
-    },
-    "resultSet": {
-        "count": number,
-        "competitions": string, // "FL1,CL",
-        "first": string; // "2024-08-16",
-        "last": string; // "2025-05-18",
-        "played": number,
-        "wins": number,
-        "draws": number,
-        "losses": number,
-    },
-    "matches": MatchData[],
-}
+    filters: {
+        competitions: string; // "FL1,CL",
+        permission: string; // "TIER_ONE",
+        limit: number;
+    };
+    resultSet: {
+        count: number;
+        competitions: string; // "FL1,CL",
+        first: string; // "2024-08-16",
+        last: string; // "2025-05-18",
+        played: number;
+        wins: number;
+        draws: number;
+        losses: number;
+    };
+    matches: MatchData[];
+};
 
 type Team = {
     id: number;
@@ -33,7 +33,7 @@ type Score = {
 type Competition = {
     id: number;
     name: string;
-}
+};
 
 export type MatchData = {
     competition: Competition;

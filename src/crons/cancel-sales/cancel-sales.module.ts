@@ -8,5 +8,4 @@ import { DbModule } from '../../db/db.module';
     controllers: [CancelSalesController],
     providers: [CancelSalesService],
 })
-export class CancelSalesModule {
-}
+export class CancelSalesModule {}

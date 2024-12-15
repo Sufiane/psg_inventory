@@ -3,11 +3,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CancelSalesModule } from './cancel-sales/cancel-sales.module';
 
 @Module({
-    imports: [
-        ScheduleModule.forRoot(),
-        CancelSalesModule,
-    ],
-
+    imports: [ScheduleModule.forRoot(), CancelSalesModule],
 })
-export class CronModule {
-}
+export class CronModule {}

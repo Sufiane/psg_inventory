@@ -2,16 +2,15 @@ import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class AddSaleDto {
     @IsString()
-    matchId: string
+    matchId: string;
 
     @IsNumber()
-    nbTickets: number
+    nbTickets: number;
 
     @IsOptional()
     @IsNumber()
-    invest: number = 0
+    invest: number = 0;
 
     @IsNumber()
-    listedPrice: number
-
+    listedPrice: number;
 }

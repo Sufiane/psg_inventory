@@ -5,11 +5,10 @@ import { SalesService as SalesDbService } from '../../db/sales.service';
 
 @Injectable()
 export class CancelSalesService {
-
     constructor(private readonly salesDbService: SalesDbService) {}
 
     @Cron('0 0 * * *')
     async cancelSales() {
-        await this.salesDbService.cancelMany()
+        await this.salesDbService.cancelMany();
     }
 }

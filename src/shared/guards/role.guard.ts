@@ -3,8 +3,7 @@ import { Roles } from '@prisma/client';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-    constructor() {
-    }
+    constructor() {}
 
     canActivate(context: ExecutionContext): boolean {
         const request = context.switchToHttp().getRequest();

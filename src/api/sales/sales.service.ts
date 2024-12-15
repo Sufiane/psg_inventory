@@ -8,8 +8,7 @@ const PSG_COMMISSION = 12;
 
 @Injectable()
 export class SalesService {
-    constructor(private readonly salesDbService: SalesDbService) {
-    }
+    constructor(private readonly salesDbService: SalesDbService) {}
 
     getSale(userId: string, saleId: string) {
         return this.salesDbService.getOneSale(userId, saleId);
@@ -18,7 +17,7 @@ export class SalesService {
     async getSales(userId: string) {
         const sales = await this.salesDbService.getSales(userId);
 
-        return sales.map(sale => {
+        return sales.map((sale) => {
             return {
                 ...omit(sale, ['Match', 'userId', 'matchId']),
                 opponent: {
@@ -41,14 +40,12 @@ export class SalesService {
         await this.salesDbService.updateSale({
             userId,
             ...payload,
-            profit: payload.listedPrice
-                    ? this.getProfit(payload.listedPrice)
-                    : undefined,
+            profit: payload.listedPrice ? this.getProfit(payload.listedPrice) : undefined,
         });
     }
 
     getProfit(price: number): number {
-        return price * (100 - PSG_COMMISSION) / 100;
+        return (price * (100 - PSG_COMMISSION)) / 100;
     }
 
     async deleteSale(userId: string, saleId: string) {

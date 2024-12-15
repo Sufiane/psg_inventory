@@ -1,4 +1,4 @@
-export function getCurrentSeasonDate(): { start: Date, end: Date } {
+export function getCurrentSeasonDate(): { start: Date; end: Date } {
     const currentDate = new Date();
 
     if (currentDate.getMonth() < 7) {

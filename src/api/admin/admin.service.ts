@@ -10,8 +10,7 @@ export class AdminService {
     constructor(
         private readonly footballDataService: FootballDataService,
         private readonly matchsDbService: MatchsDbService,
-    ) {
-    }
+    ) {}
 
     async loadMatches(seasonStartYear?: number): Promise<void> {
         const PSG_ID = 524;
