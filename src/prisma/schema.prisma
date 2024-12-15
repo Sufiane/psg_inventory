@@ -13,6 +13,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Roles {
+  ADMIN
+  USER
+}
+
 model Users {
   id        String   @id @default(uuid())
   firstName String   @map("first_name")
@@ -22,6 +27,7 @@ model Users {
   Sales     Sales[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt() @map("updated_at")
+  role      Roles    @default(USER)
 
   @@map("users")
 }
