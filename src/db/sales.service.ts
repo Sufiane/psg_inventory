@@ -33,12 +33,12 @@ export class SalesService extends PrismaService {
     }
 
     async addSale(payload: {
-        userId: string,
-        profit: number,
-        nbTickets: number,
-        invest: number,
-        matchId: string,
-        listedPrice: number,
+        userId: string;
+        profit: number;
+        nbTickets: number;
+        invest: number;
+        matchId: string;
+        listedPrice: number;
     }): Promise<void> {
         await this.sales.create({
             data: {
@@ -49,14 +49,14 @@ export class SalesService extends PrismaService {
     }
 
     async updateSale(payload: {
-        saleId: string,
-        userId: string,
-        profit: number | undefined,
-        nbTickets?: number,
-        invest?: number,
-        listedPrice?: number,
-        sold?: boolean,
-        status?: SaleStatus,
+        saleId: string;
+        userId: string;
+        profit: number | undefined;
+        nbTickets?: number;
+        invest?: number;
+        listedPrice?: number;
+        sold?: boolean;
+        status?: SaleStatus;
     }): Promise<void> {
         const currentSale = await this.sales.findUnique({
             where: {
@@ -113,10 +113,11 @@ export class SalesService extends PrismaService {
     }
 
     getOneByWithFullMatch(query: {
-        profit?: number,
-        listedPrice?: number,
-        invest?: number,
-        nbTickets?: number
+        profit?: number;
+        listedPrice?: number;
+        invest?: number;
+        nbTickets?: number;
+        status?: SaleStatus;
     }) {
         return this.sales.findFirstOrThrow({
             include: {
@@ -149,6 +150,22 @@ export class SalesService extends PrismaService {
                     },
                 },
                 status: SaleStatus.PENDING,
+            },
+        });
+    }
+
+    getOldestMatchSale(userId: string) {
+        return this.sales.findFirstOrThrow({
+            include: {
+                Match: true,
+            },
+            where: {
+                userId,
+            },
+            orderBy: {
+                Match: {
+                    date: 'asc',
+                },
             },
         });
     }
