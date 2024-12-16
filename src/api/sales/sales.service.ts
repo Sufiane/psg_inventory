@@ -1,14 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { SalesService as SalesDbService } from '../../db/sales.service';
+import { SalesService as SalesDbService } from '../../db/sales/sales.service';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { omit } from 'radash';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 
 const PSG_COMMISSION = 12;
 
 @Injectable()
 export class SalesService {
-    constructor(private readonly salesDbService: SalesDbService) {}
+    constructor(
+        private readonly salesDbService: SalesDbService,
+        private readonly redisService: RedisService,
+    ) {}
 
     getSale(userId: string, saleId: string) {
         return this.salesDbService.getOneSale(userId, saleId);
@@ -42,6 +47,8 @@ export class SalesService {
             ...payload,
             profit: payload.listedPrice ? this.getProfit(payload.listedPrice) : undefined,
         });
+
+        await this.redisService.invalidate(CACHE_KEYS.invalidateAccounting(userId));
     }
 
     getProfit(price: number): number {
@@ -50,5 +57,7 @@ export class SalesService {
 
     async deleteSale(userId: string, saleId: string) {
         await this.salesDbService.deleteSale(userId, saleId);
+
+        await this.redisService.invalidate(CACHE_KEYS.invalidateAccounting(userId));
     }
 }

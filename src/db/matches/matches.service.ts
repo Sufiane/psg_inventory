@@ -1,13 +1,32 @@
-import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { convertStringToCompetition } from './matches.utils';
 import { Competition } from '@prisma/client';
 import { Prisma } from '.prisma/client';
+import { Injectable } from '@nestjs/common';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
+import { Match } from './types/match.type';
 
 @Injectable()
 export class MatchesService extends PrismaService {
-    getMatches(dates: { from: Date; to?: Date }, withResult: boolean = false) {
+    constructor(private readonly redisService: RedisService) {
+        super();
+    }
+
+    static matchQuery(withResult: boolean = false) {
+        return {
+            include: {
+                Opponent: true,
+                MatchResults: withResult,
+            },
+        };
+    }
+
+    async getMatches(
+        dates: { from: Date; to?: Date },
+        withResult: boolean = false,
+    ): Promise<Match[]> {
         const where: { date: { gte: Date; lte?: Date } } = {
             date: {
                 gte: dates.from,
@@ -18,28 +37,44 @@ export class MatchesService extends PrismaService {
             where.date.lte = dates.to;
         }
 
-        return this.matches.findMany({
+        const cacheKey = CACHE_KEYS.matches(dates.from, dates.to);
+        const cachedData = await this.redisService.get<Match[]>(cacheKey);
+
+        if (cachedData) {
+            return cachedData;
+        }
+
+        const dbResult = this.matches.findMany({
+            ...MatchesService.matchQuery(withResult),
             where: where,
-            include: {
-                Opponent: true,
-                MatchResults: withResult,
-            },
         });
+
+        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+
+        return dbResult;
     }
 
-    getOneMatch(id: string, withResult: boolean = false) {
-        return this.matches.findUnique({
-            include: {
-                Opponent: true,
-                MatchResults: withResult,
-            },
+    async getOneMatch(id: string, withResult: boolean = false): Promise<Match | null> {
+        const cacheKey = CACHE_KEYS.match(id);
+        const cachedData = await this.redisService.get<Match | null>(cacheKey);
+
+        if (cachedData) {
+            return cachedData;
+        }
+
+        const dbResult = await this.matches.findUnique({
+            ...MatchesService.matchQuery(withResult),
             where: {
                 id,
             },
         });
+
+        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+
+        return dbResult;
     }
 
-    async loadMatches(matches: FormattedMatch[]) {
+    async loadMatches(matches: FormattedMatch[]): Promise<void> {
         for (const match of matches) {
             await this.$transaction(async (tx) => {
                 const { id: opponentId } = await this.opponents.upsert({
@@ -121,5 +156,7 @@ export class MatchesService extends PrismaService {
 
             throw e;
         }
+
+        await this.redisService.invalidate(CACHE_KEYS.matches(new Date(payload.date)));
     }
 }

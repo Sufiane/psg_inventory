@@ -1,26 +1,58 @@
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../prisma.service';
 import { Matches, Opponents, Sales, SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
+import { Injectable } from '@nestjs/common';
+import { Sale } from './type/sale.type';
 
+@Injectable()
 export class SalesService extends PrismaService {
-    getOneSale(userId: string, saleId: string) {
-        return this.sales.findUnique({
+    constructor(private readonly redisService: RedisService) {
+        super();
+    }
+
+    static saleQuery = {
+        include: {
+            Match: {
+                select: {
+                    Opponent: true,
+                },
+            },
+        },
+    };
+
+    async getOneSale(userId: string, saleId: string): Promise<Sale | null> {
+        const cacheKey = CACHE_KEYS.sale(saleId);
+        const cachedData = await this.redisService.get<Sale>(cacheKey);
+
+        if (cachedData) {
+            return cachedData;
+        }
+
+        const dbResult = await this.sales.findUnique({
+            ...SalesService.saleQuery,
             where: {
                 id: saleId,
                 userId,
             },
         });
+
+        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+
+        return dbResult;
     }
 
-    getSales(userId: string) {
-        return this.sales.findMany({
-            include: {
-                Match: {
-                    select: {
-                        Opponent: true,
-                    },
-                },
-            },
+    async getSales(userId: string): Promise<Sale[]> {
+        const cacheKey = CACHE_KEYS.sales(userId);
+        const cachedData = await this.redisService.get<Sale[]>(cacheKey);
+
+        if (cachedData) {
+            return cachedData;
+        }
+
+        const dbResult = await this.sales.findMany({
+            ...SalesService.saleQuery,
             where: {
                 userId,
             },
@@ -30,6 +62,10 @@ export class SalesService extends PrismaService {
                 },
             },
         });
+
+        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+
+        return dbResult;
     }
 
     async addSale(payload: {
@@ -46,6 +82,8 @@ export class SalesService extends PrismaService {
                 status: SaleStatus.PENDING,
             },
         });
+
+        await this.redisService.invalidate(CACHE_KEYS.sales(payload.userId));
     }
 
     async updateSale(payload: {
@@ -93,6 +131,9 @@ export class SalesService extends PrismaService {
                 },
             });
         });
+
+        await this.redisService.invalidate(CACHE_KEYS.sales(payload.userId));
+        await this.redisService.invalidate(CACHE_KEYS.sale(payload.saleId));
     }
 
     async deleteSale(userId: string, saleId: string): Promise<void> {
@@ -110,6 +151,9 @@ export class SalesService extends PrismaService {
                 },
             });
         });
+
+        await this.redisService.invalidate(CACHE_KEYS.sales(userId));
+        await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
     }
 
     getOneByWithFullMatch(query: {
@@ -136,8 +180,8 @@ export class SalesService extends PrismaService {
         }) as Promise<Sales & { Match: Matches & { Opponent: Opponents } }>;
     }
 
-    cancelMany() {
-        return this.sales.updateMany({
+    async cancelMany() {
+        await this.sales.updateMany({
             data: {
                 status: SaleStatus.CANCELLED,
             },

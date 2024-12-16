@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
-import { SalesService as SalesDbService } from '../../db/sales.service';
+import { SalesService as SalesDbService } from '../../db/sales/sales.service';
 
 @Injectable()
 export class CancelSalesService {

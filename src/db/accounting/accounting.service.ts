@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { AccountingAggregate } from './types/get-accounting.type';
 import { omit } from 'radash';
 import { Prisma } from '.prisma/client';
 import { SaleStatus } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AccountingService extends PrismaService {

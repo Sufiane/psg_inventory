@@ -1,17 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Accounting } from './types/accounting.type';
 import { AccountingService as AccountingDbService } from '../../db/accounting/accounting.service';
-import { SalesService as SalesDbService } from '../../db/sales.service';
+import { SalesService as SalesDbService } from '../../db/sales/sales.service';
 import { formatAggregate } from './accounting.utils';
 import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { statusConverter } from './utils/status-converter.util';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 
 @Injectable()
 export class AccountingService {
     constructor(
         private readonly accountingDbService: AccountingDbService,
         private readonly salesDbService: SalesDbService,
+        private readonly redisService: RedisService,
     ) {}
 
     async getCurrentSeason(userId: string): Promise<TimePeriodAccounting> {
@@ -97,6 +100,15 @@ export class AccountingService {
             end?: Date;
         },
     ): Promise<TimePeriodAccounting> {
+        const cacheKey = CACHE_KEYS.accounting(userId, dates.start, dates.end);
+        const cachedData = await this.redisService.get<TimePeriodAccounting | null>(
+            cacheKey,
+        );
+
+        if (cachedData) {
+            return cachedData;
+        }
+
         const [realizedAccounting, unrealizedAccounting, pendingAccounting] =
             await Promise.all([
                 this.getAccounting(userId, 'realized', dates),
@@ -104,10 +116,14 @@ export class AccountingService {
                 this.getAccounting(userId, 'pending', dates),
             ]);
 
-        return {
+        const accounting = {
             realized: realizedAccounting,
             unrealized: unrealizedAccounting,
             pending: pendingAccounting,
         };
+
+        await this.redisService.set(cacheKey, accounting, 24 * 60 * 60);
+
+        return accounting;
     }
 }

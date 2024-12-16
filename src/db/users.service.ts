@@ -1,9 +1,15 @@
 import { PrismaService } from './prisma.service';
-import { Injectable } from '@nestjs/common';
 import { Users } from '@prisma/client';
+import { RedisService } from '../redis/redis.service';
+import CACHE_KEYS from '../redis/CACHE_KEYS';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class UsersService extends PrismaService {
+    constructor(private readonly redisService: RedisService) {
+        super();
+    }
+
     async create(payload: {
         email: string;
         firstName: string;
@@ -14,10 +20,22 @@ export class UsersService extends PrismaService {
     }
 
     async findOneByEmail(email: string): Promise<Users | null> {
-        return this.users.findUnique({
+        const cachedData = await this.redisService.get<Users | null>(
+            CACHE_KEYS.userByEmail(email),
+        );
+
+        if (cachedData) {
+            return cachedData;
+        }
+
+        const dbResult = await this.users.findUnique({
             where: {
                 email,
             },
         });
+
+        await this.redisService.set(CACHE_KEYS.userByEmail(email), dbResult, 60 * 60);
+
+        return dbResult;
     }
 }

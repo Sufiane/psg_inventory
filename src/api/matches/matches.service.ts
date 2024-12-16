@@ -38,10 +38,10 @@ export class MatchesService {
 
         return {
             id: match.id,
-            date: match.date,
+            date: match.date.toISOString(),
             atHome: match.atHome,
             competition: match.competition,
-            opponent: match.Opponent,
+            opponent: match.Opponent.name,
             result:
                 withResult && match.MatchResults
                     ? {
