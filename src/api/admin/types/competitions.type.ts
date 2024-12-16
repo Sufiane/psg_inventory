@@ -1,0 +1,6 @@
+export enum Competitions {
+    CHAMPIONS_LEAGUE = 'CHAMPIONS_LEAGUE',
+    CHAMPIONSHIP = 'CHAMPIONSHIP',
+    FRENCH_CUP = 'FRENCH_CUP',
+    LEAGUE_CUP = 'LEAGUE_CUP',
+}

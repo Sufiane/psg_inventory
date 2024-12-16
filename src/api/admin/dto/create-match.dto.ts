@@ -7,8 +7,8 @@ import {
     IsString,
     Matches,
 } from 'class-validator';
-import { Competition } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { Competitions } from '../types/competitions.type';
 
 export class ResultDto {
     @IsBoolean()
@@ -28,8 +28,8 @@ export class CreateMatchDto {
     @IsBoolean()
     atHome: boolean;
 
-    @IsEnum(Competition)
-    competition: Competition;
+    @IsEnum(Competitions)
+    competition: Competitions;
 
     @IsOptional()
     @IsObject()
