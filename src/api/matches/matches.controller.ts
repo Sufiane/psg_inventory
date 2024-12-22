@@ -14,9 +14,7 @@ export class MatchesController {
     async getCurrentSeason(
         @Query() { withResult }: QueryMatchDto,
     ): Promise<FormattedMatch[]> {
-        const matches = await this.matchesService.getCurrentSeason(withResult);
-
-        return matches.map((match) => formatMatch(match, withResult));
+        return this.matchesService.getCurrentSeason(withResult);
     }
 
     @Get('/season/:seasonStartYear')

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { add } from 'date-fns';
+import { formatMatch } from './formatters/format-match.formatter';
+import { FormattedMatch } from './types/formatted-match.type';
 
 @Injectable()
 export class MatchesService {
@@ -20,13 +22,15 @@ export class MatchesService {
         );
     }
 
-    getCurrentSeason(withResult: boolean = false) {
+    async getCurrentSeason(withResult: boolean = false): Promise<FormattedMatch[]> {
         const currentSeasonDate = getCurrentSeasonDate();
 
-        return this.matchsDbService.getMatches(
+        const dbResponse = await this.matchsDbService.getMatches(
             { from: currentSeasonDate.start, to: currentSeasonDate.end },
             withResult,
         );
+
+        return dbResponse.map((match) => formatMatch(match, withResult));
     }
 
     async getMatch(matchId: string, withResult: boolean = false) {
