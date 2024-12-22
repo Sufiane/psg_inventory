@@ -10,7 +10,5 @@ export function statusConverter(
             return SaleStatus.SOLD;
         case 'unrealized':
             return SaleStatus.CANCELLED;
-        default:
-            throw new Error('unknown_status');
     }
 }

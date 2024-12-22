@@ -1,10 +1,12 @@
 import { PrismaService } from '../prisma.service';
-import { Matches, Opponents, Sales, SaleStatus } from '@prisma/client';
+import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
 import { Sale } from './type/sale.type';
+import { SaleWithFullMatch } from './type/sale-with-full-match.type';
+import { OldestMatchSale } from './type/oldest-match-sale.type';
 
 @Injectable()
 export class SalesService extends PrismaService {
@@ -162,7 +164,7 @@ export class SalesService extends PrismaService {
         invest?: number;
         nbTickets?: number;
         status?: SaleStatus;
-    }) {
+    }): Promise<SaleWithFullMatch> {
         return this.sales.findFirstOrThrow({
             include: {
                 Match: {
@@ -177,7 +179,7 @@ export class SalesService extends PrismaService {
                     date: 'asc',
                 },
             },
-        }) as Promise<Sales & { Match: Matches & { Opponent: Opponents } }>;
+        }) as Promise<SaleWithFullMatch>;
     }
 
     async cancelMany() {
@@ -198,7 +200,7 @@ export class SalesService extends PrismaService {
         });
     }
 
-    getOldestMatchSale(userId: string) {
+    getOldestMatchSale(userId: string): Promise<OldestMatchSale> {
         return this.sales.findFirstOrThrow({
             include: {
                 Match: true,

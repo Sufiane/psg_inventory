@@ -1,6 +1,7 @@
-import { AggregatePayload } from './types/aggregate-payload.type';
+import { AggregatePayload } from '../types/aggregate-payload.type';
+import { FormattedAggregate } from '../types/formatted-aggregate.type';
 
-export function formatAggregate(payload: AggregatePayload) {
+export function formatAggregate(payload: AggregatePayload): FormattedAggregate {
     return {
         totalSales: payload.sum.listedPrice ?? 0,
         totalProfit: payload.sum.profit ?? 0,

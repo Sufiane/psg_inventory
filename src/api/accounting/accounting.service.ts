@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Accounting } from './types/accounting.type';
 import { AccountingService as AccountingDbService } from '../../db/accounting/accounting.service';
 import { SalesService as SalesDbService } from '../../db/sales/sales.service';
-import { formatAggregate } from './accounting.utils';
+import { formatAggregate } from './utils/format-aggregate.util';
 import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { statusConverter } from './utils/status-converter.util';
@@ -64,11 +64,11 @@ export class AccountingService {
 
         const [lowestMatch, highestMatch] = await Promise.all([
             this.salesDbService.getOneByWithFullMatch({
-                profit: aggregate._min.profit ?? undefined,
+                profit: aggregate._min.profit,
                 status: statusConverter(status),
             }),
             this.salesDbService.getOneByWithFullMatch({
-                profit: aggregate._max.profit ?? undefined,
+                profit: aggregate._max.profit,
                 status: statusConverter(status),
             }),
         ]);
