@@ -4,12 +4,16 @@ import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { add } from 'date-fns';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
+import { Match } from '../../db/matches/types/match.type';
 
 @Injectable()
 export class MatchesService {
     constructor(private readonly matchsDbService: MatchsDbService) {}
 
-    getSeasonMatches(seasonStartYear: string, withResult: boolean = false) {
+    getSeasonMatches(
+        seasonStartYear: string,
+        withResult: boolean = false,
+    ): Promise<Match[]> {
         const startSeasonDate = new Date(`${seasonStartYear}-08-01`);
         const endSeasonDate = add(startSeasonDate, { years: 1 });
 
