@@ -44,7 +44,7 @@ export class MatchesService extends PrismaService {
             return cachedData;
         }
 
-        const dbResult = this.matches.findMany({
+        const dbResult = await this.matches.findMany({
             ...MatchesService.matchQuery(withResult),
             where: where,
         });
