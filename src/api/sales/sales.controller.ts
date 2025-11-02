@@ -25,8 +25,8 @@ export class SalesController {
     async addSale(
         @User() user: AuthenticatedUser,
         @Body() payload: AddSaleDto,
-    ): Promise<void> {
-        await this.salesService.addSale(user.id, payload);
+    ): Promise<{ id: string }> {
+        return this.salesService.addSale(user.id, payload);
     }
 
     @Post('/update')

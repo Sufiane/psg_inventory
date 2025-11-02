@@ -33,12 +33,14 @@ export class SalesService {
         });
     }
 
-    async addSale(userId: string, payload: AddSaleDto): Promise<void> {
-        await this.salesDbService.addSale({
+    async addSale(userId: string, payload: AddSaleDto): Promise<{ id: string }> {
+        const sale = await this.salesDbService.addSale({
             userId,
             ...payload,
             profit: this.getProfit(payload.listedPrice),
         });
+
+        return { id: sale.id };
     }
 
     async updateSale(userId: string, payload: UpdateSaleDto): Promise<void> {

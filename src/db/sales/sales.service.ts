@@ -77,15 +77,22 @@ export class SalesService extends PrismaService {
         invest: number;
         matchId: string;
         listedPrice: number;
-    }): Promise<void> {
-        await this.sales.create({
+    }): Promise<{ id: string }> {
+        const dbResult = await this.sales.create({
             data: {
                 ...payload,
                 status: SaleStatus.PENDING,
             },
+            select: {
+                id: true,
+            },
         });
 
         await this.redisService.invalidate(CACHE_KEYS.sales(payload.userId));
+
+        return {
+            id: dbResult.id,
+        };
     }
 
     async updateSale(payload: {
