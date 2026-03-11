@@ -4,6 +4,7 @@ import { shake } from 'radash';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
+import { ONE_HOUR_TTL } from '../../shared/constants';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
@@ -40,7 +41,7 @@ export class SalesService extends PrismaService {
             },
         });
 
-        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
         return dbResult;
     }
@@ -65,7 +66,7 @@ export class SalesService extends PrismaService {
             },
         });
 
-        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
         return dbResult;
     }

@@ -4,6 +4,7 @@ import { omit } from 'radash';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 import { AuthenticatedUser } from '../shared/types/authenticated-user.type';
+import { BCRYPT_SALT_ROUNDS } from '../shared/constants';
 
 @Injectable()
 export class AuthService {
@@ -13,7 +14,7 @@ export class AuthService {
     ) {}
 
     async hashPassword(passwordToHash: string): Promise<string> {
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
 
         return bcrypt.hash(passwordToHash, salt);
     }
