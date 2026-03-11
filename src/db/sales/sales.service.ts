@@ -8,9 +8,10 @@ import { ONE_HOUR_TTL } from '../../shared/constants';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
+import { ISalesDbService } from './sales.db.interface';
 
 @Injectable()
-export class SalesService extends PrismaService {
+export class SalesService extends PrismaService implements ISalesDbService {
     constructor(private readonly redisService: RedisService) {
         super();
     }

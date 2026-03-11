@@ -4,9 +4,10 @@ import { omit } from 'radash';
 import { Prisma } from '.prisma/client';
 import { SaleStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
+import { IAccountingDbService } from './accounting.db.interface';
 
 @Injectable()
-export class AccountingService extends PrismaService {
+export class AccountingService extends PrismaService implements IAccountingDbService {
     async getAccounting(
         userId: string,
         status: SaleStatus,

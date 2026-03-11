@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { FootballDataService } from '../../football-data/football-data.service';
-import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { PSG_ID } from '../../shared/constants';
 
@@ -10,7 +10,7 @@ export class AdminService {
 
     constructor(
         private readonly footballDataService: FootballDataService,
-        private readonly matchsDbService: MatchsDbService,
+        private readonly matchsDbService: IMatchesDbService,
     ) {}
 
     async loadMatches(seasonStartYear?: number): Promise<void> {

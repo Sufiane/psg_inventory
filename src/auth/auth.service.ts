@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UsersService } from '../db/users.service';
+import { IUsersDbService } from '../db/users/users.db.interface';
 import { omit } from 'radash';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
@@ -9,7 +9,7 @@ import { BCRYPT_SALT_ROUNDS } from '../shared/constants';
 @Injectable()
 export class AuthService {
     constructor(
-        private readonly usersDbService: UsersService,
+        private readonly usersDbService: IUsersDbService,
         private readonly jwtService: JwtService,
     ) {}
 
