@@ -6,6 +6,7 @@ import { MatchesService as MatchsDbService } from '../../db/matches/matches.serv
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { InternalServerErrorException } from '@nestjs/common';
 import { CreateMatchDto } from './dto/create-match.dto';
+import { PSG_ID } from '../../shared/constants';
 
 describe('AdminService', () => {
     let service: AdminService;
@@ -46,7 +47,7 @@ describe('AdminService', () => {
             await expect(service.loadMatches(seasonStartYear)).resolves.toBeUndefined();
             expect(footballDataService.getTeamMatches).toHaveBeenCalledTimes(1);
             expect(footballDataService.getTeamMatches).toHaveBeenCalledWith(
-                524,
+                PSG_ID,
                 seasonStartYear,
             );
             expect(matchsDbService.loadMatches).toHaveBeenCalledTimes(1);

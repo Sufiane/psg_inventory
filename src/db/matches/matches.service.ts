@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Match } from './types/match.type';
+import { ONE_HOUR_TTL } from '../../shared/constants';
 
 @Injectable()
 export class MatchesService extends PrismaService {
@@ -49,7 +50,7 @@ export class MatchesService extends PrismaService {
             where: where,
         });
 
-        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
         return dbResult;
     }
@@ -69,7 +70,7 @@ export class MatchesService extends PrismaService {
             },
         });
 
-        await this.redisService.set(cacheKey, dbResult, 60 * 60);
+        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
         return dbResult;
     }

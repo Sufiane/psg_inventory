@@ -3,6 +3,7 @@ import { Users } from '@prisma/client';
 import { RedisService } from '../redis/redis.service';
 import CACHE_KEYS from '../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
+import { ONE_HOUR_TTL } from '../shared/constants';
 
 @Injectable()
 export class UsersService extends PrismaService {
@@ -34,7 +35,11 @@ export class UsersService extends PrismaService {
             },
         });
 
-        await this.redisService.set(CACHE_KEYS.userByEmail(email), dbResult, 60 * 60);
+        await this.redisService.set(
+            CACHE_KEYS.userByEmail(email),
+            dbResult,
+            ONE_HOUR_TTL,
+        );
 
         return dbResult;
     }

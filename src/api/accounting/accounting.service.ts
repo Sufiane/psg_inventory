@@ -8,6 +8,7 @@ import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { statusConverter } from './utils/status-converter.util';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
+import { ONE_DAY_TTL } from '../../shared/constants';
 
 @Injectable()
 export class AccountingService {
@@ -122,7 +123,7 @@ export class AccountingService {
             pending: pendingAccounting,
         };
 
-        await this.redisService.set(cacheKey, accounting, 24 * 60 * 60);
+        await this.redisService.set(cacheKey, accounting, ONE_DAY_TTL);
 
         return accounting;
     }

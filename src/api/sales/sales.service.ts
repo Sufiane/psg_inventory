@@ -5,8 +5,7 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 import { omit } from 'radash';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-
-const PSG_COMMISSION = 12;
+import { PSG_COMMISSION } from '../../shared/constants';
 
 @Injectable()
 export class SalesService {
