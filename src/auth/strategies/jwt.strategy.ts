@@ -2,14 +2,14 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../db/users.service';
+import { IUsersDbService } from '../../db/users/users.db.interface';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { omit } from 'radash';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(
-        private readonly usersDbService: UsersService,
+        private readonly usersDbService: IUsersDbService,
         configService: ConfigService<{ JWT_SECRET: string }, true>,
     ) {
         super({

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Accounting } from './types/accounting.type';
-import { AccountingService as AccountingDbService } from '../../db/accounting/accounting.service';
-import { SalesService as SalesDbService } from '../../db/sales/sales.service';
+import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
+import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { formatAggregate } from './utils/format-aggregate.util';
 import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
@@ -13,8 +13,8 @@ import { ONE_DAY_TTL } from '../../shared/constants';
 @Injectable()
 export class AccountingService {
     constructor(
-        private readonly accountingDbService: AccountingDbService,
-        private readonly salesDbService: SalesDbService,
+        private readonly accountingDbService: IAccountingDbService,
+        private readonly salesDbService: ISalesDbService,
         private readonly redisService: RedisService,
     ) {}
 

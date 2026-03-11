@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SalesService as SalesDbService } from '../../db/sales/sales.service';
+import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { omit } from 'radash';
@@ -10,7 +10,7 @@ import { PSG_COMMISSION } from '../../shared/constants';
 @Injectable()
 export class SalesService {
     constructor(
-        private readonly salesDbService: SalesDbService,
+        private readonly salesDbService: ISalesDbService,
         private readonly redisService: RedisService,
     ) {}
 

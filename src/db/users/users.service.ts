@@ -1,12 +1,13 @@
-import { PrismaService } from './prisma.service';
+import { PrismaService } from '../prisma.service';
 import { Users } from '@prisma/client';
-import { RedisService } from '../redis/redis.service';
-import CACHE_KEYS from '../redis/CACHE_KEYS';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
-import { ONE_HOUR_TTL } from '../shared/constants';
+import { ONE_HOUR_TTL } from '../../shared/constants';
+import { IUsersDbService } from './users.db.interface';
 
 @Injectable()
-export class UsersService extends PrismaService {
+export class UsersService extends PrismaService implements IUsersDbService {
     constructor(private readonly redisService: RedisService) {
         super();
     }

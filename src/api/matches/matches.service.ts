@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { add } from 'date-fns';
 import { formatMatch } from './formatters/format-match.formatter';
@@ -8,7 +8,7 @@ import { Match } from '../../db/matches/types/match.type';
 
 @Injectable()
 export class MatchesService {
-    constructor(private readonly matchsDbService: MatchsDbService) {}
+    constructor(private readonly matchsDbService: IMatchesDbService) {}
 
     getSeasonMatches(
         seasonStartYear: string,

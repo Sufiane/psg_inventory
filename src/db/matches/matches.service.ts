@@ -8,9 +8,10 @@ import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
+import { IMatchesDbService } from './matches.db.interface';
 
 @Injectable()
-export class MatchesService extends PrismaService {
+export class MatchesService extends PrismaService implements IMatchesDbService {
     constructor(private readonly redisService: RedisService) {
         super();
     }
