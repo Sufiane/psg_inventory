@@ -7,7 +7,9 @@ import { Injectable } from '@nestjs/common';
 import { IAccountingDbService } from './accounting.db.interface';
 
 @Injectable()
-export class AccountingService extends PrismaService implements IAccountingDbService {
+export class AccountingService implements IAccountingDbService {
+    constructor(private readonly prisma: PrismaService) {}
+
     async getAccounting(
         userId: string,
         status: SaleStatus,
@@ -21,7 +23,7 @@ export class AccountingService extends PrismaService implements IAccountingDbSer
             listedPrice: true,
         };
 
-        const dbResult = await this.sales.aggregate({
+        const dbResult = await this.prisma.sales.aggregate({
             _sum: fields,
             _avg: fields,
             _min: omit(fields, ['invest']),

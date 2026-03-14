@@ -11,10 +11,11 @@ import { OldestMatchSale } from './type/oldest-match-sale.type';
 import { ISalesDbService } from './sales.db.interface';
 
 @Injectable()
-export class SalesService extends PrismaService implements ISalesDbService {
-    constructor(private readonly redisService: RedisService) {
-        super();
-    }
+export class SalesService implements ISalesDbService {
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly redisService: RedisService,
+    ) {}
 
     static saleQuery = {
         include: {
@@ -34,7 +35,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
             return cachedData;
         }
 
-        const dbResult = await this.sales.findUnique({
+        const dbResult = await this.prisma.sales.findUnique({
             ...SalesService.saleQuery,
             where: {
                 id: saleId,
@@ -55,7 +56,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
             return cachedData;
         }
 
-        const dbResult = await this.sales.findMany({
+        const dbResult = await this.prisma.sales.findMany({
             ...SalesService.saleQuery,
             where: {
                 userId,
@@ -80,7 +81,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
         matchId: string;
         listedPrice: number;
     }): Promise<{ id: string }> {
-        const dbResult = await this.sales.create({
+        const dbResult = await this.prisma.sales.create({
             data: {
                 ...payload,
                 status: SaleStatus.PENDING,
@@ -107,7 +108,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
         sold?: boolean;
         status?: SaleStatus;
     }): Promise<void> {
-        const currentSale = await this.sales.findUnique({
+        const currentSale = await this.prisma.sales.findUnique({
             where: {
                 userId: payload.userId,
                 id: payload.saleId,
@@ -118,7 +119,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
             throw new Error('current_sale_not_found');
         }
 
-        await this.$transaction(async (tx) => {
+        await this.prisma.$transaction(async (tx) => {
             await tx.sales.update({
                 data: shake({
                     profit: payload.profit,
@@ -148,7 +149,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
     }
 
     async deleteSale(userId: string, saleId: string): Promise<void> {
-        await this.$transaction(async (tx) => {
+        await this.prisma.$transaction(async (tx) => {
             await tx.saleHistories.deleteMany({
                 where: {
                     saleId,
@@ -174,7 +175,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
         nbTickets?: number;
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch> {
-        return this.sales.findFirstOrThrow({
+        return this.prisma.sales.findFirstOrThrow({
             include: {
                 Match: {
                     include: {
@@ -192,7 +193,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
     }
 
     async cancelMany() {
-        await this.sales.updateMany({
+        await this.prisma.sales.updateMany({
             data: {
                 status: SaleStatus.CANCELLED,
             },
@@ -210,7 +211,7 @@ export class SalesService extends PrismaService implements ISalesDbService {
     }
 
     getOldestMatchSale(userId: string): Promise<OldestMatchSale> {
-        return this.sales.findFirstOrThrow({
+        return this.prisma.sales.findFirstOrThrow({
             include: {
                 Match: true,
             },

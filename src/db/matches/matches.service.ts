@@ -11,10 +11,11 @@ import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IMatchesDbService } from './matches.db.interface';
 
 @Injectable()
-export class MatchesService extends PrismaService implements IMatchesDbService {
-    constructor(private readonly redisService: RedisService) {
-        super();
-    }
+export class MatchesService implements IMatchesDbService {
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly redisService: RedisService,
+    ) {}
 
     static matchQuery(withResult: boolean = false) {
         return {
@@ -46,7 +47,7 @@ export class MatchesService extends PrismaService implements IMatchesDbService {
             return cachedData;
         }
 
-        const dbResult = await this.matches.findMany({
+        const dbResult = await this.prisma.matches.findMany({
             ...MatchesService.matchQuery(withResult),
             where: where,
         });
@@ -64,7 +65,7 @@ export class MatchesService extends PrismaService implements IMatchesDbService {
             return cachedData;
         }
 
-        const dbResult = await this.matches.findUnique({
+        const dbResult = await this.prisma.matches.findUnique({
             ...MatchesService.matchQuery(withResult),
             where: {
                 id,
@@ -78,8 +79,8 @@ export class MatchesService extends PrismaService implements IMatchesDbService {
 
     async loadMatches(matches: FormattedMatch[]): Promise<void> {
         for (const match of matches) {
-            await this.$transaction(async (tx) => {
-                const { id: opponentId } = await this.opponents.upsert({
+            await this.prisma.$transaction(async (tx) => {
+                const { id: opponentId } = await this.prisma.opponents.upsert({
                     select: {
                         id: true,
                     },
@@ -128,7 +129,7 @@ export class MatchesService extends PrismaService implements IMatchesDbService {
         };
     }): Promise<void> {
         try {
-            await this.matches.create({
+            await this.prisma.matches.create({
                 data: {
                     date: new Date(payload.date),
                     atHome: payload.atHome,

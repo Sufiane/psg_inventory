@@ -7,10 +7,11 @@ import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IUsersDbService } from './users.db.interface';
 
 @Injectable()
-export class UsersService extends PrismaService implements IUsersDbService {
-    constructor(private readonly redisService: RedisService) {
-        super();
-    }
+export class UsersService implements IUsersDbService {
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly redisService: RedisService,
+    ) {}
 
     async create(payload: {
         email: string;
@@ -18,7 +19,7 @@ export class UsersService extends PrismaService implements IUsersDbService {
         lastName: string;
         password: string;
     }): Promise<void> {
-        await this.users.create({ data: payload });
+        await this.prisma.users.create({ data: payload });
     }
 
     async findOneByEmail(email: string): Promise<Users | null> {
@@ -30,7 +31,7 @@ export class UsersService extends PrismaService implements IUsersDbService {
             return cachedData;
         }
 
-        const dbResult = await this.users.findUnique({
+        const dbResult = await this.prisma.users.findUnique({
             where: {
                 email,
             },
