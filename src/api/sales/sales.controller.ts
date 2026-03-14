@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { User } from '../../shared/decorators/user.decorator';
 import { GetSaleDto } from './dto/get-sale.dto';
-import { SalesService } from './sales.service';
+import { ISalesService } from './interfaces/sales.service.interface';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
@@ -9,7 +9,7 @@ import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('sales')
 export class SalesController {
-    constructor(private readonly salesService: SalesService) {}
+    constructor(private readonly salesService: ISalesService) {}
 
     @Get('/:saleId')
     getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {

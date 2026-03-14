@@ -1,16 +1,16 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Public } from '../../shared/decorators/public.decorator';
-import { UsersService } from './users.service';
+import { IUsersService } from './interfaces/users.service.interface';
 import { LocalAuthGuard } from '../../shared/guards/local.guard';
-import { AuthService } from '../../auth/auth.service';
+import { IAuthService } from '../../auth/interfaces/auth.service.interface';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('users')
 export class UsersController {
     constructor(
-        private readonly usersService: UsersService,
-        private readonly authService: AuthService,
+        private readonly usersService: IUsersService,
+        private readonly authService: IAuthService,
     ) {}
 
     @Public()

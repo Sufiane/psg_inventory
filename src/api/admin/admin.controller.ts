@@ -1,5 +1,5 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
-import { AdminService } from './admin.service';
+import { IAdminService } from './interfaces/admin.service.interface';
 import { LoadSeasonMatchesDto } from './dto/load-season-matches.dto';
 import { RolesGuard } from '../../shared/guards/role.guard';
 import { CreateMatchDto } from './dto/create-match.dto';
@@ -7,7 +7,7 @@ import { CreateMatchDto } from './dto/create-match.dto';
 @UseGuards(RolesGuard)
 @Controller('admin')
 export class AdminController {
-    constructor(private readonly adminService: AdminService) {}
+    constructor(private readonly adminService: IAdminService) {}
 
     @Post('/matches/load/current-season')
     async loadCurrentSeason(): Promise<void> {

@@ -5,9 +5,10 @@ import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 import { AuthenticatedUser } from '../shared/types/authenticated-user.type';
 import { BCRYPT_SALT_ROUNDS } from '../shared/constants';
+import { IAuthService } from './interfaces/auth.service.interface';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements IAuthService {
     constructor(
         private readonly usersDbService: IUsersDbService,
         private readonly jwtService: JwtService,

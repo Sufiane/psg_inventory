@@ -9,9 +9,10 @@ import { statusConverter } from './utils/status-converter.util';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { ONE_DAY_TTL } from '../../shared/constants';
+import { IAccountingService } from './interfaces/accounting.service.interface';
 
 @Injectable()
-export class AccountingService {
+export class AccountingService implements IAccountingService {
     constructor(
         private readonly accountingDbService: IAccountingDbService,
         private readonly salesDbService: ISalesDbService,
