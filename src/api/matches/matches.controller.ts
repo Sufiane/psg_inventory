@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 import { QueryMatchDto } from './dto/query-match.dto';
-import { MatchesService } from './matches.service';
+import { IMatchesService } from './interfaces/matches.service.interface';
 import { GetMatchDto } from './dto/get-match.dto';
 import { GetSeasonMatchesDto } from './dto/get-season-matches.dto';
 import { formatMatch } from './formatters/format-match.formatter';
@@ -8,7 +8,7 @@ import { FormattedMatch } from './types/formatted-match.type';
 
 @Controller('matches')
 export class MatchesController {
-    constructor(private readonly matchesService: MatchesService) {}
+    constructor(private readonly matchesService: IMatchesService) {}
 
     @Get('/current-season')
     async getCurrentSeason(

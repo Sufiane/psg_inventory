@@ -3,9 +3,10 @@ import { FootballDataService } from '../../football-data/football-data.service';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { PSG_ID } from '../../shared/constants';
+import { IAdminService } from './interfaces/admin.service.interface';
 
 @Injectable()
-export class AdminService {
+export class AdminService implements IAdminService {
     private readonly logger = new Logger(AdminService.name);
 
     constructor(

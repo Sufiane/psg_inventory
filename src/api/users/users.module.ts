@@ -3,10 +3,11 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { DbModule } from '../../db/db.module';
 import { AuthModule } from '../../auth/auth.module';
+import { IUsersService } from './interfaces/users.service.interface';
 
 @Module({
     imports: [DbModule, AuthModule],
     controllers: [UsersController],
-    providers: [UsersService],
+    providers: [{ provide: IUsersService, useClass: UsersService }],
 })
 export class UsersModule {}

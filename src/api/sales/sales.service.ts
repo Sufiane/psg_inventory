@@ -6,9 +6,10 @@ import { omit } from 'radash';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { PSG_COMMISSION } from '../../shared/constants';
+import { ISalesService } from './interfaces/sales.service.interface';
 
 @Injectable()
-export class SalesService {
+export class SalesService implements ISalesService {
     constructor(
         private readonly salesDbService: ISalesDbService,
         private readonly redisService: RedisService,

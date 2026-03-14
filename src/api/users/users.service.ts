@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { IUsersDbService } from '../../db/users/users.db.interface';
 import { omit } from 'radash';
 import { CreateUserDto } from './dto/create-user.dto';
-import { AuthService } from '../../auth/auth.service';
+import { IAuthService } from '../../auth/interfaces/auth.service.interface';
+import { IUsersService } from './interfaces/users.service.interface';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements IUsersService {
     constructor(
         private readonly userDbService: IUsersDbService,
-        private readonly authService: AuthService,
+        private readonly authService: IAuthService,
     ) {}
 
     async create(payload: CreateUserDto): Promise<void> {

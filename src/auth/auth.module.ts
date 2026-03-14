@@ -1,6 +1,7 @@
 import { DbModule } from '../db/db.module';
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { IAuthService } from './interfaces/auth.service.interface';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
@@ -27,7 +28,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             }),
         }),
     ],
-    providers: [AuthService, LocalStrategy, JwtStrategy],
-    exports: [AuthService],
+    providers: [
+        { provide: IAuthService, useClass: AuthService },
+        LocalStrategy,
+        JwtStrategy,
+    ],
+    exports: [IAuthService],
 })
 export class AuthModule {}

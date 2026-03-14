@@ -5,9 +5,10 @@ import { add } from 'date-fns';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
 import { Match } from '../../db/matches/types/match.type';
+import { IMatchesService } from './interfaces/matches.service.interface';
 
 @Injectable()
-export class MatchesService {
+export class MatchesService implements IMatchesService {
     constructor(private readonly matchsDbService: IMatchesDbService) {}
 
     getSeasonMatches(
