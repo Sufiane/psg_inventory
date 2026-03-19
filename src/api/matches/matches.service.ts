@@ -1,4 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { add } from 'date-fns';
@@ -42,7 +45,7 @@ export class MatchesService implements IMatchesService {
         const match = await this.matchsDbService.getOneMatch(matchId, withResult);
 
         if (!match) {
-            throw new NotFoundException('match_not_found');
+            throw new DomainException(ErrorCode.MATCH_NOT_FOUND);
         }
 
         return {

@@ -1,9 +1,12 @@
-import { PrismaService } from '../prisma.service';
+import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
-import { RedisService } from '../../redis/redis.service';
+
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-import { Injectable } from '@nestjs/common';
+import { RedisService } from '../../redis/redis.service';
+import { PrismaService } from '../prisma.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
@@ -116,7 +119,7 @@ export class SalesService implements ISalesDbService {
         });
 
         if (!currentSale) {
-            throw new Error('current_sale_not_found');
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
         await this.prisma.$transaction(async (tx) => {

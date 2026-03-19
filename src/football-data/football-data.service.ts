@@ -1,4 +1,7 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+
+import { DomainException } from '../common/exceptions/domain.exception';
+import { ErrorCode } from '../common/exceptions/error-codes.enum';
 import { ConfigService } from '@nestjs/config';
 import { TeamMatches } from './types/football-data-api.type';
 import { FormattedMatch } from '../shared/types/formatted-match.type';
@@ -41,7 +44,7 @@ export class FootballDataService {
                 status: response.status,
             });
 
-            throw new InternalServerErrorException('could_not_load_matches');
+            throw new DomainException(ErrorCode.COULD_NOT_LOAD_MATCHES);
         }
 
         const response = (await apiResponse.json()) as TeamMatches;

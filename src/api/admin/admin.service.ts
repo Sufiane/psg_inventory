@@ -1,4 +1,7 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { FootballDataService } from '../../football-data/football-data.service';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { CreateMatchDto } from './dto/create-match.dto';
@@ -33,7 +36,7 @@ export class AdminService implements IAdminService {
                 error: JSON.stringify(e, Object.getOwnPropertyNames(e)),
             });
 
-            throw new InternalServerErrorException();
+            throw new DomainException(ErrorCode.MATCH_CREATION_FAILED);
         }
     }
 }

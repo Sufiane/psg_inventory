@@ -1,4 +1,6 @@
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+
+import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { QueryMatchDto } from './dto/query-match.dto';
 import { IMatchesService } from './interfaces/matches.service.interface';
 import { GetMatchDto } from './dto/get-match.dto';
@@ -35,12 +37,10 @@ export class MatchesController {
         @Param() { matchId }: GetMatchDto,
         @Query() { withResult }: QueryMatchDto,
     ) {
-        const result = await this.matchesService.getMatch(matchId, withResult);
-
-        if (!result) {
-            throw new BadRequestException('match_not_found');
+        try {
+            return await this.matchesService.getMatch(matchId, withResult);
+        } catch (e) {
+            throw toHttpException(e);
         }
-
-        return result;
     }
 }
