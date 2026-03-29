@@ -40,7 +40,7 @@ export class MatchesService implements IMatchesDbService {
             where.date.lte = dates.to;
         }
 
-        const cacheKey = CACHE_KEYS.matches(dates.from, dates.to);
+        const cacheKey = CACHE_KEYS.matches(dates.from, dates.to, withResult);
         const cached = await this.redisService.get<Match[]>(cacheKey);
 
         if (cached !== null) {
