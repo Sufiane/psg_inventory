@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { User } from '../../shared/decorators/user.decorator';
 import { GetSaleDto } from './dto/get-sale.dto';
 import { ISalesService } from './interfaces/sales.service.interface';
@@ -12,13 +13,21 @@ export class SalesController {
     constructor(private readonly salesService: ISalesService) {}
 
     @Get('/:saleId')
-    getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {
-        return this.salesService.getSale(user.id, saleId);
+    async getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {
+        try {
+            return await this.salesService.getSale(user.id, saleId);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Get('/')
-    getSales(@User() user: AuthenticatedUser) {
-        return this.salesService.getSales(user.id);
+    async getSales(@User() user: AuthenticatedUser) {
+        try {
+            return await this.salesService.getSales(user.id);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Post('/')
@@ -26,12 +35,20 @@ export class SalesController {
         @User() user: AuthenticatedUser,
         @Body() payload: AddSaleDto,
     ): Promise<{ id: string }> {
-        return this.salesService.addSale(user.id, payload);
+        try {
+            return await this.salesService.addSale(user.id, payload);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Post('/update')
     async updateSale(@User() user: AuthenticatedUser, @Body() payload: UpdateSaleDto) {
-        await this.salesService.updateSale(user.id, payload);
+        try {
+            await this.salesService.updateSale(user.id, payload);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Delete('/:saleId')
@@ -39,6 +56,10 @@ export class SalesController {
         @User() user: AuthenticatedUser,
         @Param() { saleId }: DeleteSaleDto,
     ) {
-        await this.salesService.deleteSale(user.id, saleId);
+        try {
+            await this.salesService.deleteSale(user.id, saleId);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 }

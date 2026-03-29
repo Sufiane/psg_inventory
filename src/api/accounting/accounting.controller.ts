@@ -1,4 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
@@ -10,23 +11,37 @@ export class AccountingController {
     constructor(private readonly accountingService: IAccountingService) {}
 
     @Get('current-season')
-    getCurrentSeason(@User() user: AuthenticatedUser): Promise<TimePeriodAccounting> {
-        return this.accountingService.getCurrentSeason(user.id);
+    async getCurrentSeason(
+        @User() user: AuthenticatedUser,
+    ): Promise<TimePeriodAccounting> {
+        try {
+            return await this.accountingService.getCurrentSeason(user.id);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Get('all-time')
-    getAllTime(@User() user: AuthenticatedUser): Promise<TimePeriodAccounting> {
-        return this.accountingService.getAllTime(user.id);
+    async getAllTime(@User() user: AuthenticatedUser): Promise<TimePeriodAccounting> {
+        try {
+            return await this.accountingService.getAllTime(user.id);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Get('/season/:seasonStartYear')
-    getSeason(
+    async getSeason(
         @User() user: AuthenticatedUser,
         @Param() { seasonStartYear }: GetSeasonDto,
     ): Promise<TimePeriodAccounting> {
-        return this.accountingService.getGivenSeason(
-            user.id,
-            parseInt(seasonStartYear, 10),
-        );
+        try {
+            return await this.accountingService.getGivenSeason(
+                user.id,
+                parseInt(seasonStartYear, 10),
+            );
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 }
