@@ -116,6 +116,8 @@ export class MatchesService implements IMatchesDbService {
                 });
             });
         }
+
+        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
     }
 
     async createMatch(payload: {

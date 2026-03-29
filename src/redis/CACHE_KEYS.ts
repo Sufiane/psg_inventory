@@ -2,6 +2,7 @@ export default {
     accounting: (userId: string, start: Date, end?: Date) =>
         `accounting:user:id:${userId}:start:${start.toString()}:end:${end?.toString()}`,
     invalidateAccounting: (userId: string) => `accounting:user:id:${userId}:*`,
+    invalidateMatches: () => 'matches:*',
     match: (matchId: string) => `match:id:${matchId}`,
     matches: (from: Date, to?: Date) =>
         `matches:start:${from.toString()}:end:${to?.toString()}`,

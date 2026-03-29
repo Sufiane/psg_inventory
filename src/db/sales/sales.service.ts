@@ -196,6 +196,18 @@ export class SalesService implements ISalesDbService {
     }
 
     async cancelMany() {
+        const affected = await this.prisma.sales.findMany({
+            select: { id: true, userId: true },
+            where: {
+                Match: { is: { date: { lte: new Date() } } },
+                status: SaleStatus.PENDING,
+            },
+        });
+
+        if (affected.length === 0) {
+            return;
+        }
+
         await this.prisma.sales.updateMany({
             data: {
                 status: SaleStatus.CANCELLED,
@@ -211,6 +223,16 @@ export class SalesService implements ISalesDbService {
                 status: SaleStatus.PENDING,
             },
         });
+
+        const userIds = [...new Set(affected.map((s) => s.userId))];
+
+        await Promise.allSettled([
+            ...affected.map((s) => this.redisService.invalidate(CACHE_KEYS.sale(s.id))),
+            ...userIds.map((id) => this.redisService.invalidate(CACHE_KEYS.sales(id))),
+            ...userIds.map((id) =>
+                this.redisService.invalidatePattern(CACHE_KEYS.invalidateAccounting(id)),
+            ),
+        ]);
     }
 
     getOldestMatchSale(userId: string): Promise<OldestMatchSale> {
