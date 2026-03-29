@@ -2,7 +2,7 @@ import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 
 export class BaseRedis implements OnModuleInit, OnModuleDestroy {
-    public readonly redis: RedisClientType;
+    protected readonly redis: RedisClientType;
 
     constructor(redisUrl: string) {
         this.redis = createClient({
