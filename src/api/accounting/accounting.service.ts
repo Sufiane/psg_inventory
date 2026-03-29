@@ -106,7 +106,13 @@ export class AccountingService implements IAccountingService {
         const cached = await this.redisService.get<TimePeriodAccounting>(cacheKey);
 
         if (cached !== null) {
-            return cached.value;
+            return (
+                cached.value ?? {
+                    realized: null,
+                    pending: null,
+                    unrealized: null,
+                }
+            );
         }
 
         const [realizedAccounting, unrealizedAccounting, pendingAccounting] =

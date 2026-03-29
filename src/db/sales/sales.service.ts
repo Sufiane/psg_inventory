@@ -56,7 +56,8 @@ export class SalesService implements ISalesDbService {
         const cached = await this.redisService.get<Sale[]>(cacheKey);
 
         if (cached !== null) {
-            return cached.value;
+            // in case we have a valid null value
+            return cached.value ?? [];
         }
 
         const dbResult = await this.prisma.sales.findMany({
