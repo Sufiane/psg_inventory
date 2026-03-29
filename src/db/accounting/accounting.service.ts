@@ -46,6 +46,6 @@ export class AccountingService implements IAccountingDbService {
             return null;
         }
 
-        return dbResult as unknown as Promise<AccountingAggregate>;
+        return dbResult as unknown as AccountingAggregate;
     }
 }
