@@ -41,10 +41,10 @@ export class MatchesService implements IMatchesDbService {
         }
 
         const cacheKey = CACHE_KEYS.matches(dates.from, dates.to);
-        const cachedData = await this.redisService.get<Match[]>(cacheKey);
+        const cached = await this.redisService.get<Match[]>(cacheKey);
 
-        if (cachedData) {
-            return cachedData;
+        if (cached !== null) {
+            return cached.value;
         }
 
         const dbResult = await this.prisma.matches.findMany({
@@ -59,10 +59,10 @@ export class MatchesService implements IMatchesDbService {
 
     async getOneMatch(id: string, withResult: boolean = false): Promise<Match | null> {
         const cacheKey = CACHE_KEYS.match(id);
-        const cachedData = await this.redisService.get<Match | null>(cacheKey);
+        const cached = await this.redisService.get<Match>(cacheKey);
 
-        if (cachedData) {
-            return cachedData;
+        if (cached !== null) {
+            return cached.value;
         }
 
         const dbResult = await this.prisma.matches.findUnique({

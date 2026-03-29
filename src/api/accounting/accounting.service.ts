@@ -103,12 +103,10 @@ export class AccountingService implements IAccountingService {
         },
     ): Promise<TimePeriodAccounting> {
         const cacheKey = CACHE_KEYS.accounting(userId, dates.start, dates.end);
-        const cachedData = await this.redisService.get<TimePeriodAccounting | null>(
-            cacheKey,
-        );
+        const cached = await this.redisService.get<TimePeriodAccounting>(cacheKey);
 
-        if (cachedData) {
-            return cachedData;
+        if (cached !== null) {
+            return cached.value;
         }
 
         const [realizedAccounting, unrealizedAccounting, pendingAccounting] =

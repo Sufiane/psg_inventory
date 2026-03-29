@@ -32,10 +32,10 @@ export class SalesService implements ISalesDbService {
 
     async getOneSale(userId: string, saleId: string): Promise<Sale | null> {
         const cacheKey = CACHE_KEYS.sale(saleId);
-        const cachedData = await this.redisService.get<Sale>(cacheKey);
+        const cached = await this.redisService.get<Sale>(cacheKey);
 
-        if (cachedData) {
-            return cachedData;
+        if (cached !== null) {
+            return cached.value;
         }
 
         const dbResult = await this.prisma.sales.findUnique({
@@ -53,10 +53,10 @@ export class SalesService implements ISalesDbService {
 
     async getSales(userId: string): Promise<Sale[]> {
         const cacheKey = CACHE_KEYS.sales(userId);
-        const cachedData = await this.redisService.get<Sale[]>(cacheKey);
+        const cached = await this.redisService.get<Sale[]>(cacheKey);
 
-        if (cachedData) {
-            return cachedData;
+        if (cached !== null) {
+            return cached.value;
         }
 
         const dbResult = await this.prisma.sales.findMany({

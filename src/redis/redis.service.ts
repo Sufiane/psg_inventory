@@ -15,20 +15,22 @@ export class RedisService extends BaseRedis {
         await this.redis.set(key, JSON.stringify(value), ttl ? { EX: ttl } : {});
     }
 
-    async get<T>(key: string): Promise<T | null> {
+    async get<T>(key: string): Promise<{ value: T | null } | null> {
         const cachedValue = await this.redis.get(key);
 
-        if (!cachedValue) {
+        if (cachedValue === null) {
             return null;
         }
 
-        return JSON.parse(cachedValue, (_key, value) => {
-            if (typeof value === 'string' && ISO_DATE_REGEX.test(value)) {
-                return new Date(value);
-            }
+        return {
+            value: JSON.parse(cachedValue, (_key, value) => {
+                if (typeof value === 'string' && ISO_DATE_REGEX.test(value)) {
+                    return new Date(value);
+                }
 
-            return value;
-        });
+                return value;
+            }),
+        };
     }
 
     async invalidate(key: string) {
