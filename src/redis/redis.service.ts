@@ -26,4 +26,16 @@ export class RedisService extends BaseRedis {
     async invalidate(key: string) {
         await this.redis.del(key);
     }
+
+    async invalidatePattern(pattern: string) {
+        const keys: string[] = [];
+
+        for await (const key of this.redis.scanIterator({ MATCH: pattern })) {
+            keys.push(key);
+        }
+
+        if (keys.length > 0) {
+            await this.redis.del(keys);
+        }
+    }
 }

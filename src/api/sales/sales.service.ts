@@ -50,7 +50,9 @@ export class SalesService implements ISalesService {
             profit: payload.listedPrice ? this.getProfit(payload.listedPrice) : undefined,
         });
 
-        await this.redisService.invalidate(CACHE_KEYS.invalidateAccounting(userId));
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateAccounting(userId),
+        );
     }
 
     getProfit(price: number): number {
@@ -60,6 +62,8 @@ export class SalesService implements ISalesService {
     async deleteSale(userId: string, saleId: string) {
         await this.salesDbService.deleteSale(userId, saleId);
 
-        await this.redisService.invalidate(CACHE_KEYS.invalidateAccounting(userId));
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateAccounting(userId),
+        );
     }
 }
