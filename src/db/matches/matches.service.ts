@@ -44,7 +44,8 @@ export class MatchesService implements IMatchesDbService {
         const cached = await this.redisService.get<Match[]>(cacheKey);
 
         if (cached !== null) {
-            return cached.value;
+            // if by mistake there is a null value in cache
+            return cached.value ?? [];
         }
 
         const dbResult = await this.prisma.matches.findMany({
