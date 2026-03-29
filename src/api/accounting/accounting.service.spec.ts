@@ -249,7 +249,7 @@ describe('AccountingService', () => {
         describe('when there is cache', () => {
             it('should return the cache data', async () => {
                 const expectedResult = {} as TimePeriodAccounting;
-                redisService.get.mockResolvedValueOnce(expectedResult);
+                redisService.get.mockResolvedValueOnce({ value: expectedResult });
 
                 const userId = 'userId';
                 const dates = {
