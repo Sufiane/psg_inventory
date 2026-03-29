@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ConflictException,
     HttpException,
     InternalServerErrorException,
     NotFoundException,
@@ -19,6 +20,8 @@ const map: Record<ErrorCode, () => HttpException> = {
         new InternalServerErrorException(ErrorCode.COULD_NOT_LOAD_MATCHES),
     [ErrorCode.INTERNAL_ERROR]: () =>
         new InternalServerErrorException(ErrorCode.INTERNAL_ERROR),
+    [ErrorCode.EMAIL_ALREADY_EXISTS]: () =>
+        new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS),
 };
 
 export function toHttpException(e: unknown): HttpException {

@@ -5,6 +5,9 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IUsersDbService } from './users.db.interface';
+import { Prisma } from '.prisma/client';
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 
 @Injectable()
 export class UsersService implements IUsersDbService {
@@ -19,7 +22,14 @@ export class UsersService implements IUsersDbService {
         lastName: string;
         password: string;
     }): Promise<void> {
-        await this.prisma.users.create({ data: payload });
+        try {
+            await this.prisma.users.create({ data: payload });
+        } catch (e) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+                throw new DomainException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            }
+            throw e;
+        }
     }
 
     async findOneByEmail(email: string): Promise<Users | null> {

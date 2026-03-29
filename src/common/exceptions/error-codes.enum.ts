@@ -5,4 +5,5 @@ export enum ErrorCode {
     MATCH_CREATION_FAILED = 'match_creation_failed',
     COULD_NOT_LOAD_MATCHES = 'could_not_load_matches',
     INTERNAL_ERROR = 'internal_error',
+    EMAIL_ALREADY_EXISTS = 'email_already_exists',
 }

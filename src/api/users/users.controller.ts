@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Public } from '../../shared/decorators/public.decorator';
 import { IUsersService } from './interfaces/users.service.interface';
@@ -17,7 +18,11 @@ export class UsersController {
     @Post('/')
     // todo should return a jwt
     async createUser(@Body() payload: CreateUserDto) {
-        await this.usersService.create(payload);
+        try {
+            await this.usersService.create(payload);
+        } catch (e) {
+            throw toHttpException(e);
+        }
     }
 
     @Public()
