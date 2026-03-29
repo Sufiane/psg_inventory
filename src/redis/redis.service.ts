@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BaseRedis } from './base.service';
 
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
+
 @Injectable()
 export class RedisService extends BaseRedis {
     // todo use node  env to customize TTL for testing
@@ -20,7 +22,13 @@ export class RedisService extends BaseRedis {
             return null;
         }
 
-        return JSON.parse(cachedValue);
+        return JSON.parse(cachedValue, (_key, value) => {
+            if (typeof value === 'string' && ISO_DATE_REGEX.test(value)) {
+                return new Date(value);
+            }
+
+            return value;
+        });
     }
 
     async invalidate(key: string) {
