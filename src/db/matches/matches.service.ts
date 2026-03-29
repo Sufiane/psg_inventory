@@ -163,6 +163,8 @@ export class MatchesService implements IMatchesDbService {
             throw e;
         }
 
-        await this.redisService.invalidate(CACHE_KEYS.matches(new Date(payload.date)));
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateMatches(new Date(payload.date)),
+        );
     }
 }
