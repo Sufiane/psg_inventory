@@ -7,6 +7,8 @@ import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { PSG_COMMISSION } from '../../shared/constants';
 import { ISalesService } from './interfaces/sales.service.interface';
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -15,8 +17,14 @@ export class SalesService implements ISalesService {
         private readonly redisService: RedisService,
     ) {}
 
-    getSale(userId: string, saleId: string) {
-        return this.salesDbService.getOneSale(userId, saleId);
+    async getSale(userId: string, saleId: string) {
+        const sale = await this.salesDbService.getOneSale(userId, saleId);
+
+        if (!sale) {
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+        }
+
+        return sale;
     }
 
     async getSales(userId: string) {
