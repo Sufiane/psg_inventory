@@ -58,7 +58,7 @@ describe('formatAggregate', () => {
             highest: {
                 profit: payload.max.profit,
                 price: payload.max.listedPrice,
-                nbTickets: payload.min.nbTickets,
+                nbTickets: payload.max.nbTickets,
                 match: {
                     opponent: payload.max.match.opponent,
                     date: payload.max.match.date,
