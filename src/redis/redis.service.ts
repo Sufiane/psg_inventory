@@ -6,7 +6,6 @@ const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
 
 @Injectable()
 export class RedisService extends BaseRedis {
-    // todo use node  env to customize TTL for testing
     constructor(configService: ConfigService<{ REDIS_URL: string }, true>) {
         super(configService.get('REDIS_URL'));
     }
