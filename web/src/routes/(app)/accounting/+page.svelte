@@ -56,23 +56,29 @@
         <AccountingCardSkeleton title="Pending" />
     </div>
 {:then accounting}
-    {@const realizedProfit = accounting.realized?.totalProfit ?? 0}
+    {@const realizedProceeds = accounting.realized?.totalProfit ?? 0}
+    {@const realizedInvest = accounting.realized?.totalInvest ?? 0}
     {@const seasonInvest = accounting.totalSeasonInvestment}
-    {@const netProfit = realizedProfit - seasonInvest}
+    {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
 
     <section class="bg-white rounded-lg border border-slate-200 p-4 mb-6">
         <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
             Net realized profit
         </h2>
         <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
-            <dt class="text-slate-500">Realized profit</dt>
+            <dt class="text-slate-500">Realized proceeds</dt>
             <dd
-                class="text-right font-mono {realizedProfit < 0
+                class="text-right font-mono {realizedProceeds < 0
                     ? 'text-red-600'
                     : 'text-emerald-600'}"
             >
-                {money(realizedProfit)}
+                {money(realizedProceeds)}
             </dd>
+
+            <dt class="text-slate-500">
+                Ticket invest{tab === 'all-time' ? ' (all time)' : ''}
+            </dt>
+            <dd class="text-right font-mono text-slate-700">−{money(realizedInvest)}</dd>
 
             <dt class="text-slate-500">
                 Season investment{tab === 'all-time' ? ' (all seasons)' : ''}
