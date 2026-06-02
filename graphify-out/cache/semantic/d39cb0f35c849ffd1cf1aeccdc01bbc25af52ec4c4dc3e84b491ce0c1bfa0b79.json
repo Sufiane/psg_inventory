@@ -1,0 +1,1 @@
+{"nodes": [{"id": "utils_convert_string_to_boolean", "label": "convertStringToBoolean", "file_type": "code", "source_file": "src/shared/utils/string-to-boolean.utils.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

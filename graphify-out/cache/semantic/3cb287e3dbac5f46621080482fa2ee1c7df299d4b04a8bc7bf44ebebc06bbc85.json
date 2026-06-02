@@ -1,0 +1,1 @@
+{"nodes": [{"id": "accounting_get_season_dto", "label": "GetSeasonDto", "file_type": "code", "source_file": "src/api/accounting/dto/get-season.dto.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

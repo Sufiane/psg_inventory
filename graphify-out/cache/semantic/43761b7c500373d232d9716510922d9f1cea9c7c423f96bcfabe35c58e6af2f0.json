@@ -1,0 +1,1 @@
+{"nodes": [{"id": "accounting_accounting_db_interface", "label": "IAccountingDbService", "file_type": "code", "source_file": "src/db/accounting/accounting.db.interface.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

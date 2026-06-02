@@ -1,0 +1,1 @@
+{"nodes": [{"id": "types_get_accounting_type", "label": "AccountingAggregate", "file_type": "code", "source_file": "src/db/accounting/types/get-accounting.type.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

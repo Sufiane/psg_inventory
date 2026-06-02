@@ -1,0 +1,8 @@
+node_modules
+.svelte-kit
+.wrangler
+.env
+.env.*
+!.env.example
+build
+dist

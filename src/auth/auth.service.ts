@@ -33,8 +33,8 @@ export class AuthService implements IAuthService {
         return omit(user, ['password', 'updatedAt']);
     }
 
-    async login(user: AuthenticatedUser) {
-        const payload = { email: user.email, sub: user.id };
+    async login(user: AuthenticatedUser & { role?: string }): Promise<{ token: string }> {
+        const payload = { email: user.email, sub: user.id, role: user.role };
 
         return {
             token: this.jwtService.sign(payload),
