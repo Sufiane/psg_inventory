@@ -3,7 +3,10 @@ import type { Actions, PageServerLoad } from './$types';
 import { JWT_COOKIE } from '$lib/api';
 import { backendUrl } from '$lib/env';
 import { decodeJwt } from '$lib/jwt';
+import { Logger } from '$lib/logger';
 import type { LoginResponse } from '$lib/types';
+
+const logger = new Logger('LoginAction');
 
 export const load: PageServerLoad = ({ locals, url }) => {
     if (locals.user) {
@@ -28,16 +31,38 @@ export const actions: Actions = {
             });
         }
 
-        const response = await event.fetch(`${backendUrl(event)}/users/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
+        const target = `${backendUrl(event)}/users/login`;
+        let response: Response;
+
+        try {
+            response = await event.fetch(target, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+        } catch (err) {
+            logger.error('login fetch failed', {
+                target,
+                error: err instanceof Error ? err.message : String(err),
+            });
+
+            return fail(502, {
+                email,
+                message: `Backend unreachable at ${target}.`,
+            });
+        }
 
         if (!response.ok) {
+            const bodyText = await response.text();
+            logger.error('login non-ok', {
+                target,
+                status: response.status,
+                body: bodyText,
+            });
+
             return fail(response.status, {
                 email,
-                message: 'Invalid email or password.',
+                message: `Login failed (${response.status}): ${bodyText.slice(0, 200) || 'no body'}`,
             });
         }
 
