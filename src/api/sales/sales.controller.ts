@@ -6,11 +6,36 @@ import { ISalesService } from './interfaces/sales.service.interface';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
+import { GetSeasonSalesDto } from './dto/get-season-sales.dto';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('sales')
 export class SalesController {
     constructor(private readonly salesService: ISalesService) {}
+
+    @Get('/current-season')
+    async getCurrentSeasonSales(@User() user: AuthenticatedUser) {
+        try {
+            return await this.salesService.getCurrentSeasonSales(user.id);
+        } catch (e) {
+            throw toHttpException(e);
+        }
+    }
+
+    @Get('/season/:seasonStartYear')
+    async getSeasonSales(
+        @User() user: AuthenticatedUser,
+        @Param() { seasonStartYear }: GetSeasonSalesDto,
+    ) {
+        try {
+            return await this.salesService.getSeasonSales(
+                user.id,
+                Number.parseInt(seasonStartYear, 10),
+            );
+        } catch (e) {
+            throw toHttpException(e);
+        }
+    }
 
     @Get('/:saleId')
     async getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {

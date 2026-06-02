@@ -77,6 +77,42 @@ export class SalesService implements ISalesDbService {
         return dbResult;
     }
 
+    async getSalesByRange(
+        userId: string,
+        range: { from: Date; to: Date },
+    ): Promise<Sale[]> {
+        const cacheKey = CACHE_KEYS.salesByRange(userId, range.from, range.to);
+        const cached = await this.redisService.get<Sale[]>(cacheKey);
+
+        if (cached !== null) {
+            return cached.value ?? [];
+        }
+
+        const dbResult = await this.prisma.sales.findMany({
+            ...SalesService.saleQuery,
+            where: {
+                userId,
+                Match: {
+                    is: {
+                        date: {
+                            gte: range.from,
+                            lt: range.to,
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                Match: {
+                    date: 'asc',
+                },
+            },
+        });
+
+        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
+
+        return dbResult;
+    }
+
     async addSale(payload: {
         userId: string;
         profit: number;
@@ -95,7 +131,9 @@ export class SalesService implements ISalesDbService {
             },
         });
 
-        await this.redisService.invalidate(CACHE_KEYS.sales(payload.userId));
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateSales(payload.userId),
+        );
 
         return {
             id: dbResult.id,
@@ -148,7 +186,9 @@ export class SalesService implements ISalesDbService {
             });
         });
 
-        await this.redisService.invalidate(CACHE_KEYS.sales(payload.userId));
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateSales(payload.userId),
+        );
         await this.redisService.invalidate(CACHE_KEYS.sale(payload.saleId));
     }
 
@@ -168,7 +208,7 @@ export class SalesService implements ISalesDbService {
             });
         });
 
-        await this.redisService.invalidate(CACHE_KEYS.sales(userId));
+        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
         await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
     }
 
@@ -229,7 +269,9 @@ export class SalesService implements ISalesDbService {
 
         await Promise.allSettled([
             ...affected.map((s) => this.redisService.invalidate(CACHE_KEYS.sale(s.id))),
-            ...userIds.map((id) => this.redisService.invalidate(CACHE_KEYS.sales(id))),
+            ...userIds.map((id) =>
+                this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(id)),
+            ),
             ...userIds.map((id) =>
                 this.redisService.invalidatePattern(CACHE_KEYS.invalidateAccounting(id)),
             ),

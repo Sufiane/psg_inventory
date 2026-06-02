@@ -3,20 +3,41 @@
   import { money } from '$lib/format';
 
   let { data }: { data: PageData } = $props();
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 </script>
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold">Sales</h1>
-  <a
-    href="/sales/new"
-    class="rounded bg-blue-600 text-white px-3 py-1.5 text-sm hover:bg-blue-700"
-  >
-    + New sale
-  </a>
+
+  <div class="flex items-center gap-3">
+    <form method="GET" class="flex items-center gap-2">
+      <label class="text-sm text-slate-600" for="year">Season</label>
+      <select
+        id="year"
+        name="year"
+        class="rounded border border-slate-300 px-2 py-1 text-sm"
+        onchange={(event) => event.currentTarget.form?.requestSubmit()}
+      >
+        <option value="">Current</option>
+        {#each years as year (year)}
+          <option value={year} selected={data.year === year}>{year}</option>
+        {/each}
+      </select>
+    </form>
+
+    <a
+      href="/sales/new"
+      class="rounded bg-blue-600 text-white px-3 py-1.5 text-sm hover:bg-blue-700"
+    >
+      + New sale
+    </a>
+  </div>
 </div>
 
 {#if data.sales.length === 0}
-  <p class="text-slate-400 text-sm">No sales yet.</p>
+  <p class="text-slate-400 text-sm">No sales in this season.</p>
 {:else}
   <div class="bg-white rounded-lg border border-slate-200 overflow-hidden">
     <table class="w-full text-sm">

@@ -9,5 +9,8 @@ export default {
         `matches:start:${from.toISOString()}:end:${to?.toISOString()}:withResult:${withResult}`,
     sale: (saleId: string) => `sale:id:${saleId}`,
     sales: (userId: string) => `user:id:${userId}:sales`,
+    salesByRange: (userId: string, from: Date, to: Date) =>
+        `user:id:${userId}:sales:start:${from.toISOString()}:end:${to.toISOString()}`,
+    invalidateSales: (userId: string) => `user:id:${userId}:sales*`,
     userByEmail: (email: string) => `user:email:${email}`,
 };

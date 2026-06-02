@@ -6,9 +6,11 @@ import { omit } from 'radash';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { PSG_COMMISSION } from '../../shared/constants';
-import { ISalesService } from './interfaces/sales.service.interface';
+import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
+import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
+import { Sale } from '../../db/sales/type/sale.type';
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -27,18 +29,41 @@ export class SalesService implements ISalesService {
         return sale;
     }
 
-    async getSales(userId: string) {
+    async getSales(userId: string): Promise<FormattedSale[]> {
         const sales = await this.salesDbService.getSales(userId);
 
-        return sales.map((sale) => {
-            return {
-                ...omit(sale, ['Match', 'userId', 'matchId']),
-                opponent: {
-                    id: sale.Match.Opponent.id,
-                    name: sale.Match.Opponent.name,
-                },
-            };
+        return sales.map((sale) => this.formatSale(sale));
+    }
+
+    async getCurrentSeasonSales(userId: string): Promise<FormattedSale[]> {
+        const { start, end } = getCurrentSeasonDate();
+        const sales = await this.salesDbService.getSalesByRange(userId, {
+            from: start,
+            to: end,
         });
+
+        return sales.map((sale) => this.formatSale(sale));
+    }
+
+    async getSeasonSales(
+        userId: string,
+        seasonStartYear: number,
+    ): Promise<FormattedSale[]> {
+        const from = new Date(seasonStartYear, 7, 1);
+        const to = new Date(seasonStartYear + 1, 7, 1);
+        const sales = await this.salesDbService.getSalesByRange(userId, { from, to });
+
+        return sales.map((sale) => this.formatSale(sale));
+    }
+
+    private formatSale(sale: Sale): FormattedSale {
+        return {
+            ...omit(sale, ['Match', 'userId', 'matchId']),
+            opponent: {
+                id: sale.Match.Opponent.id,
+                name: sale.Match.Opponent.name,
+            },
+        };
     }
 
     async addSale(userId: string, payload: AddSaleDto): Promise<{ id: string }> {

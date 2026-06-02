@@ -6,6 +6,10 @@ import { OldestMatchSale } from './type/oldest-match-sale.type';
 export abstract class ISalesDbService {
     abstract getOneSale(userId: string, saleId: string): Promise<Sale | null>;
     abstract getSales(userId: string): Promise<Sale[]>;
+    abstract getSalesByRange(
+        userId: string,
+        range: { from: Date; to: Date },
+    ): Promise<Sale[]>;
     abstract addSale(payload: {
         userId: string;
         profit: number;
