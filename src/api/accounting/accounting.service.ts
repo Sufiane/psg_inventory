@@ -160,9 +160,15 @@ export class AccountingService implements IAccountingService {
               }
             : null;
 
+        // For the all-time view, only count passes for seasons that have already
+        // started — a future season's pass is paid but not yet "in use", so
+        // including it would understate the historical net.
+        const currentSeasonStartYear = seasonStartYearFromDate(new Date());
         const totalSeasonInvestment =
             seasonStartYear === null
-                ? allPasses.reduce((sum, pass) => sum + pass.price, 0)
+                ? allPasses
+                      .filter((pass) => pass.seasonStartYear <= currentSeasonStartYear)
+                      .reduce((sum, pass) => sum + pass.price, 0)
                 : (seasonInvestmentInfo?.price ?? 0);
 
         const accounting: TimePeriodAccounting = {
