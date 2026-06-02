@@ -1,12 +1,15 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
+    import { enhance } from '$app/forms';
     import { money } from '$lib/format';
+    import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
     let pass = $derived(data.pass);
+    let submitting = $state<'upsert' | 'remove' | null>(null);
 </script>
 
 <div class="flex items-center justify-between mb-6">
@@ -46,7 +49,19 @@
             Season {data.year} pass
         </h2>
 
-        <form method="POST" action="?/upsert" class="space-y-4">
+        <form
+            method="POST"
+            action="?/upsert"
+            class="space-y-4"
+            use:enhance={() => {
+                submitting = 'upsert';
+
+                return async ({ update }) => {
+                    await update();
+                    submitting = null;
+                };
+            }}
+        >
             <input type="hidden" name="seasonStartYear" value={data.year} />
 
             <label class="block">
@@ -101,8 +116,12 @@
             <div class="flex items-center gap-3">
                 <button
                     type="submit"
-                    class="rounded bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
+                    disabled={submitting !== null}
+                    class="rounded bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                 >
+                    {#if submitting === 'upsert'}
+                        <Spinner size="1em" />
+                    {/if}
                     {pass ? 'Update' : 'Create'}
                 </button>
 
@@ -111,13 +130,21 @@
                         type="submit"
                         formaction="?/remove"
                         formnovalidate
-                        class="rounded border border-red-300 text-red-600 px-4 py-2 text-sm font-medium hover:bg-red-50"
+                        disabled={submitting !== null}
+                        class="rounded border border-red-300 text-red-600 px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                         onclick={(event) => {
                             if (!confirm(`Delete season ${data.year} pass?`)) {
                                 event.preventDefault();
+
+                                return;
                             }
+
+                            submitting = 'remove';
                         }}
                     >
+                        {#if submitting === 'remove'}
+                            <Spinner size="1em" />
+                        {/if}
                         Delete
                     </button>
                 {/if}
