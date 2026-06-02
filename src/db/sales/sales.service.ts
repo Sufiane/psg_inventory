@@ -24,6 +24,7 @@ export class SalesService implements ISalesDbService {
         include: {
             Match: {
                 select: {
+                    date: true,
                     Opponent: true,
                 },
             },

@@ -51,6 +51,7 @@ export type SaleDetail = {
     nbTickets: number;
     status: SaleStatus;
     Match: {
+        date: string;
         Opponent: { id: string; name: string };
     };
 };
