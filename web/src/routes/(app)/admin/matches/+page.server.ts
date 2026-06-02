@@ -109,4 +109,19 @@ export const actions: Actions = {
 
         return { success: true, info: `Match vs ${opponent} created.` };
     },
+
+    cancelStaleSales: async (event) => {
+        try {
+            await api(event, '/cron/cancel-sales', {
+                method: 'POST',
+                expectEmpty: true,
+            });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to run cron.';
+
+            return fail(400, { message });
+        }
+
+        return { success: true, info: 'Stale unrealized sales cancelled.' };
+    },
 };

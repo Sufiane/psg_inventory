@@ -7,7 +7,7 @@
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
 </script>
 
-<h1 class="text-2xl font-semibold mb-6">Admin · Matches</h1>
+<h1 class="text-2xl font-semibold mb-6">Admin board</h1>
 
 {#if form?.success}
   <p class="mb-4 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-3 py-2">
@@ -116,6 +116,28 @@
         class="rounded bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700"
       >
         Create match
+      </button>
+    </form>
+  </section>
+
+  <section class="bg-white rounded-lg border border-slate-200 p-6 md:col-span-2">
+    <h2 class="font-semibold mb-2">Operations</h2>
+    <p class="text-sm text-slate-500 mb-4">
+      Cancel unrealized sales whose match has already passed. The cron runs on a schedule;
+      this button forces it immediately.
+    </p>
+
+    <form method="POST" action="?/cancelStaleSales">
+      <button
+        type="submit"
+        class="rounded bg-amber-600 text-white px-4 py-2 text-sm font-medium hover:bg-amber-700"
+        onclick={(event) => {
+          if (!confirm('Force-cancel stale unrealized sales now?')) {
+            event.preventDefault();
+          }
+        }}
+      >
+        Cancel stale unrealized sales
       </button>
     </form>
   </section>
