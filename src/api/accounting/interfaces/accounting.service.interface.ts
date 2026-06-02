@@ -16,5 +16,6 @@ export abstract class IAccountingService {
     abstract getSeason(
         userId: string,
         dates: { start: Date; end?: Date },
+        seasonStartYear: number | null,
     ): Promise<TimePeriodAccounting>;
 }

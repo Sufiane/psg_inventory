@@ -15,6 +15,7 @@
         <a href="/" class="hover:text-blue-600">Dashboard</a>
         <a href="/matches" class="hover:text-blue-600">Matches</a>
         <a href="/sales" class="hover:text-blue-600">Sales</a>
+        <a href="/season" class="hover:text-blue-600">Season</a>
         <a href="/accounting" class="hover:text-blue-600">Accounting</a>
         {#if user.role === 'ADMIN'}
           <a href="/admin/matches" class="hover:text-blue-600">Admin</a>

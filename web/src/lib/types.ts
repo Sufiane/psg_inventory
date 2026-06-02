@@ -80,10 +80,39 @@ export type Accounting = {
     lowest: MaxMinData;
 };
 
+export type SeasonInvestment = {
+    price: number;
+    seasonStartYear: number;
+    category: string | null;
+    row: string | null;
+    seat: string | null;
+};
+
 export type TimePeriodAccounting = {
     realized: Accounting | null;
     unrealized: Accounting | null;
     pending: Accounting | null;
+    seasonInvestment: SeasonInvestment | null;
+    totalSeasonInvestment: number;
+};
+
+export type SeasonPass = {
+    id: string;
+    userId: string;
+    seasonStartYear: number;
+    price: number;
+    category: string | null;
+    row: string | null;
+    seat: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type UpsertSeasonPassPayload = {
+    price: number;
+    category?: string;
+    row?: string;
+    seat?: string;
 };
 
 export type AddSalePayload = {

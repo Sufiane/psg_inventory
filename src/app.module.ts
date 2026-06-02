@@ -10,6 +10,7 @@ import { AccountingModule } from './api/accounting/accounting.module';
 import { CronModule } from './crons/cron.module';
 import { AdminModule } from './api/admin/admin.module';
 import { RedisModule } from './redis/redis.module';
+import { SeasonPassesModule } from './api/season-passes/season-passes.module';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { RedisModule } from './redis/redis.module';
         CronModule,
         AdminModule,
         RedisModule,
+        SeasonPassesModule,
     ],
     providers: [
         {

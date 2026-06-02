@@ -19,17 +19,34 @@ enum Roles {
 }
 
 model Users {
-  id        String   @id @default(uuid())
-  firstName String   @map("first_name")
-  lastName  String   @map("last_name")
-  email     String   @unique
-  password  String
-  Sales     Sales[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt() @map("updated_at")
-  role      Roles    @default(USER)
+  id           String         @id @default(uuid())
+  firstName    String         @map("first_name")
+  lastName     String         @map("last_name")
+  email        String         @unique
+  password     String
+  Sales        Sales[]
+  SeasonPasses SeasonPasses[]
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt() @map("updated_at")
+  role         Roles          @default(USER)
 
   @@map("users")
+}
+
+model SeasonPasses {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  seasonStartYear Int      @map("season_start_year")
+  price           Int
+  category        String?
+  row             String?
+  seat            String?
+  User            Users    @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt() @map("updated_at")
+
+  @@unique([userId, seasonStartYear])
+  @@map("season_passes")
 }
 
 enum Competition {

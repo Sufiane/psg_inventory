@@ -60,6 +60,8 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                seasonInvestment: null,
+                totalSeasonInvestment: 0,
             };
 
             const startDate = new Date('2022-01-01');
@@ -91,6 +93,8 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                seasonInvestment: null,
+                totalSeasonInvestment: 0,
             };
 
             const getSeasonSpy = jest.spyOn(service, 'getSeason');
@@ -116,6 +120,8 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                seasonInvestment: null,
+                totalSeasonInvestment: 0,
             };
 
             const oldestMatchSale = {
@@ -257,7 +263,7 @@ describe('AccountingService', () => {
                     end: undefined,
                 };
 
-                await expect(service.getSeason(userId, dates)).resolves.toEqual(
+                await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
                     expectedResult,
                 );
                 expect(redisService.get).toHaveBeenCalledTimes(1);
@@ -292,7 +298,7 @@ describe('AccountingService', () => {
                     unrealized,
                 } as TimePeriodAccounting;
 
-                await expect(service.getSeason(userId, dates)).resolves.toEqual(
+                await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
                     expectedResult,
                 );
                 expect(redisService.get).toHaveBeenCalledTimes(1);
