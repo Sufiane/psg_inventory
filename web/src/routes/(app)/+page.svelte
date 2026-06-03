@@ -2,13 +2,81 @@
     import type { PageData } from './$types';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
+    import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
-    import { competitionLabel, dateTime } from '$lib/format';
+    import { competitionLabel, dateTime, money } from '$lib/format';
 
     let { data }: { data: PageData } = $props();
 </script>
 
 <h1 class="text-2xl font-semibold mb-6">Current season</h1>
+
+{#await data.accounting}
+    <NetProfitSkeleton />
+{:then accounting}
+    {@const realizedProceeds = accounting.realized?.totalProfit ?? 0}
+    {@const realizedInvest = accounting.realized?.totalInvest ?? 0}
+    {@const seasonInvest = accounting.totalSeasonInvestment}
+    {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
+
+    <section class="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            Net realized profit
+        </h2>
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
+            <dt class="text-slate-500">Realized proceeds</dt>
+            <dd
+                class="text-right font-mono {realizedProceeds < 0
+                    ? 'text-red-600'
+                    : 'text-emerald-600'}"
+            >
+                {money(realizedProceeds)}
+            </dd>
+
+            <dt class="text-slate-500">Ticket invest</dt>
+            <dd class="text-right font-mono text-slate-700">−{money(realizedInvest)}</dd>
+
+            <dt class="text-slate-500">Season investment</dt>
+            <dd class="text-right font-mono text-slate-700">−{money(seasonInvest)}</dd>
+
+            <dt class="text-slate-900 font-medium pt-2 border-t border-slate-100">
+                Net
+            </dt>
+            <dd
+                class="text-right pt-2 border-t border-slate-100 font-mono font-semibold {netProfit <
+                0
+                    ? 'text-red-600'
+                    : 'text-emerald-600'}"
+            >
+                {money(netProfit)}
+            </dd>
+        </dl>
+
+        {#if accounting.seasonInvestment}
+            <p class="mt-3 text-xs text-slate-500">
+                Season {accounting.seasonInvestment.seasonStartYear}
+                {#if accounting.seasonInvestment.category}
+                    · {accounting.seasonInvestment.category}
+                {/if}
+                {#if accounting.seasonInvestment.row}
+                    · Row {accounting.seasonInvestment.row}
+                {/if}
+                {#if accounting.seasonInvestment.seat}
+                    · Seat {accounting.seasonInvestment.seat}
+                {/if}
+            </p>
+        {:else}
+            <p class="mt-3 text-xs text-slate-500">
+                No season pass recorded.
+                <a href="/season" class="text-blue-600 hover:underline"
+                    >Set it on the Season tab.</a
+                >
+            </p>
+        {/if}
+    </section>
+{:catch}
+    <!-- error is shown in the cards block below -->
+{/await}
 
 <div class="grid md:grid-cols-3 gap-4 mb-8">
     {#await data.accounting}
