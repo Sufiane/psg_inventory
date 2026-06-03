@@ -158,12 +158,14 @@
             data={accounting.unrealized}
             {showSeason}
             variant="compact"
+            tone="sunk"
         />
         <AccountingCard
             title="Pending"
             data={accounting.pending}
             {showSeason}
             variant="compact"
+            tone="warning"
         />
     </div>
     </div>

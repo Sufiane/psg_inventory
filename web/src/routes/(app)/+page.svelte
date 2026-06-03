@@ -97,10 +97,14 @@
             <AccountingCard title="Realized" data={accounting.realized} />
         </div>
         <div in:fade={{ duration: 140, easing: cubicOut, delay: 30 }}>
-            <AccountingCard title="Unrealized" data={accounting.unrealized} />
+            <AccountingCard
+                title="Unrealized"
+                data={accounting.unrealized}
+                tone="sunk"
+            />
         </div>
         <div in:fade={{ duration: 160, easing: cubicOut, delay: 60 }}>
-            <AccountingCard title="Pending" data={accounting.pending} />
+            <AccountingCard title="Pending" data={accounting.pending} tone="warning" />
         </div>
     {:catch err}
         <p

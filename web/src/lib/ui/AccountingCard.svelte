@@ -7,12 +7,32 @@
         data,
         showSeason = false,
         variant = 'full',
+        tone = 'neutral',
     }: {
         title: string;
         data: Accounting | null;
         showSeason?: boolean;
         variant?: 'full' | 'compact';
+        tone?: 'neutral' | 'warning' | 'sunk';
     } = $props();
+
+    const TONE_CLASS: Record<'neutral' | 'warning' | 'sunk', string> = {
+        neutral: 'text-ink',
+        warning: 'text-warning',
+        sunk: 'text-sunk',
+    };
+
+    /** Color for Best/Worst money inside the full variant.
+     * Neutral tone preserves the signed positive/negative behaviour
+     * (realized P&L). Other tones override the sign because the value
+     * isn't realized cash, regardless of its arithmetic sign. */
+    function moneyTone(profit: number): string {
+        if (tone !== 'neutral') {
+            return TONE_CLASS[tone];
+        }
+
+        return profit < 0 ? 'text-negative' : 'text-positive';
+    }
 
     function seasonOf(iso: string | Date): number {
         const date = typeof iso === 'string' ? new Date(iso) : iso;
@@ -37,10 +57,9 @@
             <p class="mt-2 text-sm text-ink-faint">No data.</p>
         {:else}
             <p
-                class="mt-2 font-mono text-2xl font-semibold tracking-tight {data.totalProfit <
-                0
-                    ? 'text-negative'
-                    : 'text-positive'}"
+                class="mt-2 font-mono text-2xl font-semibold tracking-tight {TONE_CLASS[
+                    tone
+                ]}"
             >
                 {signedMoney(data.totalProfit)}
             </p>
@@ -82,11 +101,7 @@
                 <div class="mt-4 pt-4 border-t border-line text-xs text-ink-muted space-y-1.5">
                     <div class="flex flex-wrap items-baseline gap-x-2">
                         <span class="font-medium text-ink">Best</span>
-                        <span
-                            class="font-mono {data.highest.profit < 0
-                                ? 'text-negative'
-                                : 'text-positive'}"
-                        >
+                        <span class="font-mono {moneyTone(data.highest.profit)}">
                             {signedMoney(data.highest.profit)}
                         </span>
                         <span
@@ -99,11 +114,7 @@
                     </div>
                     <div class="flex flex-wrap items-baseline gap-x-2">
                         <span class="font-medium text-ink">Worst</span>
-                        <span
-                            class="font-mono {data.lowest.profit < 0
-                                ? 'text-negative'
-                                : 'text-positive'}"
-                        >
+                        <span class="font-mono {moneyTone(data.lowest.profit)}">
                             {signedMoney(data.lowest.profit)}
                         </span>
                         <span

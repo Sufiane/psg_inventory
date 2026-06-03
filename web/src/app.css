@@ -25,6 +25,60 @@
 
     --color-negative: oklch(0.5 0.18 25);
     --color-negative-strong: oklch(0.44 0.2 25);
+
+    /* Status-of-money tones. Both reserved for amounts that AREN'T realized cash.
+       - warning: pending sales (in-flight, may land, may not). Amber/saffron.
+       - sunk: unrealized sales (cancelled, never coming). Muted plum, deliberately
+         hue-shifted away from --color-primary (270) so it doesn't read as brand. */
+    --color-warning: oklch(0.55 0.13 70);
+    --color-warning-strong: oklch(0.48 0.14 70);
+
+    --color-sunk: oklch(0.45 0.07 320);
+    --color-sunk-strong: oklch(0.38 0.08 320);
+}
+
+/* Dark-mode token overrides. Tailwind v4 generates utilities like
+   `text-ink` as `color: var(--color-ink)`, so flipping the CSS variables
+   at :root cascades through every utility without changing markup. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-ink: oklch(0.94 0.02 270);
+        --color-ink-muted: oklch(0.72 0.03 270);
+        --color-ink-faint: oklch(0.55 0.03 270);
+
+        --color-surface: oklch(0.18 0.01 270);
+        --color-surface-subtle: oklch(0.13 0.01 270);
+        --color-surface-strong: oklch(0.26 0.015 270);
+
+        --color-line: oklch(0.28 0.015 270);
+        --color-line-strong: oklch(0.4 0.02 270);
+
+        --color-primary: oklch(0.72 0.15 270);
+        --color-primary-hover: oklch(0.8 0.16 270);
+
+        --color-positive: oklch(0.72 0.15 155);
+        --color-positive-strong: oklch(0.8 0.17 155);
+
+        --color-negative: oklch(0.7 0.18 25);
+        --color-negative-strong: oklch(0.78 0.2 25);
+
+        --color-warning: oklch(0.74 0.16 70);
+        --color-warning-strong: oklch(0.8 0.17 70);
+
+        --color-sunk: oklch(0.7 0.14 320);
+        --color-sunk-strong: oklch(0.78 0.15 320);
+    }
+
+    /* Skeleton highlight needs to mix toward the lighter surface so it
+       still reads as a sweep against the darker base. */
+    .skeleton {
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in oklch, var(--color-surface-strong) 90%, white) 50%,
+            transparent 100%
+        );
+    }
 }
 
 /* Type system — Linear-leaning quiet light.
