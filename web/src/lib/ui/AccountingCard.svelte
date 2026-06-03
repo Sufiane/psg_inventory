@@ -1,12 +1,18 @@
 <script lang="ts">
     import type { Accounting } from '$lib/types';
-    import { money, competitionLabel } from '$lib/format';
+    import { money, signedMoney, competitionLabel } from '$lib/format';
 
     let {
         title,
         data,
         showSeason = false,
-    }: { title: string; data: Accounting | null; showSeason?: boolean } = $props();
+        variant = 'full',
+    }: {
+        title: string;
+        data: Accounting | null;
+        showSeason?: boolean;
+        variant?: 'full' | 'compact';
+    } = $props();
 
     function seasonOf(iso: string | Date): number {
         const date = typeof iso === 'string' ? new Date(iso) : iso;
@@ -15,59 +21,101 @@
     }
 </script>
 
-<section class="bg-white rounded-lg border border-slate-200 p-4">
-    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
-        {title}
-    </h2>
+{#if variant === 'compact'}
+    <section class="bg-surface rounded-lg border border-line p-4">
+        <header class="flex items-baseline justify-between gap-3">
+            <h2 class="text-sm font-semibold text-ink-muted">{title}</h2>
+            {#if data}
+                <span class="text-xs text-ink-faint">
+                    {data.totalNbTickets}
+                    {data.totalNbTickets === 1 ? 'ticket' : 'tickets'}
+                </span>
+            {/if}
+        </header>
 
-    {#if !data}
-        <p class="text-slate-400 text-sm">No data.</p>
-    {:else}
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt class="text-slate-500">Total sales</dt>
-            <dd class="text-right font-medium">{money(data.totalSales)}</dd>
-
-            <dt class="text-slate-500">Total profit</dt>
-            <dd
-                class="text-right font-medium {data.totalProfit < 0
-                    ? 'text-red-600'
-                    : 'text-emerald-600'}"
+        {#if !data}
+            <p class="mt-2 text-sm text-ink-faint">No data.</p>
+        {:else}
+            <p
+                class="mt-2 font-mono text-2xl font-semibold tracking-tight {data.totalProfit <
+                0
+                    ? 'text-negative'
+                    : 'text-positive'}"
             >
-                {money(data.totalProfit)}
-            </dd>
-
-            <dt class="text-slate-500">Total invest</dt>
-            <dd class="text-right">{money(data.totalInvest)}</dd>
-
-            <dt class="text-slate-500">Tickets</dt>
-            <dd class="text-right">{data.totalNbTickets}</dd>
-
-            <dt class="text-slate-500">Avg price</dt>
-            <dd class="text-right">{money(data.averageTicketPrice)}</dd>
-
-            <dt class="text-slate-500">Avg profit</dt>
-            <dd class="text-right">{money(data.averageProfit)}</dd>
-        </dl>
-
-        {#if data.highest?.match}
-            <div
-                class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1"
-            >
-                <div>
-                    Best: {money(data.highest.profit)} — vs {data.highest.match.opponent}
-                    ({competitionLabel(data.highest.match.competition)})
-                    {#if showSeason}
-                        · Season {seasonOf(data.highest.match.date)}
-                    {/if}
-                </div>
-                <div>
-                    Worst: {money(data.lowest.profit)} — vs {data.lowest.match.opponent}
-                    ({competitionLabel(data.lowest.match.competition)})
-                    {#if showSeason}
-                        · Season {seasonOf(data.lowest.match.date)}
-                    {/if}
-                </div>
-            </div>
+                {signedMoney(data.totalProfit)}
+            </p>
+            <p class="mt-1 text-xs text-ink-muted">
+                <span class="font-mono">{money(data.totalSales)}</span> listed value
+            </p>
         {/if}
-    {/if}
-</section>
+    </section>
+{:else}
+    <section class="bg-surface rounded-lg border border-line p-5">
+        <h2 class="text-base font-semibold tracking-tight text-ink mb-4">
+            {title}
+        </h2>
+
+        {#if !data}
+            <p class="text-sm text-ink-muted">No data.</p>
+        {:else}
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+                <dt class="text-ink-muted">Total sales</dt>
+                <dd class="text-right font-mono text-ink">{money(data.totalSales)}</dd>
+
+                <dt class="text-ink-muted">Tickets</dt>
+                <dd class="text-right font-mono text-ink" data-numeric>
+                    {data.totalNbTickets}
+                </dd>
+
+                <dt class="text-ink-muted">Avg price</dt>
+                <dd class="text-right font-mono text-ink">
+                    {money(data.averageTicketPrice)}
+                </dd>
+
+                <dt class="text-ink-muted">Avg profit</dt>
+                <dd class="text-right font-mono text-ink">
+                    {money(data.averageProfit)}
+                </dd>
+            </dl>
+
+            {#if data.highest?.match}
+                <div class="mt-4 pt-4 border-t border-line text-xs text-ink-muted space-y-1.5">
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                        <span class="font-medium text-ink">Best</span>
+                        <span
+                            class="font-mono {data.highest.profit < 0
+                                ? 'text-negative'
+                                : 'text-positive'}"
+                        >
+                            {signedMoney(data.highest.profit)}
+                        </span>
+                        <span
+                            >vs {data.highest.match.opponent} ({competitionLabel(
+                                data.highest.match.competition,
+                            )}){#if showSeason}, Season {seasonOf(
+                                    data.highest.match.date,
+                                )}{/if}</span
+                        >
+                    </div>
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                        <span class="font-medium text-ink">Worst</span>
+                        <span
+                            class="font-mono {data.lowest.profit < 0
+                                ? 'text-negative'
+                                : 'text-positive'}"
+                        >
+                            {signedMoney(data.lowest.profit)}
+                        </span>
+                        <span
+                            >vs {data.lowest.match.opponent} ({competitionLabel(
+                                data.lowest.match.competition,
+                            )}){#if showSeason}, Season {seasonOf(
+                                    data.lowest.match.date,
+                                )}{/if}</span
+                        >
+                    </div>
+                </div>
+            {/if}
+        {/if}
+    </section>
+{/if}

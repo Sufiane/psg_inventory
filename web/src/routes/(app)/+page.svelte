@@ -1,15 +1,17 @@
 <script lang="ts">
     import type { PageData } from './$types';
+    import { fade } from 'svelte/transition';
+    import { cubicOut } from 'svelte/easing';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
-    import { competitionLabel, dateTime, money } from '$lib/format';
+    import { competitionLabel, dateTime, signedMoney } from '$lib/format';
 
     let { data }: { data: PageData } = $props();
 </script>
 
-<h1 class="text-2xl font-semibold mb-6">Current season</h1>
+<h1 class="text-2xl font-semibold tracking-tight text-ink mb-6">Current season</h1>
 
 {#await data.accounting}
     <NetProfitSkeleton />
@@ -19,41 +21,46 @@
     {@const seasonInvest = accounting.totalSeasonInvestment}
     {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
 
-    <section class="bg-white rounded-lg border border-slate-200 p-4 mb-6">
-        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+    <section
+        in:fade={{ duration: 120, easing: cubicOut }}
+        class="bg-surface rounded-lg border border-line p-5 mb-6 max-w-lg"
+        aria-labelledby="dashboard-net-heading"
+    >
+        <h2 id="dashboard-net-heading" class="text-sm font-medium text-ink-muted">
             Net realized profit
         </h2>
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm max-w-md">
-            <dt class="text-slate-500">Realized proceeds</dt>
+        <p
+            class="mt-1 font-mono text-3xl font-semibold tracking-tight {netProfit < 0
+                ? 'text-negative-strong'
+                : 'text-positive-strong'}"
+            aria-live="polite"
+        >
+            {signedMoney(netProfit)}
+        </p>
+
+        <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+            <dt class="text-ink-muted">Realized proceeds</dt>
             <dd
                 class="text-right font-mono {realizedProceeds < 0
-                    ? 'text-red-600'
-                    : 'text-emerald-600'}"
+                    ? 'text-negative'
+                    : 'text-positive'}"
             >
-                {money(realizedProceeds)}
+                {signedMoney(realizedProceeds)}
             </dd>
 
-            <dt class="text-slate-500">Ticket invest</dt>
-            <dd class="text-right font-mono text-slate-700">−{money(realizedInvest)}</dd>
+            <dt class="text-ink-muted">Ticket invest</dt>
+            <dd class="text-right font-mono text-ink-muted">
+                {signedMoney(-realizedInvest)}
+            </dd>
 
-            <dt class="text-slate-500">Season investment</dt>
-            <dd class="text-right font-mono text-slate-700">−{money(seasonInvest)}</dd>
-
-            <dt class="text-slate-900 font-medium pt-2 border-t border-slate-100">
-                Net
-            </dt>
-            <dd
-                class="text-right pt-2 border-t border-slate-100 font-mono font-semibold {netProfit <
-                0
-                    ? 'text-red-600'
-                    : 'text-emerald-600'}"
-            >
-                {money(netProfit)}
+            <dt class="text-ink-muted">Season investment</dt>
+            <dd class="text-right font-mono text-ink-muted">
+                {signedMoney(-seasonInvest)}
             </dd>
         </dl>
 
         {#if accounting.seasonInvestment}
-            <p class="mt-3 text-xs text-slate-500">
+            <p class="mt-4 text-xs text-ink-muted">
                 Season {accounting.seasonInvestment.seasonStartYear}
                 {#if accounting.seasonInvestment.category}
                     · {accounting.seasonInvestment.category}
@@ -66,9 +73,11 @@
                 {/if}
             </p>
         {:else}
-            <p class="mt-3 text-xs text-slate-500">
+            <p class="mt-4 text-xs text-ink-muted">
                 No season pass recorded.
-                <a href="/season" class="text-blue-600 hover:underline"
+                <a
+                    href="/season"
+                    class="text-primary font-medium hover:text-primary-hover hover:underline"
                     >Set it on the Season tab.</a
                 >
             </p>
@@ -84,25 +93,32 @@
         <AccountingCardSkeleton title="Unrealized" />
         <AccountingCardSkeleton title="Pending" />
     {:then accounting}
-        <AccountingCard title="Realized" data={accounting.realized} />
-        <AccountingCard title="Unrealized" data={accounting.unrealized} />
-        <AccountingCard title="Pending" data={accounting.pending} />
+        <div in:fade={{ duration: 120, easing: cubicOut }}>
+            <AccountingCard title="Realized" data={accounting.realized} />
+        </div>
+        <div in:fade={{ duration: 140, easing: cubicOut, delay: 30 }}>
+            <AccountingCard title="Unrealized" data={accounting.unrealized} />
+        </div>
+        <div in:fade={{ duration: 160, easing: cubicOut, delay: 60 }}>
+            <AccountingCard title="Pending" data={accounting.pending} />
+        </div>
     {:catch err}
         <p
-            class="md:col-span-3 rounded bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2"
+            role="alert"
+            class="md:col-span-3 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
         >
             Failed to load accounting: {err?.message ?? 'unknown error'}
         </p>
     {/await}
 </div>
 
-<section class="bg-white rounded-lg border border-slate-200 p-4">
-    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+<section class="bg-surface rounded-lg border border-line p-5">
+    <h2 class="text-base font-semibold tracking-tight text-ink mb-4">
         Upcoming matches
     </h2>
 
     {#await data.matches}
-        <ul class="divide-y divide-slate-100">
+        <ul class="divide-y divide-line">
             {#each Array(3) as _, i (i)}
                 <li class="py-2 flex items-center gap-3 text-sm">
                     <Skeleton width="8rem" height="0.85rem" />
@@ -116,20 +132,30 @@
             .filter((match) => new Date(match.date) >= new Date())
             .slice(0, 5)}
         {#if upcoming.length === 0}
-            <p class="text-slate-400 text-sm">No upcoming matches.</p>
+            <p
+                in:fade={{ duration: 120, easing: cubicOut }}
+                class="text-ink-faint text-sm"
+            >
+                No upcoming matches.
+            </p>
         {:else}
-            <ul class="divide-y divide-slate-100">
+            <ul
+                in:fade={{ duration: 120, easing: cubicOut }}
+                class="divide-y divide-line"
+            >
                 {#each upcoming as match (match.id)}
                     <li class="py-2 flex items-center gap-3 text-sm">
-                        <span class="w-32 text-slate-500">{dateTime(match.date)}</span>
-                        <span class="flex-1">
+                        <span class="w-32 text-ink-muted">{dateTime(match.date)}</span>
+                        <span class="flex-1 text-ink">
                             {match.atHome ? 'vs' : '@'}
                             <strong>{match.opponent}</strong>
                         </span>
-                        <span class="text-slate-400 text-xs"
+                        <span class="text-ink-faint text-xs"
                             >{competitionLabel(match.competition)}</span
                         >
-                        <a href="/matches/{match.id}" class="text-blue-600 hover:underline"
+                        <a
+                            href="/matches/{match.id}"
+                            class="text-primary font-medium hover:text-primary-hover hover:underline"
                             >View</a
                         >
                     </li>
@@ -137,7 +163,7 @@
             </ul>
         {/if}
     {:catch err}
-        <p class="text-red-700 text-sm">
+        <p role="alert" class="text-negative-strong text-sm">
             Failed to load matches: {err?.message ?? 'unknown error'}
         </p>
     {/await}

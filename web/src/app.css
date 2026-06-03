@@ -1,1 +1,115 @@
 @import 'tailwindcss';
+
+/* Restrained palette tuned to PRODUCT.md ("sharp / quiet / precise").
+   All neutrals carry a faint chroma toward the brand hue (270, ink-violet)
+   so the surfaces feel cohesive with the primary without reading as
+   "tinted". Semantic positive / negative are deep ledger tones, not
+   alert-grade. OKLCH throughout. */
+@theme {
+    --color-ink: oklch(0.22 0.05 270);
+    --color-ink-muted: oklch(0.48 0.04 270);
+    --color-ink-faint: oklch(0.62 0.03 270);
+
+    --color-surface: oklch(0.995 0.003 270);
+    --color-surface-subtle: oklch(0.975 0.005 270);
+    --color-surface-strong: oklch(0.94 0.008 270);
+
+    --color-line: oklch(0.91 0.008 270);
+    --color-line-strong: oklch(0.84 0.012 270);
+
+    --color-primary: oklch(0.42 0.14 270);
+    --color-primary-hover: oklch(0.34 0.15 270);
+
+    --color-positive: oklch(0.48 0.13 155);
+    --color-positive-strong: oklch(0.42 0.14 155);
+
+    --color-negative: oklch(0.5 0.18 25);
+    --color-negative-strong: oklch(0.44 0.2 25);
+}
+
+/* Type system — Linear-leaning quiet light.
+   System sans for UI, system mono for numerics; tabular figures locked
+   so columns of money line up at any size. */
+:root {
+    font-feature-settings: 'kern' 1;
+}
+
+h1,
+h2,
+h3 {
+    text-wrap: balance;
+}
+
+.font-mono,
+[data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1, 'kern' 1;
+}
+
+/* Skeleton placeholder.
+   - Stays invisible for the first 180ms so fast loads never flash a placeholder.
+   - After the delay, a soft horizontal sheen sweeps across a tinted base.
+   - Highlight color is mixed from the surface tokens so it ties to the OKLCH palette
+     instead of feeling like a stock gray-on-gray pulse.
+   - Reduced-motion is honored by the global `@media (prefers-reduced-motion)` block
+     below; both keyframes degrade to a static visible block. */
+.skeleton {
+    opacity: 0;
+    background-color: var(--color-surface-strong);
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--color-surface) 70%, transparent) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation:
+        skeleton-reveal 200ms ease-out 180ms forwards,
+        skeleton-shimmer 1.8s ease-in-out 180ms infinite;
+}
+
+/* Wrapper around a whole skeleton card. Defers the entire frame so
+   fast loads never reveal an empty bordered shell either. No shimmer
+   on the frame itself; only the inner `.skeleton` rectangles shimmer. */
+.skeleton-card {
+    opacity: 0;
+    animation: skeleton-reveal 200ms ease-out 180ms forwards;
+}
+
+@keyframes skeleton-reveal {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes skeleton-shimmer {
+    from {
+        background-position: 100% 0;
+    }
+    to {
+        background-position: -100% 0;
+    }
+}
+
+/* Global keyboard focus. `:where` keeps specificity at 0 so component
+   styles can override; `:focus-visible` only fires on keyboard focus,
+   not on mouse clicks. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-pulse {
+        animation: none;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0ms !important;
+        animation-duration: 0ms !important;
+    }
+}

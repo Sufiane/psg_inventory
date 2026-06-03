@@ -14,6 +14,6 @@
 
 <span
     aria-hidden="true"
-    class="inline-block bg-slate-200 animate-pulse {rounded} {extra}"
+    class="skeleton inline-block {rounded} {extra}"
     style="width: {width}; height: {height};"
 ></span>
