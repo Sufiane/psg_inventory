@@ -122,10 +122,12 @@
         {/if}
     </section>
 
+    {@const showSeason = tab === 'all-time'}
+
     <div class="grid md:grid-cols-3 gap-4">
-        <AccountingCard title="Realized" data={accounting.realized} />
-        <AccountingCard title="Unrealized" data={accounting.unrealized} />
-        <AccountingCard title="Pending" data={accounting.pending} />
+        <AccountingCard title="Realized" data={accounting.realized} {showSeason} />
+        <AccountingCard title="Unrealized" data={accounting.unrealized} {showSeason} />
+        <AccountingCard title="Pending" data={accounting.pending} {showSeason} />
     </div>
 {:catch err}
     <p class="rounded bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
