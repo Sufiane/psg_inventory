@@ -155,6 +155,40 @@ h3 {
     border-radius: 2px;
 }
 
+/* Form-control affordances. Hover and focus both promote the border
+   to ink so the field reads as clickable / active without needing
+   a heavy ring. */
+:where(input:not([type='checkbox']):not([type='radio']), select, textarea):hover {
+    border-color: var(--color-ink-muted);
+}
+
+:where(input:not([type='checkbox']):not([type='radio']), select, textarea):focus {
+    border-color: var(--color-ink);
+}
+
+/* Hide native number-input spinners. Financial inputs read cleaner
+   without the up/down buttons; users can type freely. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type='number'] {
+    -moz-appearance: textfield;
+}
+
+/* Hide the native scrollbar on horizontally-scrollable containers
+   that need to scroll on narrow viewports but shouldn't show the
+   bar (primary nav, tab strips). Scrolling still works. */
+.no-scrollbar {
+    scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-pulse {
         animation: none;

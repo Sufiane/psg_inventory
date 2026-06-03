@@ -1,17 +1,21 @@
 <script lang="ts">
     import type { Accounting } from '$lib/types';
-    import { money, signedMoney, competitionLabel } from '$lib/format';
+    import { money, signedMoney, competitionLabel, shortDate } from '$lib/format';
 
     let {
         title,
         data,
+        subtitle,
         showSeason = false,
+        showDate = false,
         variant = 'full',
         tone = 'neutral',
     }: {
         title: string;
         data: Accounting | null;
+        subtitle?: string;
         showSeason?: boolean;
+        showDate?: boolean;
         variant?: 'full' | 'compact';
         tone?: 'neutral' | 'warning' | 'sunk';
     } = $props();
@@ -31,7 +35,15 @@
             return TONE_CLASS[tone];
         }
 
-        return profit < 0 ? 'text-negative' : 'text-positive';
+        if (profit < 0) {
+            return 'text-negative';
+        }
+
+        if (profit > 0) {
+            return 'text-positive';
+        }
+
+        return 'text-ink';
     }
 
     function seasonOf(iso: string | Date): number {
@@ -52,6 +64,10 @@
                 </span>
             {/if}
         </header>
+
+        {#if subtitle}
+            <p class="mt-0.5 text-xs text-ink-faint">{subtitle}</p>
+        {/if}
 
         {#if !data}
             <p class="mt-2 text-sm text-ink-faint">No data.</p>
@@ -107,7 +123,7 @@
                         <span
                             >vs {data.highest.match.opponent} ({competitionLabel(
                                 data.highest.match.competition,
-                            )}){#if showSeason}, Season {seasonOf(
+                            )}){#if showDate}, {shortDate(data.highest.match.date)}{/if}{#if showSeason}, Season {seasonOf(
                                     data.highest.match.date,
                                 )}{/if}</span
                         >
@@ -120,7 +136,7 @@
                         <span
                             >vs {data.lowest.match.opponent} ({competitionLabel(
                                 data.lowest.match.competition,
-                            )}){#if showSeason}, Season {seasonOf(
+                            )}){#if showDate}, {shortDate(data.lowest.match.date)}{/if}{#if showSeason}, Season {seasonOf(
                                     data.lowest.match.date,
                                 )}{/if}</span
                         >

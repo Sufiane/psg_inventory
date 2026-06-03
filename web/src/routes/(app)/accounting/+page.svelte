@@ -93,8 +93,9 @@
         <p
             class="mt-1 font-mono text-3xl font-semibold tracking-tight {netProfit < 0
                 ? 'text-negative-strong'
-                : 'text-positive-strong'}"
-            aria-live="polite"
+                : netProfit > 0
+                  ? 'text-positive-strong'
+                  : 'text-ink'}"
         >
             {signedMoney(netProfit)}
         </p>
@@ -104,7 +105,9 @@
             <dd
                 class="text-right font-mono {realizedProceeds < 0
                     ? 'text-negative'
-                    : 'text-positive'}"
+                    : realizedProceeds > 0
+                      ? 'text-positive'
+                      : 'text-ink'}"
             >
                 {signedMoney(realizedProceeds)}
             </dd>
@@ -150,11 +153,17 @@
     </section>
 
     <div class="mb-4">
-        <AccountingCard title="Realized" data={accounting.realized} {showSeason} />
+        <AccountingCard
+            title="Realized"
+            data={accounting.realized}
+            {showSeason}
+            showDate={!showSeason}
+        />
     </div>
     <div class="grid sm:grid-cols-2 gap-4">
         <AccountingCard
             title="Unrealized"
+            subtitle="Cancelled, won't settle."
             data={accounting.unrealized}
             {showSeason}
             variant="compact"
@@ -162,6 +171,7 @@
         />
         <AccountingCard
             title="Pending"
+            subtitle="Listed, awaiting sale."
             data={accounting.pending}
             {showSeason}
             variant="compact"

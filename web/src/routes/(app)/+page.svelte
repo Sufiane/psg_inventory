@@ -9,9 +9,42 @@
     import { competitionLabel, dateTime, signedMoney } from '$lib/format';
 
     let { data }: { data: PageData } = $props();
+
+    function netTone(value: number): string {
+        if (value < 0) {
+            return 'text-negative-strong';
+        }
+
+        if (value > 0) {
+            return 'text-positive-strong';
+        }
+
+        return 'text-ink';
+    }
+
+    function proceedsTone(value: number): string {
+        if (value < 0) {
+            return 'text-negative';
+        }
+
+        if (value > 0) {
+            return 'text-positive';
+        }
+
+        return 'text-ink';
+    }
 </script>
 
-<h1 class="text-2xl font-semibold tracking-tight text-ink mb-6">Current season</h1>
+<div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight text-ink">Current season</h1>
+
+    <a
+        href="/sales/new"
+        class="rounded bg-primary text-surface px-3 py-2 text-sm font-medium hover:bg-primary-hover transition-colors"
+    >
+        New sale
+    </a>
+</div>
 
 {#await data.accounting}
     <NetProfitSkeleton />
@@ -30,21 +63,16 @@
             Net realized profit
         </h2>
         <p
-            class="mt-1 font-mono text-3xl font-semibold tracking-tight {netProfit < 0
-                ? 'text-negative-strong'
-                : 'text-positive-strong'}"
-            aria-live="polite"
+            class="mt-1 font-mono text-3xl font-semibold tracking-tight {netTone(
+                netProfit,
+            )}"
         >
             {signedMoney(netProfit)}
         </p>
 
         <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
             <dt class="text-ink-muted">Realized proceeds</dt>
-            <dd
-                class="text-right font-mono {realizedProceeds < 0
-                    ? 'text-negative'
-                    : 'text-positive'}"
-            >
+            <dd class="text-right font-mono {proceedsTone(realizedProceeds)}">
                 {signedMoney(realizedProceeds)}
             </dd>
 
@@ -83,33 +111,35 @@
             </p>
         {/if}
     </section>
-{:catch}
-    <!-- error is shown in the cards block below -->
 {/await}
 
-<div class="grid md:grid-cols-3 gap-4 mb-8">
+<div class="grid sm:grid-cols-2 gap-4 mb-8 max-w-lg">
     {#await data.accounting}
-        <AccountingCardSkeleton title="Realized" />
-        <AccountingCardSkeleton title="Unrealized" />
-        <AccountingCardSkeleton title="Pending" />
+        <AccountingCardSkeleton title="Unrealized" variant="compact" />
+        <AccountingCardSkeleton title="Pending" variant="compact" />
     {:then accounting}
         <div in:fade={{ duration: 120, easing: cubicOut }}>
-            <AccountingCard title="Realized" data={accounting.realized} />
-        </div>
-        <div in:fade={{ duration: 140, easing: cubicOut, delay: 30 }}>
             <AccountingCard
                 title="Unrealized"
+                subtitle="Cancelled, won't settle."
                 data={accounting.unrealized}
+                variant="compact"
                 tone="sunk"
             />
         </div>
-        <div in:fade={{ duration: 160, easing: cubicOut, delay: 60 }}>
-            <AccountingCard title="Pending" data={accounting.pending} tone="warning" />
+        <div in:fade={{ duration: 120, easing: cubicOut }}>
+            <AccountingCard
+                title="Pending"
+                subtitle="Listed, awaiting sale."
+                data={accounting.pending}
+                variant="compact"
+                tone="warning"
+            />
         </div>
     {:catch err}
         <p
             role="alert"
-            class="md:col-span-3 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
+            class="sm:col-span-2 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
         >
             Failed to load accounting: {err?.message ?? 'unknown error'}
         </p>
@@ -125,7 +155,7 @@
         <ul class="divide-y divide-line">
             {#each Array(3) as _, i (i)}
                 <li class="py-2 flex items-center gap-3 text-sm">
-                    <Skeleton width="8rem" height="0.85rem" />
+                    <Skeleton width="9rem" height="0.85rem" />
                     <span class="flex-1"><Skeleton width="60%" height="0.85rem" /></span>
                     <Skeleton width="5rem" height="0.75rem" />
                 </li>
@@ -148,20 +178,22 @@
                 class="divide-y divide-line"
             >
                 {#each upcoming as match (match.id)}
-                    <li class="py-2 flex items-center gap-3 text-sm">
-                        <span class="w-32 text-ink-muted">{dateTime(match.date)}</span>
-                        <span class="flex-1 text-ink">
-                            {match.atHome ? 'vs' : '@'}
-                            <strong>{match.opponent}</strong>
-                        </span>
-                        <span class="text-ink-faint text-xs"
-                            >{competitionLabel(match.competition)}</span
-                        >
+                    <li>
                         <a
                             href="/matches/{match.id}"
-                            class="text-primary font-medium hover:text-primary-hover hover:underline"
-                            >View</a
+                            class="py-2 flex items-center gap-3 text-sm hover:bg-surface-strong rounded-md px-2 -mx-2 transition-colors"
                         >
+                            <span class="w-36 shrink-0 text-ink-muted"
+                                >{dateTime(match.date)}</span
+                            >
+                            <span class="flex-1 min-w-0 text-ink truncate">
+                                {match.atHome ? 'vs' : '@'}
+                                <strong>{match.opponent}</strong>
+                            </span>
+                            <span class="text-ink-faint text-xs shrink-0"
+                                >{competitionLabel(match.competition)}</span
+                            >
+                        </a>
                     </li>
                 {/each}
             </ul>

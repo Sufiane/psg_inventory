@@ -33,28 +33,46 @@
 
 {#if user}
     <header class="bg-surface border-b border-line">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-6">
-            <a href="/" class="font-semibold tracking-tight text-ink">PSG Inventory</a>
-            <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
-                {#each nav as item (item.href)}
-                    {@const active = item.match(path)}
-                    <a
-                        href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        class="px-2.5 py-1.5 rounded transition-colors duration-150 {active
-                            ? 'text-ink font-medium bg-surface-strong/60'
-                            : 'text-ink-muted hover:text-ink'}"
-                    >
-                        {item.label}
-                    </a>
-                {/each}
-            </nav>
-            <div class="ml-auto flex items-center gap-3 text-sm text-ink-muted">
-                <span>{user.email}</span>
+        <div
+            class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2"
+        >
+            <a
+                href="/"
+                class="font-semibold tracking-tight text-ink shrink-0 mr-auto sm:mr-0"
+            >
+                PSG Inventory
+            </a>
+
+            <div
+                class="order-3 sm:order-2 w-full sm:w-auto sm:mr-auto -mx-4 sm:mx-0"
+            >
+                <nav
+                    class="no-scrollbar flex items-center gap-1 text-sm overflow-x-auto px-4 sm:px-0 [-webkit-overflow-scrolling:touch]"
+                    aria-label="Primary"
+                >
+                    {#each nav as item (item.href)}
+                        {@const active = item.match(path)}
+                        <a
+                            href={item.href}
+                            aria-current={active ? 'page' : undefined}
+                            class="shrink-0 px-3 py-2 rounded transition-colors duration-150 {active
+                                ? 'text-ink font-medium bg-surface-strong/60'
+                                : 'text-ink-muted hover:text-ink'}"
+                        >
+                            {item.label}
+                        </a>
+                    {/each}
+                </nav>
+            </div>
+
+            <div class="order-2 sm:order-3 flex items-center gap-3 text-sm text-ink-muted">
+                <span class="hidden md:inline truncate max-w-[16ch]" title={user.email}>
+                    {user.email}
+                </span>
                 <form method="POST" action="/logout">
                     <button
                         type="submit"
-                        class="text-primary font-medium hover:text-primary-hover hover:underline"
+                        class="text-primary font-medium hover:text-primary-hover hover:underline px-1 py-2"
                     >
                         Sign out
                     </button>

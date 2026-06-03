@@ -16,6 +16,11 @@ const DATE = new Intl.DateTimeFormat('fr-FR', {
     timeStyle: 'short',
 });
 
+const DATE_SHORT = new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+});
+
 export function money(n: number): string {
     return EUR.format(n);
 }
@@ -34,6 +39,12 @@ export function dateTime(iso: string | Date): string {
     const date = typeof iso === 'string' ? new Date(iso) : iso;
 
     return DATE.format(date);
+}
+
+export function shortDate(iso: string | Date): string {
+    const date = typeof iso === 'string' ? new Date(iso) : iso;
+
+    return DATE_SHORT.format(date);
 }
 
 export function competitionLabel(value: string): string {
