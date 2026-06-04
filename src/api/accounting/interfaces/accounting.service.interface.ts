@@ -1,4 +1,5 @@
 import { Accounting } from '../types/accounting.type';
+import { Amortization } from '../types/amortization.type';
 import { TimePeriodAccounting } from '../types/time-period-accounting.type';
 
 export abstract class IAccountingService {
@@ -18,4 +19,8 @@ export abstract class IAccountingService {
         dates: { start: Date; end?: Date },
         seasonStartYear: number | null,
     ): Promise<TimePeriodAccounting>;
+    abstract getAmortization(
+        userId: string,
+        seasonStartYear: number,
+    ): Promise<Amortization>;
 }

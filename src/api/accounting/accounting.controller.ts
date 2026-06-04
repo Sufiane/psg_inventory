@@ -5,6 +5,7 @@ import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import { GetSeasonDto } from './dto/get-season.dto';
+import { Amortization } from './types/amortization.type';
 
 @Controller('accounting')
 export class AccountingController {
@@ -37,6 +38,21 @@ export class AccountingController {
     ): Promise<TimePeriodAccounting> {
         try {
             return await this.accountingService.getGivenSeason(
+                user.id,
+                parseInt(seasonStartYear, 10),
+            );
+        } catch (e) {
+            throw toHttpException(e);
+        }
+    }
+
+    @Get('/amortization/:seasonStartYear')
+    async getAmortization(
+        @User() user: AuthenticatedUser,
+        @Param() { seasonStartYear }: GetSeasonDto,
+    ): Promise<Amortization> {
+        try {
+            return await this.accountingService.getAmortization(
                 user.id,
                 parseInt(seasonStartYear, 10),
             );

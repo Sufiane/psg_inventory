@@ -1,6 +1,8 @@
 export default {
     accounting: (userId: string, start: Date, end?: Date) =>
         `accounting:user:id:${userId}:start:${start.toISOString()}:end:${end?.toISOString()}`,
+    amortization: (userId: string, seasonStartYear: number) =>
+        `accounting:user:id:${userId}:amortization:${seasonStartYear}`,
     invalidateAccounting: (userId: string) => `accounting:user:id:${userId}:*`,
     invalidateMatches: (from?: Date) =>
         from ? `matches:start:${from.toISOString()}:*` : 'matches:*',

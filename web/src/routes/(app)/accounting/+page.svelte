@@ -5,6 +5,8 @@
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
+    import AmortizationCard from '$lib/ui/AmortizationCard.svelte';
+    import AmortizationCardSkeleton from '$lib/ui/AmortizationCardSkeleton.svelte';
     import { signedMoney } from '$lib/format';
 
     let { data }: { data: PageData } = $props();
@@ -67,7 +69,12 @@
 </div>
 
 {#await data.accounting}
-    <NetProfitSkeleton />
+    <div class="grid gap-4 mb-6 lg:grid-cols-2 lg:items-start">
+        <NetProfitSkeleton />
+        {#if tab !== 'all-time'}
+            <AmortizationCardSkeleton />
+        {/if}
+    </div>
     <div class="mb-4">
         <AccountingCardSkeleton title="Realized" />
     </div>
@@ -83,8 +90,9 @@
     {@const showSeason = tab === 'all-time'}
 
     <div in:fade={{ duration: 120, easing: cubicOut }}>
+    <div class="grid gap-4 mb-6 lg:grid-cols-2 lg:items-start">
     <section
-        class="bg-surface rounded-lg border border-line p-5 mb-6 max-w-lg"
+        class="bg-surface rounded-lg border border-line p-5 max-w-lg"
         aria-labelledby="net-profit-heading"
     >
         <h2 id="net-profit-heading" class="text-sm font-medium text-ink-muted">
@@ -151,6 +159,25 @@
             </p>
         {/if}
     </section>
+
+    {#if tab !== 'all-time'}
+        {@const amortYear =
+            tab === 'season' && data.year
+                ? data.year
+                : new Date().getMonth() < 7
+                  ? new Date().getFullYear() - 1
+                  : new Date().getFullYear()}
+        {#await data.amortization}
+            <AmortizationCardSkeleton />
+        {:then amortization}
+            {#if amortization}
+                <AmortizationCard data={amortization} seasonStartYear={amortYear} />
+            {/if}
+        {:catch}
+            <!-- amortization is non-critical; net section already errored or will -->
+        {/await}
+    {/if}
+    </div>
 
     <div class="mb-4">
         <AccountingCard

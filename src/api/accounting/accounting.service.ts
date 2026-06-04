@@ -14,6 +14,7 @@ import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { ONE_DAY_TTL } from '../../shared/constants';
 import { IAccountingService } from './interfaces/accounting.service.interface';
+import { Amortization, AmortizationMatchRow } from './types/amortization.type';
 
 function seasonStartYearFromDate(date: Date): number {
     return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
@@ -183,4 +184,103 @@ export class AccountingService implements IAccountingService {
 
         return accounting;
     }
+
+    async getAmortization(
+        userId: string,
+        seasonStartYear: number,
+    ): Promise<Amortization> {
+        const cacheKey = CACHE_KEYS.amortization(userId, seasonStartYear);
+        const cached = await this.redisService.get<Amortization>(cacheKey);
+
+        if (cached !== null) {
+            return cached.value ?? emptyAmortization(seasonStartYear);
+        }
+
+        const dates = {
+            start: new Date(seasonStartYear, 7, 1),
+            end: new Date(seasonStartYear + 1, 6, 31),
+        };
+
+        const [pass, matchRows] = await Promise.all([
+            this.seasonPassesDbService.findBySeason(userId, seasonStartYear),
+            this.accountingDbService.getRealizedProfitPerMatch(
+                userId,
+                dates.start,
+                dates.end,
+            ),
+        ]);
+
+        const hasPass = pass !== null;
+        const passPrice = pass?.price ?? 0;
+
+        let cumulative = 0;
+        let breakEvenAssigned = false;
+
+        const perMatch: AmortizationMatchRow[] = matchRows.map((row) => {
+            cumulative += row.matchProfit;
+
+            const isBreakEven =
+                !breakEvenAssigned && hasPass && passPrice > 0 && cumulative >= passPrice;
+
+            if (isBreakEven) {
+                breakEvenAssigned = true;
+            }
+
+            return {
+                matchId: row.matchId,
+                date: row.date,
+                opponent: row.opponent,
+                competition: row.competition,
+                atHome: row.atHome,
+                matchProfit: row.matchProfit,
+                cumulative,
+                isBreakEven,
+            };
+        });
+
+        const totalRealized = cumulative;
+        const breakEvenRow = perMatch.find((row) => row.isBreakEven) ?? null;
+
+        const result: Amortization = {
+            seasonStartYear,
+            passPrice,
+            hasPass,
+            totalRealized,
+            progress:
+                hasPass && passPrice > 0 ? Math.min(1, totalRealized / passPrice) : 0,
+            remaining:
+                hasPass && passPrice > 0 ? Math.max(0, passPrice - totalRealized) : 0,
+            surplus:
+                hasPass && passPrice > 0
+                    ? Math.max(0, totalRealized - passPrice)
+                    : Math.max(0, totalRealized),
+            breakEven: breakEvenRow
+                ? {
+                      matchId: breakEvenRow.matchId,
+                      date: breakEvenRow.date,
+                      opponent: breakEvenRow.opponent,
+                      cumulative: breakEvenRow.cumulative,
+                  }
+                : null,
+            perMatch,
+        };
+
+        await this.redisService.set(cacheKey, result, ONE_DAY_TTL);
+
+        return result;
+    }
+}
+
+function emptyAmortization(seasonStartYear: number): Amortization {
+    return {
+        seasonStartYear,
+        passPrice: 0,
+        hasPass: false,
+        totalRealized: 0,
+        progress: 0,
+        remaining: 0,
+        surplus: 0,
+        breakEven: null,
+        perMatch: [],
+    };
 }

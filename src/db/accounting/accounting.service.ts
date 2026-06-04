@@ -5,6 +5,7 @@ import { Prisma } from '.prisma/client';
 import { SaleStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { IAccountingDbService } from './accounting.db.interface';
+import { MatchRealizedProfit } from './types/match-realized-profit.type';
 
 @Injectable()
 export class AccountingService implements IAccountingDbService {
@@ -47,5 +48,56 @@ export class AccountingService implements IAccountingDbService {
         }
 
         return dbResult as unknown as AccountingAggregate;
+    }
+
+    async getRealizedProfitPerMatch(
+        userId: string,
+        from: Date,
+        to: Date,
+    ): Promise<MatchRealizedProfit[]> {
+        const sales = await this.prisma.sales.findMany({
+            where: {
+                userId,
+                status: SaleStatus.SOLD,
+                Match: { date: { gte: from, lte: to } },
+            },
+            select: {
+                profit: true,
+                matchId: true,
+                Match: {
+                    select: {
+                        date: true,
+                        competition: true,
+                        atHome: true,
+                        Opponent: { select: { name: true } },
+                    },
+                },
+            },
+        });
+
+        const byMatch = new Map<string, MatchRealizedProfit>();
+
+        for (const sale of sales) {
+            const existing = byMatch.get(sale.matchId);
+
+            if (existing) {
+                existing.matchProfit += sale.profit;
+                continue;
+            }
+
+            byMatch.set(sale.matchId, {
+                matchId: sale.matchId,
+                date: sale.Match.date,
+                opponent: sale.Match.Opponent.name,
+                competition: sale.Match.competition,
+                atHome: sale.Match.atHome,
+                matchProfit: sale.profit,
+            });
+        }
+
+        return [...byMatch.values()].sort(
+            (firstMatch, secondMatch) =>
+                firstMatch.date.getTime() - secondMatch.date.getTime(),
+        );
     }
 }
