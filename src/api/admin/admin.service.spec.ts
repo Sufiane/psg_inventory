@@ -3,8 +3,9 @@ import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { FootballDataService } from '../../football-data/football-data.service';
 import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
-import { InternalServerErrorException } from '@nestjs/common';
+import { DomainException } from '../../common/exceptions/domain.exception';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { PSG_ID } from '../../shared/constants';
 
@@ -22,7 +23,7 @@ describe('AdminService', () => {
                     useValue: mockDeep<FootballDataService>(),
                 },
                 {
-                    provide: MatchsDbService,
+                    provide: IMatchesDbService,
                     useValue: mockDeep<MatchsDbService>(),
                 },
             ],
@@ -30,7 +31,7 @@ describe('AdminService', () => {
 
         service = module.get(AdminService);
         footballDataService = module.get(FootballDataService);
-        matchsDbService = module.get(MatchsDbService);
+        matchsDbService = module.get(IMatchesDbService);
 
         module.useLogger(false);
     });
@@ -62,7 +63,7 @@ describe('AdminService', () => {
 
                 const payload = {} as CreateMatchDto;
                 await expect(service.createMatch(payload)).rejects.toThrow(
-                    InternalServerErrorException,
+                    DomainException,
                 );
                 expect(matchsDbService.createMatch).toHaveBeenCalledTimes(1);
                 expect(matchsDbService.createMatch).toHaveBeenCalledWith(payload);

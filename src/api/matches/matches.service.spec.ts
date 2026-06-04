@@ -1,6 +1,7 @@
 import { MatchesService } from './matches.service';
 import { Test } from '@nestjs/testing';
 import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { Match } from '../../db/matches/types/match.type';
 
@@ -13,14 +14,14 @@ describe('MatchesService', () => {
             providers: [
                 MatchesService,
                 {
-                    provide: MatchsDbService,
+                    provide: IMatchesDbService,
                     useValue: mockDeep<MatchsDbService>(),
                 },
             ],
         }).compile();
 
         service = module.get(MatchesService);
-        matchsDbService = module.get(MatchsDbService);
+        matchsDbService = module.get(IMatchesDbService);
     });
 
     describe('getSeasonMatches', () => {

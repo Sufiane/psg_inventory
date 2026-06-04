@@ -5,6 +5,10 @@ import { RedisService } from '../../redis/redis.service';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { AccountingService as AccountingDbService } from '../../db/accounting/accounting.service';
+import { SeasonPassesService as SeasonPassesDbService } from '../../db/season-passes/season-passes.service';
+import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
+import { ISalesDbService } from '../../db/sales/sales.db.interface';
+import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import { SaleStatus } from '@prisma/client';
 import { AccountingAggregate } from '../../db/accounting/types/get-accounting.type';
 import { formatAggregate } from './utils/format-aggregate.util';
@@ -14,6 +18,8 @@ import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Accounting } from './types/accounting.type';
 import { OldestMatchSale } from '../../db/sales/type/oldest-match-sale.type';
+import { MatchRealizedProfit } from '../../db/accounting/types/match-realized-profit.type';
+import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 
 jest.mock('../../shared/utils/season.utils');
 const getCurrentSeasonDateMocked = jest.mocked(getCurrentSeasonDate);
@@ -25,6 +31,7 @@ describe('AccountingService', () => {
     let service: AccountingService;
     let salesDbService: DeepMockProxy<SalesDbService>;
     let accountingDbService: DeepMockProxy<AccountingDbService>;
+    let seasonPassesDbService: DeepMockProxy<SeasonPassesDbService>;
     let redisService: DeepMockProxy<RedisService>;
 
     beforeEach(async () => {
@@ -32,12 +39,16 @@ describe('AccountingService', () => {
             providers: [
                 AccountingService,
                 {
-                    provide: AccountingDbService,
+                    provide: IAccountingDbService,
                     useValue: mockDeep<AccountingDbService>(),
                 },
                 {
-                    provide: SalesDbService,
+                    provide: ISalesDbService,
                     useValue: mockDeep<SalesDbService>(),
+                },
+                {
+                    provide: ISeasonPassesDbService,
+                    useValue: mockDeep<SeasonPassesDbService>(),
                 },
                 {
                     provide: RedisService,
@@ -47,8 +58,9 @@ describe('AccountingService', () => {
         }).compile();
 
         service = module.get(AccountingService);
-        salesDbService = module.get(SalesDbService);
-        accountingDbService = module.get(AccountingDbService);
+        salesDbService = module.get(ISalesDbService);
+        accountingDbService = module.get(IAccountingDbService);
+        seasonPassesDbService = module.get(ISeasonPassesDbService);
         redisService = module.get(RedisService);
 
         module.useLogger(false);
@@ -64,8 +76,9 @@ describe('AccountingService', () => {
                 totalSeasonInvestment: 0,
             };
 
-            const startDate = new Date('2022-01-01');
-            const endDate = new Date('2022-02-02');
+            // start month=0 < 7 → seasonStartYear = 2021
+            const startDate = new Date(2022, 0, 1);
+            const endDate = new Date(2022, 1, 2);
             getCurrentSeasonDateMocked.mockReturnValueOnce({
                 start: startDate,
                 end: endDate,
@@ -80,10 +93,11 @@ describe('AccountingService', () => {
                 expectedResult,
             );
             expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(userId, {
-                start: startDate,
-                end: endDate,
-            });
+            expect(getSeasonSpy).toHaveBeenCalledWith(
+                userId,
+                { start: startDate, end: endDate },
+                2021,
+            );
         });
     });
 
@@ -107,10 +121,14 @@ describe('AccountingService', () => {
                 service.getGivenSeason(userId, seasonStartYear),
             ).resolves.toEqual(expectedResult);
             expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(userId, {
-                start: new Date(seasonStartYear, 7, 1),
-                end: new Date(seasonStartYear + 1, 6, 31),
-            });
+            expect(getSeasonSpy).toHaveBeenCalledWith(
+                userId,
+                {
+                    start: new Date(seasonStartYear, 7, 1),
+                    end: new Date(seasonStartYear + 1, 6, 31),
+                },
+                seasonStartYear,
+            );
         });
     });
 
@@ -138,9 +156,11 @@ describe('AccountingService', () => {
 
             await expect(service.getAllTime(userId)).resolves.toEqual(expectedResult);
             expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(userId, {
-                start: oldestMatchSale.Match.date,
-            });
+            expect(getSeasonSpy).toHaveBeenCalledWith(
+                userId,
+                { start: oldestMatchSale.Match.date },
+                null,
+            );
         });
     });
 
@@ -172,12 +192,8 @@ describe('AccountingService', () => {
         describe('when there is an aggregate found', () => {
             it('should return the aggregated accounting', async () => {
                 const aggregate = {
-                    _min: {
-                        profit: 1,
-                    },
-                    _max: {
-                        profit: 1,
-                    },
+                    _min: { profit: 1 },
+                    _max: { profit: 1 },
                 } as AccountingAggregate;
                 accountingDbService.getAccounting.mockResolvedValueOnce(aggregate);
 
@@ -189,18 +205,10 @@ describe('AccountingService', () => {
                 };
 
                 const highestMatch = {
-                    Match: {
-                        Opponent: {
-                            name: 'opponentHighest',
-                        },
-                    },
+                    Match: { Opponent: { name: 'opponentHighest' } },
                 } as SaleWithFullMatch;
                 const lowestMatch = {
-                    Match: {
-                        Opponent: {
-                            name: 'opponentLowest',
-                        },
-                    },
+                    Match: { Opponent: { name: 'opponentLowest' } },
                 } as SaleWithFullMatch;
                 salesDbService.getOneByWithFullMatch
                     .mockResolvedValueOnce(lowestMatch)
@@ -276,6 +284,7 @@ describe('AccountingService', () => {
         describe('when there is no cache', () => {
             it('should return the accounting and set the cache', async () => {
                 redisService.get.mockResolvedValueOnce(null);
+                seasonPassesDbService.findAll.mockResolvedValueOnce([]);
 
                 const userId = 'userId';
                 const dates = {
@@ -292,11 +301,13 @@ describe('AccountingService', () => {
                     .mockResolvedValueOnce(unrealized)
                     .mockResolvedValueOnce(pending);
 
-                const expectedResult = {
+                const expectedResult: TimePeriodAccounting = {
                     realized,
-                    pending,
                     unrealized,
-                } as TimePeriodAccounting;
+                    pending,
+                    seasonInvestment: null,
+                    totalSeasonInvestment: 0,
+                };
 
                 await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
                     expectedResult,
@@ -312,6 +323,171 @@ describe('AccountingService', () => {
                     24 * 60 * 60,
                 );
             });
+        });
+    });
+
+    describe('getAmortization', () => {
+        const userId = 'userUuid';
+        const seasonStartYear = 2024;
+
+        function row(
+            overrides: Partial<MatchRealizedProfit> & {
+                matchId: string;
+                date: Date;
+                matchProfit: number;
+            },
+        ): MatchRealizedProfit {
+            return {
+                opponent: 'Marseille',
+                competition: 'CHAMPIONSHIP',
+                atHome: true,
+                ...overrides,
+            };
+        }
+
+        function pass(price: number): SeasonPass {
+            return {
+                id: 'pass-id',
+                userId,
+                seasonStartYear,
+                price,
+                category: null,
+                row: null,
+                seat: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+        }
+
+        beforeEach(() => {
+            redisService.get.mockResolvedValue(null);
+        });
+
+        it('returns zeroed result when no sales and no pass', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(null);
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([]);
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result.hasPass).toBe(false);
+            expect(result.passPrice).toBe(0);
+            expect(result.totalRealized).toBe(0);
+            expect(result.progress).toBe(0);
+            expect(result.remaining).toBe(0);
+            expect(result.surplus).toBe(0);
+            expect(result.breakEven).toBeNull();
+            expect(result.perMatch).toEqual([]);
+        });
+
+        it('reports progress without break-even when below pass price', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(1000));
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
+                row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 200 }),
+                row({ matchId: 'm2', date: new Date('2024-10-01'), matchProfit: 300 }),
+            ]);
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result.hasPass).toBe(true);
+            expect(result.passPrice).toBe(1000);
+            expect(result.totalRealized).toBe(500);
+            expect(result.progress).toBeCloseTo(0.5);
+            expect(result.remaining).toBe(500);
+            expect(result.surplus).toBe(0);
+            expect(result.breakEven).toBeNull();
+            expect(result.perMatch[1].cumulative).toBe(500);
+        });
+
+        it('flags the first match whose cumulative crosses pass price', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(500));
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
+                row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 200 }),
+                row({
+                    matchId: 'm2',
+                    date: new Date('2024-10-01'),
+                    matchProfit: 400,
+                    opponent: 'Lyon',
+                }),
+                row({ matchId: 'm3', date: new Date('2024-11-01'), matchProfit: 100 }),
+            ]);
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result.progress).toBe(1);
+            expect(result.remaining).toBe(0);
+            expect(result.surplus).toBe(200);
+            expect(result.breakEven).toEqual({
+                matchId: 'm2',
+                date: new Date('2024-10-01'),
+                opponent: 'Lyon',
+                cumulative: 600,
+            });
+            expect(result.perMatch.filter((entry) => entry.isBreakEven)).toHaveLength(1);
+        });
+
+        it('caps progress at 1 and reports surplus on overshoot', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(300));
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
+                row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 800 }),
+            ]);
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result.progress).toBe(1);
+            expect(result.remaining).toBe(0);
+            expect(result.surplus).toBe(500);
+        });
+
+        it('treats missing pass as no progress; surplus tracks total realized', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(null);
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
+                row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 150 }),
+            ]);
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result.hasPass).toBe(false);
+            expect(result.progress).toBe(0);
+            expect(result.remaining).toBe(0);
+            expect(result.surplus).toBe(150);
+            expect(result.breakEven).toBeNull();
+        });
+
+        it('reads from cache when present', async () => {
+            const cachedValue = {
+                seasonStartYear,
+                passPrice: 1000,
+                hasPass: true,
+                totalRealized: 1000,
+                progress: 1,
+                remaining: 0,
+                surplus: 0,
+                breakEven: null,
+                perMatch: [],
+            };
+            redisService.get.mockReset();
+            redisService.get.mockResolvedValueOnce({ value: cachedValue });
+
+            const result = await service.getAmortization(userId, seasonStartYear);
+
+            expect(result).toEqual(cachedValue);
+            expect(accountingDbService.getRealizedProfitPerMatch).not.toHaveBeenCalled();
+            expect(seasonPassesDbService.findBySeason).not.toHaveBeenCalled();
+        });
+
+        it('writes the computed result to cache', async () => {
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(100));
+            accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
+                row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 100 }),
+            ]);
+
+            await service.getAmortization(userId, seasonStartYear);
+
+            expect(redisService.set).toHaveBeenCalledTimes(1);
+            const [key, value, ttl] = redisService.set.mock.calls[0];
+            expect(key).toBe(CACHE_KEYS.amortization(userId, seasonStartYear));
+            expect(ttl).toBe(24 * 60 * 60);
+            expect((value as { progress: number }).progress).toBe(1);
         });
     });
 });
