@@ -1,8 +1,11 @@
 <script lang="ts">
-    import type { PageData } from './$types';
-    import { money, signedMoney } from '$lib/format';
+    import type { ActionData, PageData } from './$types';
+    import { enhance } from '$app/forms';
+    import { page } from '$app/state';
+    import { dateTime, money, signedMoney } from '$lib/format';
+    import Spinner from '$lib/ui/Spinner.svelte';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
 
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -67,8 +70,31 @@
             case 'PENDING':
                 return 'bg-warning/15 text-warning-strong';
             case 'CANCELLED':
-                return 'bg-surface-strong text-ink-muted';
+                return 'bg-sunk/15 text-sunk-strong';
         }
+    }
+
+    function profitTone(
+        status: 'SOLD' | 'PENDING' | 'CANCELLED',
+        profit: number,
+    ): string {
+        if (status === 'CANCELLED') {
+            return 'text-sunk';
+        }
+
+        if (status === 'PENDING') {
+            return 'text-warning';
+        }
+
+        if (profit < 0) {
+            return 'text-negative';
+        }
+
+        if (profit > 0) {
+            return 'text-positive';
+        }
+
+        return 'text-ink';
     }
 
     function onMobileSortChange(event: Event): void {
@@ -76,7 +102,203 @@
 
         sortKey = value === '' ? null : (value as SortKey);
     }
+
+    // URL-driven expand state. `?edit={saleId}` opens the inline form for that row.
+    let editId = $derived(page.url.searchParams.get('edit'));
+    let editSale = $derived(data.editSale);
+    let editMatchDate = $derived(editSale ? new Date(editSale.Match.date) : null);
+    let isPastMatch = $derived(
+        editMatchDate ? editMatchDate.getTime() < Date.now() : false,
+    );
+
+    function urlWithEdit(targetId: string | null): string {
+        const params = new URLSearchParams(page.url.searchParams);
+
+        if (targetId) {
+            params.set('edit', targetId);
+        } else {
+            params.delete('edit');
+        }
+
+        const qs = params.toString();
+
+        return qs ? `/sales?${qs}` : '/sales';
+    }
+
+    let submitting = $state<'update' | 'delete' | null>(null);
+
+    function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
+        const which: 'update' | 'delete' = action.search.includes('delete')
+            ? 'delete'
+            : 'update';
+
+        if (submitting !== null) {
+            cancel();
+
+            return;
+        }
+
+        submitting = which;
+
+        return async ({ update }: { update: () => Promise<void> }) => {
+            await update();
+            submitting = null;
+        };
+    }
+
+    function confirmIfPast(event: Event, action: 'save' | 'delete'): void {
+        if (!editSale || !isPastMatch || !editMatchDate) {
+            return;
+        }
+
+        const opponent = editSale.Match.Opponent.name;
+        const verb = action === 'save' ? 'Save changes to' : 'Delete';
+        const ok = confirm(
+            `${verb} the ${opponent} sale? The match was on ${dateTime(editMatchDate)}; this rewrites historical numbers.`,
+        );
+
+        if (!ok) {
+            event.preventDefault();
+        }
+    }
+
+    function confirmDelete(event: Event): void {
+        if (!editSale) {
+            return;
+        }
+
+        if (isPastMatch) {
+            confirmIfPast(event, 'delete');
+
+            return;
+        }
+
+        const opponent = editSale.Match.Opponent.name;
+
+        if (!confirm(`Delete the ${opponent} sale?`)) {
+            event.preventDefault();
+        }
+    }
 </script>
+
+{#snippet editPanel(saleId: string)}
+    {#if editSale && editSale.id === saleId}
+        <div
+            class="bg-surface-subtle border-t border-line p-4 space-y-3"
+            role="region"
+            aria-label="Edit sale"
+        >
+            {#if isPastMatch && editMatchDate}
+                <div
+                    role="alert"
+                    class="rounded-lg border border-warning bg-warning/10 px-3 py-2 text-xs text-warning-strong"
+                >
+                    Match was on <span class="font-mono">{dateTime(editMatchDate)}</span>.
+                    Saving here rewrites the original sale record.
+                </div>
+            {/if}
+
+            <form
+                method="POST"
+                action="?/update"
+                class="grid sm:grid-cols-2 gap-3"
+                use:enhance={trackSubmit}
+            >
+                <input type="hidden" name="saleId" value={editSale.id} />
+
+                <label class="block">
+                    <span class="text-xs text-ink-muted">Tickets</span>
+                    <input
+                        type="number"
+                        name="nbTickets"
+                        min="1"
+                        step="1"
+                        value={editSale.nbTickets}
+                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                    />
+                </label>
+
+                <label class="block">
+                    <span class="text-xs text-ink-muted">Listed price (€)</span>
+                    <input
+                        type="number"
+                        name="listedPrice"
+                        min="1"
+                        step="0.01"
+                        value={editSale.listedPrice}
+                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                    />
+                </label>
+
+                <label class="block">
+                    <span class="text-xs text-ink-muted">Cost paid for tickets (€)</span>
+                    <input
+                        type="number"
+                        name="invest"
+                        min="0"
+                        step="0.01"
+                        value={editSale.invest}
+                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                    />
+                </label>
+
+                <label class="flex items-center gap-2 self-end pb-1.5">
+                    <input
+                        type="checkbox"
+                        name="sold"
+                        checked={editSale.status === 'SOLD'}
+                        class="rounded border-line-strong"
+                    />
+                    <span class="text-sm text-ink">Mark as sold</span>
+                </label>
+
+                {#if form?.message}
+                    <p
+                        role="alert"
+                        class="sm:col-span-2 text-sm text-negative-strong"
+                    >
+                        {form.message}
+                    </p>
+                {/if}
+
+                <div class="sm:col-span-2 flex flex-wrap items-center gap-2 pt-2">
+                    <button
+                        type="submit"
+                        disabled={submitting !== null}
+                        class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                        onclick={(event) => confirmIfPast(event, 'save')}
+                    >
+                        {#if submitting === 'update'}
+                            <Spinner size="1em" />
+                        {/if}
+                        Save changes
+                    </button>
+
+                    <button
+                        type="submit"
+                        formaction="?/delete"
+                        formnovalidate
+                        disabled={submitting !== null}
+                        class="rounded border border-negative text-negative-strong px-3 py-1.5 text-sm font-medium hover:bg-negative/5 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                        onclick={confirmDelete}
+                    >
+                        {#if submitting === 'delete'}
+                            <Spinner size="1em" />
+                        {/if}
+                        Delete sale
+                    </button>
+
+                    <a
+                        href={urlWithEdit(null)}
+                        class="ml-auto text-sm text-ink-muted hover:text-ink hover:underline px-2 py-1.5"
+                    >
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    {/if}
+{/snippet}
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Sales</h1>
@@ -138,10 +360,17 @@
     <!-- Mobile card list -->
     <ul class="grid gap-3 sm:hidden">
         {#each sortedSales as sale (sale.id)}
-            <li>
+            {@const isOpen = editId === sale.id}
+            <li
+                class="bg-surface rounded-lg border {isOpen
+                    ? 'border-line-strong'
+                    : 'border-line'} overflow-hidden"
+            >
                 <a
-                    href="/sales/{sale.id}"
-                    class="block bg-surface rounded-lg border border-line p-4 hover:border-line-strong transition-colors"
+                    href={urlWithEdit(isOpen ? null : sale.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? `edit-${sale.id}` : undefined}
+                    class="block p-4 hover:bg-surface-subtle transition-colors"
                 >
                     <header class="flex items-baseline justify-between gap-3 mb-2">
                         <span class="font-medium text-ink truncate">{sale.opponent.name}</span>
@@ -169,14 +398,21 @@
 
                         <dt class="text-ink-muted">Profit</dt>
                         <dd
-                            class="text-right font-mono {sale.profit < 0
-                                ? 'text-negative'
-                                : 'text-positive'}"
+                            class="text-right font-mono {profitTone(
+                                sale.status,
+                                sale.profit,
+                            )}"
                         >
                             {signedMoney(sale.profit)}
                         </dd>
                     </dl>
                 </a>
+
+                {#if isOpen}
+                    <div id="edit-{sale.id}">
+                        {@render editPanel(sale.id)}
+                    </div>
+                {/if}
             </li>
         {/each}
     </ul>
@@ -253,7 +489,8 @@
             </thead>
             <tbody class="divide-y divide-line">
                 {#each sortedSales as sale (sale.id)}
-                    <tr>
+                    {@const isOpen = editId === sale.id}
+                    <tr class={isOpen ? 'bg-surface-subtle' : ''}>
                         <td class="px-4 py-2 text-ink">{sale.opponent.name}</td>
                         <td class="px-4 py-2 text-right font-mono text-ink">
                             {sale.nbTickets}
@@ -265,9 +502,10 @@
                             {money(sale.invest)}
                         </td>
                         <td
-                            class="px-4 py-2 text-right font-mono {sale.profit < 0
-                                ? 'text-negative'
-                                : 'text-positive'}"
+                            class="px-4 py-2 text-right font-mono {profitTone(
+                                sale.status,
+                                sale.profit,
+                            )}"
                         >
                             {signedMoney(sale.profit)}
                         </td>
@@ -282,12 +520,22 @@
                         </td>
                         <td class="px-4 py-2 text-right">
                             <a
-                                href="/sales/{sale.id}"
+                                href={urlWithEdit(isOpen ? null : sale.id)}
+                                aria-expanded={isOpen}
+                                aria-controls={isOpen ? `edit-${sale.id}` : undefined}
                                 class="text-primary font-medium hover:text-primary-hover hover:underline"
-                                >Edit</a
                             >
+                                {isOpen ? 'Close' : 'Edit'}
+                            </a>
                         </td>
                     </tr>
+                    {#if isOpen}
+                        <tr id="edit-{sale.id}">
+                            <td colspan="7" class="p-0">
+                                {@render editPanel(sale.id)}
+                            </td>
+                        </tr>
+                    {/if}
                 {/each}
             </tbody>
         </table>

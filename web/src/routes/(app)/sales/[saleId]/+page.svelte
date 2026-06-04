@@ -10,6 +10,29 @@
     let isPastMatch = $derived(matchDate.getTime() < Date.now());
     let submitting = $state<'update' | 'delete' | null>(null);
 
+    function profitTone(
+        status: 'SOLD' | 'PENDING' | 'CANCELLED',
+        profit: number,
+    ): string {
+        if (status === 'CANCELLED') {
+            return 'text-sunk';
+        }
+
+        if (status === 'PENDING') {
+            return 'text-warning';
+        }
+
+        if (profit < 0) {
+            return 'text-negative';
+        }
+
+        if (profit > 0) {
+            return 'text-positive';
+        }
+
+        return 'text-ink';
+    }
+
     function confirmIfPast(event: Event, action: 'save' | 'delete'): void {
         if (!isPastMatch) {
             return;
@@ -70,9 +93,7 @@
     </span>
     <span class="text-ink-muted">Status</span><span class="text-ink">{sale.status}</span>
     <span class="text-ink-muted">Profit</span>
-    <span
-        class="font-mono {sale.profit < 0 ? 'text-negative' : 'text-positive'}"
-    >
+    <span class="font-mono {profitTone(sale.status, sale.profit)}">
         {signedMoney(sale.profit)}
     </span>
 </div>
