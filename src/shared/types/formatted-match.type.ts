@@ -3,7 +3,7 @@ export type FormattedMatch = {
     date: string;
     atHome: boolean;
     opponent: string;
-    result: {
+    result?: {
         isWin: boolean;
         score: string;
     };

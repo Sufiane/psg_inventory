@@ -105,7 +105,7 @@
                     <span class="text-ink-faint text-xs w-32 shrink-0"
                         >{competitionLabel(match.competition)}</span
                     >
-                    {#if match.result?.score}
+                    {#if match.result?.score && !match.result.score.includes('null')}
                         <span
                             class="font-mono text-xs shrink-0 {match.result.isWin
                                 ? 'text-positive'
@@ -155,7 +155,7 @@
                         <span class="text-ink-faint text-xs w-32 shrink-0"
                             >{competitionLabel(match.competition)}</span
                         >
-                        {#if match.result?.score}
+                        {#if match.result?.score && !match.result.score.includes('null')}
                             <span
                                 class="font-mono text-xs shrink-0 {match.result.isWin
                                     ? 'text-positive'

@@ -81,7 +81,7 @@ export class MatchesService implements IMatchesDbService {
     async loadMatches(matches: FormattedMatch[]): Promise<void> {
         for (const match of matches) {
             await this.prisma.$transaction(async (tx) => {
-                const { id: opponentId } = await this.prisma.opponents.upsert({
+                const { id: opponentId } = await tx.opponents.upsert({
                     select: {
                         id: true,
                     },
@@ -94,25 +94,71 @@ export class MatchesService implements IMatchesDbService {
                     },
                 });
 
-                await tx.matches.upsert({
-                    create: {
-                        date: match.date,
-                        competition: convertStringToCompetition(match.competition),
-                        atHome: match.atHome,
-                        MatchResults: {
-                            create: {
-                                isWin: match.result.isWin,
-                                score: match.result.score,
-                            },
-                        },
-                        opponentId,
-                    },
-                    update: {},
+                const matchDate = new Date(match.date);
+                const dayStart = new Date(matchDate);
+
+                dayStart.setUTCHours(0, 0, 0, 0);
+
+                const dayEnd = new Date(matchDate);
+
+                dayEnd.setUTCHours(23, 59, 59, 999);
+
+                // Dedupe by (opponentId, calendar day) rather than exact timestamp.
+                // football-data revises kickoff times as fixtures get confirmed
+                // (TBD placeholder -> real kickoff); without this, every revision
+                // creates a duplicate row.
+                const existing = await tx.matches.findFirst({
+                    select: { id: true },
                     where: {
-                        date_opponentId: {
-                            date: match.date,
-                            opponentId,
+                        opponentId,
+                        date: { gte: dayStart, lte: dayEnd },
+                    },
+                });
+
+                const competition = convertStringToCompetition(match.competition);
+                const resultData = match.result
+                    ? {
+                          isWin: match.result.isWin,
+                          score: match.result.score,
+                      }
+                    : null;
+
+                if (existing) {
+                    await tx.matches.update({
+                        where: { id: existing.id },
+                        data: {
+                            date: matchDate,
+                            competition,
+                            atHome: match.atHome,
+                            ...(resultData
+                                ? {
+                                      MatchResults: {
+                                          upsert: {
+                                              create: resultData,
+                                              update: resultData,
+                                          },
+                                      },
+                                  }
+                                : {}),
                         },
+                    });
+
+                    return;
+                }
+
+                await tx.matches.create({
+                    data: {
+                        date: matchDate,
+                        competition,
+                        atHome: match.atHome,
+                        opponentId,
+                        ...(resultData
+                            ? {
+                                  MatchResults: {
+                                      create: resultData,
+                                  },
+                              }
+                            : {}),
                     },
                 });
             });

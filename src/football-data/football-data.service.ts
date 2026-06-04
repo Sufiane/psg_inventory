@@ -51,18 +51,22 @@ export class FootballDataService {
 
         return response.matches.map((match) => {
             const isAtHome = match.homeTeam.id === teamId;
+            const hasScore =
+                match.score.fullTime.home !== null && match.score.fullTime.away !== null;
 
             return {
                 competition: match.competition.name,
                 date: match.utcDate,
                 atHome: isAtHome,
                 opponent: isAtHome ? match.awayTeam.name : match.homeTeam.name,
-                result: {
-                    isWin: isAtHome
-                        ? match.score.winner === 'HOME_TEAM'
-                        : match.score.winner === 'AWAY_TEAM',
-                    score: `${match.score.fullTime.home} - ${match.score.fullTime.away}`,
-                },
+                result: hasScore
+                    ? {
+                          isWin: isAtHome
+                              ? match.score.winner === 'HOME_TEAM'
+                              : match.score.winner === 'AWAY_TEAM',
+                          score: `${match.score.fullTime.home} - ${match.score.fullTime.away}`,
+                      }
+                    : undefined,
             };
         });
     }
