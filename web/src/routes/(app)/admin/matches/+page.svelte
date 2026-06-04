@@ -1,10 +1,27 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
+    import { enhance } from '$app/forms';
     import { competitionLabel } from '$lib/format';
+    import Spinner from '$lib/ui/Spinner.svelte';
+
+    type Op = 'loadCurrent' | 'loadSeason' | 'create' | 'cancelStaleSales';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+
+    let submitting = $state<Op | null>(null);
+
+    function track(op: Op) {
+        return () => {
+            submitting = op;
+
+            return async ({ update }: { update: () => Promise<void> }) => {
+                await update();
+                submitting = null;
+            };
+        };
+    }
 </script>
 
 <h1 class="text-2xl font-semibold tracking-tight text-ink mb-6">Admin board</h1>
@@ -32,21 +49,36 @@
             Load matches from data provider
         </h2>
 
-        <form method="POST" action="?/loadCurrent" class="mb-4">
+        <form
+            method="POST"
+            action="?/loadCurrent"
+            class="mb-4"
+            use:enhance={track('loadCurrent')}
+        >
             <button
                 type="submit"
-                class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover transition-colors"
+                disabled={submitting !== null}
+                class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
             >
+                {#if submitting === 'loadCurrent'}
+                    <Spinner size="1em" />
+                {/if}
                 Load current season
             </button>
         </form>
 
-        <form method="POST" action="?/loadSeason" class="flex items-end gap-2">
+        <form
+            method="POST"
+            action="?/loadSeason"
+            class="flex items-end gap-2"
+            use:enhance={track('loadSeason')}
+        >
             <label class="block">
                 <span class="text-sm text-ink-muted">Season start year</span>
                 <select
                     name="year"
-                    class="mt-1 rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                    disabled={submitting !== null}
+                    class="mt-1 rounded border border-line-strong bg-surface text-ink px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                     {#each years as year (year)}
                         <option value={year}>{year}</option>
@@ -55,8 +87,12 @@
             </label>
             <button
                 type="submit"
-                class="rounded border border-line-strong text-ink-muted hover:text-ink hover:border-ink px-4 py-2 text-sm transition-colors"
+                disabled={submitting !== null}
+                class="rounded border border-line-strong text-ink-muted hover:text-ink hover:border-ink px-4 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
             >
+                {#if submitting === 'loadSeason'}
+                    <Spinner size="1em" />
+                {/if}
                 Load season
             </button>
         </form>
@@ -67,7 +103,12 @@
             Create match manually
         </h2>
 
-        <form method="POST" action="?/create" class="space-y-3">
+        <form
+            method="POST"
+            action="?/create"
+            class="space-y-3"
+            use:enhance={track('create')}
+        >
             <label class="block">
                 <span class="text-sm text-ink-muted">Opponent</span>
                 <input
@@ -126,8 +167,12 @@
 
             <button
                 type="submit"
-                class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover transition-colors"
+                disabled={submitting !== null}
+                class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
             >
+                {#if submitting === 'create'}
+                    <Spinner size="1em" />
+                {/if}
                 Create match
             </button>
         </form>
@@ -140,16 +185,24 @@
             schedule; this button forces it immediately.
         </p>
 
-        <form method="POST" action="?/cancelStaleSales">
+        <form
+            method="POST"
+            action="?/cancelStaleSales"
+            use:enhance={track('cancelStaleSales')}
+        >
             <button
                 type="submit"
-                class="rounded bg-warning-strong text-surface px-4 py-2 text-sm font-medium hover:bg-warning transition-colors"
+                disabled={submitting !== null}
+                class="rounded bg-warning-strong text-surface px-4 py-2 text-sm font-medium hover:bg-warning disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                 onclick={(event) => {
                     if (!confirm('Force-cancel stale unrealized sales now?')) {
                         event.preventDefault();
                     }
                 }}
             >
+                {#if submitting === 'cancelStaleSales'}
+                    <Spinner size="1em" />
+                {/if}
                 Cancel stale unrealized sales
             </button>
         </form>
