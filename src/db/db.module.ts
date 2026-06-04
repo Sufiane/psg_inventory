@@ -5,11 +5,13 @@ import { SalesService } from './sales/sales.service';
 import { MatchesService } from './matches/matches.service';
 import { AccountingService } from './accounting/accounting.service';
 import { SeasonPassesService } from './season-passes/season-passes.service';
+import { HealthService } from './health/health.service';
 import { IAccountingDbService } from './accounting/accounting.db.interface';
 import { IMatchesDbService } from './matches/matches.db.interface';
 import { ISalesDbService } from './sales/sales.db.interface';
 import { IUsersDbService } from './users/users.db.interface';
 import { ISeasonPassesDbService } from './season-passes/season-passes.db.interface';
+import { IHealthDbService } from './health/health.db.interface';
 
 @Module({
     providers: [
@@ -19,6 +21,7 @@ import { ISeasonPassesDbService } from './season-passes/season-passes.db.interfa
         { provide: IMatchesDbService, useClass: MatchesService },
         { provide: IAccountingDbService, useClass: AccountingService },
         { provide: ISeasonPassesDbService, useClass: SeasonPassesService },
+        { provide: IHealthDbService, useClass: HealthService },
     ],
     exports: [
         IUsersDbService,
@@ -26,6 +29,7 @@ import { ISeasonPassesDbService } from './season-passes/season-passes.db.interfa
         IMatchesDbService,
         IAccountingDbService,
         ISeasonPassesDbService,
+        IHealthDbService,
     ],
 })
 export class DbModule {}

@@ -11,6 +11,7 @@ import { CronModule } from './crons/cron.module';
 import { AdminModule } from './api/admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { SeasonPassesModule } from './api/season-passes/season-passes.module';
+import { HealthModule } from './api/health/health.module';
 
 @Module({
     imports: [
@@ -23,6 +24,7 @@ import { SeasonPassesModule } from './api/season-passes/season-passes.module';
         AdminModule,
         RedisModule,
         SeasonPassesModule,
+        HealthModule,
     ],
     providers: [
         {
