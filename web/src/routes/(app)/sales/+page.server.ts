@@ -1,12 +1,13 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
-import type { SaleDetail, SaleListItem } from '$lib/types';
+import type { FormattedMatch, SaleDetail, SaleListItem } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
     const yearParam = event.url.searchParams.get('year');
     const year = yearParam ? Number.parseInt(yearParam, 10) : null;
     const editId = event.url.searchParams.get('edit');
+    const isNew = event.url.searchParams.get('new') !== null;
     const path =
         year && Number.isFinite(year) ? `/sales/season/${year}` : '/sales/current-season';
 
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async (event) => {
 
     let editSale: SaleDetail | null = null;
 
-    if (editId) {
+    if (editId && !isNew) {
         try {
             editSale = await api<SaleDetail>(event, `/sales/${editId}`);
         } catch {
@@ -22,7 +23,22 @@ export const load: PageServerLoad = async (event) => {
         }
     }
 
-    return { sales, year, editSale };
+    let matches: FormattedMatch[] = [];
+
+    if (isNew && !editId) {
+        const allMatches = await api<FormattedMatch[]>(event, '/matches/current-season');
+
+        // Most recent first: latest fixture date at the top. User typically
+        // logs a sale right after listing tickets, which is rarely for a match
+        // months away; sorting desc surfaces today's / upcoming fixtures first
+        // and pushes long-tail past fixtures to the bottom.
+        matches = [...allMatches].sort(
+            (left, right) =>
+                new Date(right.date).getTime() - new Date(left.date).getTime(),
+        );
+    }
+
+    return { sales, year, editSale, matches, isNew };
 };
 
 function readPayload(form: FormData): {
@@ -116,6 +132,53 @@ export const actions: Actions = {
             await api(event, `/sales/${saleId}`, { method: 'DELETE', expectEmpty: true });
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Delete failed.';
+
+            return fail(400, { message });
+        }
+
+        const yearParam = event.url.searchParams.get('year');
+        const redirectTarget = yearParam ? `/sales?year=${yearParam}` : '/sales';
+
+        throw redirect(303, redirectTarget);
+    },
+
+    create: async (event) => {
+        const form = await event.request.formData();
+        const matchId = form.get('matchId');
+        const nbTickets = Number(form.get('nbTickets'));
+        const listedPrice = Number(form.get('listedPrice'));
+        const investRaw = form.get('invest');
+        const invest =
+            investRaw !== null && investRaw !== '' ? Number(investRaw) : undefined;
+
+        if (typeof matchId !== 'string' || matchId.length === 0) {
+            return fail(400, { message: 'Match is required.' });
+        }
+
+        if (!Number.isInteger(nbTickets) || nbTickets < 1) {
+            return fail(400, { message: 'Tickets must be at least 1.' });
+        }
+
+        if (!Number.isFinite(listedPrice) || listedPrice < 1) {
+            return fail(400, { message: 'Listed price must be at least 1.' });
+        }
+
+        if (invest !== undefined && (!Number.isFinite(invest) || invest < 0)) {
+            return fail(400, { message: 'Invest must be 0 or more.' });
+        }
+
+        try {
+            await api<{ id: string }>(event, '/sales', {
+                method: 'POST',
+                json: {
+                    matchId,
+                    nbTickets,
+                    listedPrice,
+                    ...(invest !== undefined ? { invest } : {}),
+                },
+            });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to create sale.';
 
             return fail(400, { message });
         }

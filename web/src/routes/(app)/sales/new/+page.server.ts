@@ -4,7 +4,11 @@ import { api } from '$lib/api';
 import type { FormattedMatch } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
-    const matches = await api<FormattedMatch[]>(event, '/matches/current-season');
+    const all = await api<FormattedMatch[]>(event, '/matches/current-season');
+    // Most recent fixtures first; users log sales close to the match date.
+    const matches = [...all].sort(
+        (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
+    );
     const presetMatchId = event.url.searchParams.get('matchId');
 
     return { matches, presetMatchId };

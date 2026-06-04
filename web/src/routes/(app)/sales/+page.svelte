@@ -4,7 +4,7 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { tick } from 'svelte';
-    import { dateTime, money, signedMoney } from '$lib/format';
+    import { competitionLabel, dateTime, money, signedMoney } from '$lib/format';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -127,9 +127,12 @@
         return qs ? `/sales?${qs}` : '/sales';
     }
 
-    let submitting = $state<'update' | 'delete' | 'flip' | null>(null);
+    let submitting = $state<'update' | 'delete' | 'flip' | 'create' | null>(null);
 
     let firstFieldEl = $state<HTMLInputElement | null>(null);
+    let newPanelFirstEl = $state<HTMLSelectElement | null>(null);
+
+    let isNew = $derived(data.isNew && !editId);
 
     // When ?edit={id} resolves to a real editSale, move keyboard focus to the
     // first input so Sam (screen reader) and Alex (keyboard) land in the form
@@ -144,12 +147,48 @@
         }
     });
 
+    // Same treatment for the new-sale panel: focus the Match select on open.
+    $effect(() => {
+        if (isNew) {
+            void tick().then(() => {
+                newPanelFirstEl?.focus();
+            });
+        }
+    });
+
+    function urlWithNew(open: boolean): string {
+        const params = new URLSearchParams(page.url.searchParams);
+
+        params.delete('edit');
+
+        if (open) {
+            params.set('new', '1');
+        } else {
+            params.delete('new');
+        }
+
+        const qs = params.toString();
+
+        return qs ? `/sales?${qs}` : '/sales';
+    }
+
+    function urlClosed(): string {
+        const params = new URLSearchParams(page.url.searchParams);
+
+        params.delete('edit');
+        params.delete('new');
+
+        const qs = params.toString();
+
+        return qs ? `/sales?${qs}` : '/sales';
+    }
+
     function onWindowKeydown(event: KeyboardEvent): void {
         if (event.key !== 'Escape') {
             return;
         }
 
-        if (!editId) {
+        if (!editId && !isNew) {
             return;
         }
 
@@ -159,7 +198,22 @@
         }
 
         event.preventDefault();
-        void goto(urlWithEdit(null), { keepFocus: false, noScroll: true });
+        void goto(urlClosed(), { keepFocus: false, noScroll: true });
+    }
+
+    function trackCreate({ cancel }: { cancel: () => void }) {
+        if (submitting !== null) {
+            cancel();
+
+            return;
+        }
+
+        submitting = 'create';
+
+        return async ({ update }: { update: () => Promise<void> }) => {
+            await update();
+            submitting = null;
+        };
     }
 
     function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
@@ -475,6 +529,109 @@
     {/if}
 {/snippet}
 
+{#snippet newSalePanel()}
+    <section
+        class="bg-surface rounded-lg border border-line-strong p-4 mb-6 space-y-3"
+        aria-label="New sale"
+    >
+        <header class="flex items-baseline justify-between gap-3">
+            <h2 class="text-base font-semibold tracking-tight text-ink">New sale</h2>
+            <a
+                href={urlWithNew(false)}
+                class="text-sm text-ink-muted hover:text-ink hover:underline"
+            >
+                Cancel <kbd
+                    class="ml-1 font-mono text-[10px] text-ink-faint"
+                    aria-hidden="true">Esc</kbd
+                >
+            </a>
+        </header>
+
+        <form
+            method="POST"
+            action="?/create"
+            class="grid sm:grid-cols-2 gap-3"
+            use:enhance={trackCreate}
+        >
+            <label class="block sm:col-span-2">
+                <span class="text-xs text-ink-muted">Match</span>
+                <select
+                    bind:this={newPanelFirstEl}
+                    name="matchId"
+                    required
+                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                >
+                    <option value="">Select a match…</option>
+                    {#each data.matches as match (match.id)}
+                        <option value={match.id}>
+                            {dateTime(match.date)}, {match.atHome ? 'vs' : '@'}
+                            {match.opponent}
+                            ({competitionLabel(match.competition)})
+                        </option>
+                    {/each}
+                </select>
+            </label>
+
+            <label class="block">
+                <span class="text-xs text-ink-muted">Number of tickets</span>
+                <input
+                    type="number"
+                    name="nbTickets"
+                    min="1"
+                    step="1"
+                    required
+                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                />
+            </label>
+
+            <label class="block">
+                <span class="text-xs text-ink-muted">Listed price (€)</span>
+                <input
+                    type="number"
+                    name="listedPrice"
+                    min="1"
+                    step="0.01"
+                    required
+                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                />
+            </label>
+
+            <label class="block sm:col-span-2">
+                <span class="text-xs text-ink-muted">Cost paid for tickets (€, optional)</span>
+                <input
+                    type="number"
+                    name="invest"
+                    min="0"
+                    step="0.01"
+                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                />
+            </label>
+
+            {#if form?.message}
+                <p
+                    role="alert"
+                    class="sm:col-span-2 text-sm text-negative-strong"
+                >
+                    {form.message}
+                </p>
+            {/if}
+
+            <div class="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
+                <button
+                    type="submit"
+                    disabled={submitting !== null}
+                    class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                >
+                    {#if submitting === 'create'}
+                        <Spinner size="1em" />
+                    {/if}
+                    Create sale
+                </button>
+            </div>
+        </form>
+    </section>
+{/snippet}
+
 <svelte:window onkeydown={onWindowKeydown} />
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -496,14 +653,20 @@
             </select>
         </form>
 
-        <a
-            href="/sales/new"
-            class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
-        >
-            + New sale
-        </a>
+        {#if !isNew}
+            <a
+                href={urlWithNew(true)}
+                class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
+            >
+                + New sale
+            </a>
+        {/if}
     </div>
 </div>
+
+{#if isNew}
+    {@render newSalePanel()}
+{/if}
 
 {#if data.sales.length === 0}
     <p class="text-ink-faint text-sm">No sales in this season.</p>
