@@ -1,7 +1,9 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
+    import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { tick } from 'svelte';
     import { dateTime, money, signedMoney } from '$lib/format';
     import Spinner from '$lib/ui/Spinner.svelte';
 
@@ -125,7 +127,40 @@
         return qs ? `/sales?${qs}` : '/sales';
     }
 
-    let submitting = $state<'update' | 'delete' | null>(null);
+    let submitting = $state<'update' | 'delete' | 'flip' | null>(null);
+
+    let firstFieldEl = $state<HTMLInputElement | null>(null);
+
+    // When ?edit={id} resolves to a real editSale, move keyboard focus to the
+    // first input so Sam (screen reader) and Alex (keyboard) land in the form
+    // instead of on the now-stale trigger link. Awaiting tick() ensures the
+    // panel is mounted before we attempt focus.
+    $effect(() => {
+        if (editId && editSale && editSale.id === editId) {
+            void tick().then(() => {
+                firstFieldEl?.focus();
+                firstFieldEl?.select();
+            });
+        }
+    });
+
+    function onWindowKeydown(event: KeyboardEvent): void {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        if (!editId) {
+            return;
+        }
+
+        // Don't fight native confirm() dialogs; if anything is in flight, skip.
+        if (submitting !== null) {
+            return;
+        }
+
+        event.preventDefault();
+        void goto(urlWithEdit(null), { keepFocus: false, noScroll: true });
+    }
 
     function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
         const which: 'update' | 'delete' = action.search.includes('delete')
@@ -139,6 +174,21 @@
         }
 
         submitting = which;
+
+        return async ({ update }: { update: () => Promise<void> }) => {
+            await update();
+            submitting = null;
+        };
+    }
+
+    function trackFlip({ cancel }: { cancel: () => void }) {
+        if (submitting !== null) {
+            cancel();
+
+            return;
+        }
+
+        submitting = 'flip';
 
         return async ({ update }: { update: () => Promise<void> }) => {
             await update();
@@ -179,6 +229,36 @@
             event.preventDefault();
         }
     }
+
+    function confirmMarkSold(event: Event): void {
+        if (!editSale || !isPastMatch || !editMatchDate) {
+            return;
+        }
+
+        const opponent = editSale.Match.Opponent.name;
+        const ok = confirm(
+            `Mark the ${opponent} sale as sold? Match was on ${dateTime(editMatchDate)}; this writes a historical sale.`,
+        );
+
+        if (!ok) {
+            event.preventDefault();
+        }
+    }
+
+    function confirmRevert(event: Event): void {
+        if (!editSale) {
+            return;
+        }
+
+        const opponent = editSale.Match.Opponent.name;
+        const ok = confirm(
+            `Revert the ${opponent} sale to pending? This removes ${signedMoney(editSale.profit)} from realized profit.`,
+        );
+
+        if (!ok) {
+            event.preventDefault();
+        }
+    }
 </script>
 
 {#snippet editPanel(saleId: string)}
@@ -186,18 +266,114 @@
         <div
             class="bg-surface-subtle border-t border-line p-4 space-y-3"
             role="region"
-            aria-label="Edit sale"
+            aria-label="Edit sale vs {editSale.Match.Opponent.name}"
         >
+            <div
+                class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs"
+            >
+                <span class="text-ink-muted">
+                    Currently
+                    <span
+                        class="ml-1 inline-block px-2 py-0.5 rounded font-medium {statusPill(
+                            editSale.status,
+                        )}"
+                    >
+                        {editSale.status}
+                    </span>
+                </span>
+                {#if editMatchDate}
+                    <span class="text-ink-faint font-mono">
+                        {dateTime(editMatchDate)}
+                    </span>
+                {/if}
+            </div>
+
             {#if isPastMatch && editMatchDate}
                 <div
                     role="alert"
                     class="rounded-lg border border-warning bg-warning/10 px-3 py-2 text-xs text-warning-strong"
                 >
-                    Match was on <span class="font-mono">{dateTime(editMatchDate)}</span>.
-                    Saving here rewrites the original sale record.
+                    Match has already been played. Saving here rewrites the original
+                    sale record.
                 </div>
             {/if}
 
+            <!-- Status commit block. Marking a sale SOLD is the moment money
+                 becomes realized profit; it deserves its own affordance with the
+                 profit delta shown inline, not a checkbox buried in the input grid. -->
+            <div
+                class="rounded-lg border border-line bg-surface p-3 space-y-2"
+                aria-label="Sale status"
+            >
+                {#if editSale.status === 'SOLD'}
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <p class="text-sm text-ink">
+                            <span class="font-medium text-positive-strong">Sold</span>
+                            <span class="text-ink-muted">·</span>
+                            <span class="font-mono text-positive">
+                                {signedMoney(editSale.profit)}
+                            </span>
+                            <span class="text-ink-muted">in realized profit</span>
+                        </p>
+
+                        <form
+                            method="POST"
+                            action="?/update"
+                            use:enhance={trackFlip}
+                        >
+                            <input type="hidden" name="saleId" value={editSale.id} />
+                            <input type="hidden" name="sold" value="false" />
+                            <button
+                                type="submit"
+                                disabled={submitting !== null}
+                                onclick={confirmRevert}
+                                class="text-sm text-ink-muted hover:text-ink hover:underline disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                            >
+                                {#if submitting === 'flip'}
+                                    <Spinner size="1em" />
+                                {/if}
+                                Revert to pending
+                            </button>
+                        </form>
+                    </div>
+                {:else}
+                    <form
+                        method="POST"
+                        action="?/update"
+                        class="space-y-2"
+                        use:enhance={trackFlip}
+                    >
+                        <input type="hidden" name="saleId" value={editSale.id} />
+                        <input type="hidden" name="sold" value="true" />
+
+                        <button
+                            type="submit"
+                            disabled={submitting !== null}
+                            onclick={confirmMarkSold}
+                            class="w-full rounded bg-positive text-surface px-4 py-2.5 font-medium hover:bg-positive-strong disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
+                        >
+                            {#if submitting === 'flip'}
+                                <Spinner size="1em" />
+                            {/if}
+                            Mark sold
+                            <span class="text-surface/80">·</span>
+                            <span class="font-mono">
+                                {signedMoney(editSale.profit)}
+                            </span>
+                            <span class="text-surface/80 font-normal">to realized</span>
+                        </button>
+                        <p class="text-xs text-ink-faint">
+                            {editSale.status === 'CANCELLED'
+                                ? 'Restores this sale and credits realized profit.'
+                                : 'Adds this sale to realized profit on the dashboard.'}
+                        </p>
+                    </form>
+                {/if}
+            </div>
+
+            <!-- Edit numbers form. Status changes go through the block above; the
+                 hidden sold input preserves current status so a save here doesn't
+                 accidentally flip the sale. -->
             <form
                 method="POST"
                 action="?/update"
@@ -205,10 +381,16 @@
                 use:enhance={trackSubmit}
             >
                 <input type="hidden" name="saleId" value={editSale.id} />
+                <input
+                    type="hidden"
+                    name="sold"
+                    value={editSale.status === 'SOLD' ? 'true' : 'false'}
+                />
 
                 <label class="block">
                     <span class="text-xs text-ink-muted">Tickets</span>
                     <input
+                        bind:this={firstFieldEl}
                         type="number"
                         name="nbTickets"
                         min="1"
@@ -230,7 +412,7 @@
                     />
                 </label>
 
-                <label class="block">
+                <label class="block sm:col-span-2">
                     <span class="text-xs text-ink-muted">Cost paid for tickets (€)</span>
                     <input
                         type="number"
@@ -240,16 +422,6 @@
                         value={editSale.invest}
                         class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
                     />
-                </label>
-
-                <label class="flex items-center gap-2 self-end pb-1.5">
-                    <input
-                        type="checkbox"
-                        name="sold"
-                        checked={editSale.status === 'SOLD'}
-                        class="rounded border-line-strong"
-                    />
-                    <span class="text-sm text-ink">Mark as sold</span>
                 </label>
 
                 {#if form?.message}
@@ -292,13 +464,18 @@
                         href={urlWithEdit(null)}
                         class="ml-auto text-sm text-ink-muted hover:text-ink hover:underline px-2 py-1.5"
                     >
-                        Cancel
+                        Cancel <kbd
+                            class="ml-1 font-mono text-[10px] text-ink-faint"
+                            aria-hidden="true">Esc</kbd
+                        >
                     </a>
                 </div>
             </form>
         </div>
     {/if}
 {/snippet}
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Sales</h1>
