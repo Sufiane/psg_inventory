@@ -3,11 +3,14 @@ import {
     ConflictException,
     HttpException,
     InternalServerErrorException,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
 
 import { DomainException } from './domain.exception';
 import { ErrorCode } from './error-codes.enum';
+
+const logger = new Logger('HttpExceptionMapper');
 
 const map: Record<ErrorCode, () => HttpException> = {
     [ErrorCode.MATCH_NOT_FOUND]: () => new NotFoundException(ErrorCode.MATCH_NOT_FOUND),
@@ -29,6 +32,14 @@ const map: Record<ErrorCode, () => HttpException> = {
 export function toHttpException(e: unknown): HttpException {
     if (e instanceof DomainException) {
         return map[e.code]?.() ?? new InternalServerErrorException(e.code);
+    }
+
+    // Unmapped errors collapse to a generic 500 on the wire; without this log
+    // the original cause is lost and the response is undebuggable.
+    if (e instanceof Error) {
+        logger.error(`Unmapped error: ${e.message}`, e.stack);
+    } else {
+        logger.error('Unmapped non-error thrown', e);
     }
 
     return new InternalServerErrorException(ErrorCode.INTERNAL_ERROR);
