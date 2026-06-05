@@ -6,4 +6,5 @@ export enum ErrorCode {
     COULD_NOT_LOAD_MATCHES = 'could_not_load_matches',
     INTERNAL_ERROR = 'internal_error',
     EMAIL_ALREADY_EXISTS = 'email_already_exists',
+    SALE_AFTER_KICKOFF = 'sale_after_kickoff',
 }

@@ -1,4 +1,5 @@
 import { Accounting } from './accounting.type';
+import { LeadTime } from './lead-time.type';
 
 export type SeasonInvestment = {
     price: number;
@@ -14,4 +15,5 @@ export type TimePeriodAccounting = {
     pending: Accounting | null;
     seasonInvestment: SeasonInvestment | null;
     totalSeasonInvestment: number;
+    leadTime: LeadTime | null;
 };

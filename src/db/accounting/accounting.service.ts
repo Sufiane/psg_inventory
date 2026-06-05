@@ -6,6 +6,7 @@ import { SaleStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { IAccountingDbService } from './accounting.db.interface';
 import { MatchRealizedProfit } from './types/match-realized-profit.type';
+import { SoldLeadTime } from './types/sold-lead-time.type';
 
 @Injectable()
 export class AccountingService implements IAccountingDbService {
@@ -99,5 +100,31 @@ export class AccountingService implements IAccountingDbService {
             (firstMatch, secondMatch) =>
                 firstMatch.date.getTime() - secondMatch.date.getTime(),
         );
+    }
+
+    async getSoldLeadTimes(
+        userId: string,
+        from: Date,
+        to?: Date,
+    ): Promise<SoldLeadTime[]> {
+        const rows = await this.prisma.sales.findMany({
+            where: {
+                userId,
+                status: SaleStatus.SOLD,
+                soldAt: { not: null },
+                Match: { date: { gte: from, lte: to } },
+            },
+            select: {
+                soldAt: true,
+                Match: { select: { date: true } },
+            },
+        });
+
+        return rows
+            .filter(
+                (row): row is { soldAt: Date; Match: { date: Date } } =>
+                    row.soldAt !== null,
+            )
+            .map((row) => ({ soldAt: row.soldAt, matchDate: row.Match.date }));
     }
 }

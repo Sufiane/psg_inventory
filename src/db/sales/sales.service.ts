@@ -162,6 +162,38 @@ export class SalesService implements ISalesDbService {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
+        const nextStatus: SaleStatus =
+            payload.sold === undefined
+                ? currentSale.status
+                : payload.sold
+                  ? SaleStatus.SOLD
+                  : SaleStatus.PENDING;
+
+        const wasSold = currentSale.status === SaleStatus.SOLD;
+        const willBeSold = nextStatus === SaleStatus.SOLD;
+        const wasCancelled = currentSale.status === SaleStatus.CANCELLED;
+        const willBeCancelled = nextStatus === SaleStatus.CANCELLED;
+
+        // soldAt / cancelledAt mirror the current status: set on entry into the
+        // state, null on exit. The full transition trail lives in
+        // sale_histories, so clearing here loses no audit data.
+        const timestampPatch: {
+            soldAt?: Date | null;
+            cancelledAt?: Date | null;
+        } = {};
+
+        if (willBeSold && !wasSold) {
+            timestampPatch.soldAt = new Date();
+        } else if (!willBeSold && wasSold) {
+            timestampPatch.soldAt = null;
+        }
+
+        if (willBeCancelled && !wasCancelled) {
+            timestampPatch.cancelledAt = new Date();
+        } else if (!willBeCancelled && wasCancelled) {
+            timestampPatch.cancelledAt = null;
+        }
+
         await this.prisma.$transaction(async (tx) => {
             await tx.sales.update({
                 data: shake({
@@ -169,7 +201,8 @@ export class SalesService implements ISalesDbService {
                     nbTickets: payload.nbTickets,
                     invest: payload.invest,
                     listedPrice: payload.listedPrice,
-                    status: payload.sold ? SaleStatus.SOLD : SaleStatus.PENDING,
+                    status: nextStatus,
+                    ...timestampPatch,
                 }),
                 where: {
                     id: payload.saleId,
@@ -250,9 +283,13 @@ export class SalesService implements ISalesDbService {
             return;
         }
 
+        const cancelledAt = new Date();
+
         await this.prisma.sales.updateMany({
             data: {
                 status: SaleStatus.CANCELLED,
+                cancelledAt,
+                soldAt: null,
             },
             where: {
                 Match: {

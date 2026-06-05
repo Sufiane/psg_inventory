@@ -22,6 +22,8 @@ const map: Record<ErrorCode, () => HttpException> = {
         new InternalServerErrorException(ErrorCode.INTERNAL_ERROR),
     [ErrorCode.EMAIL_ALREADY_EXISTS]: () =>
         new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS),
+    [ErrorCode.SALE_AFTER_KICKOFF]: () =>
+        new BadRequestException(ErrorCode.SALE_AFTER_KICKOFF),
 };
 
 export function toHttpException(e: unknown): HttpException {

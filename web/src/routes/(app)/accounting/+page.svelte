@@ -7,6 +7,7 @@
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import AmortizationCard from '$lib/ui/AmortizationCard.svelte';
     import AmortizationCardSkeleton from '$lib/ui/AmortizationCardSkeleton.svelte';
+    import LeadTimeStrip from '$lib/ui/LeadTimeStrip.svelte';
     import { signedMoney } from '$lib/format';
 
     let { data }: { data: PageData } = $props();
@@ -178,6 +179,12 @@
         {/await}
     {/if}
     </div>
+
+    {#if accounting.leadTime && accounting.leadTime.soldCount >= 3}
+        <div class="mb-6">
+            <LeadTimeStrip data={accounting.leadTime} />
+        </div>
+    {/if}
 
     <div class="mb-4">
         <AccountingCard

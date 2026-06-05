@@ -74,6 +74,7 @@ describe('AccountingService', () => {
                 pending: null,
                 seasonInvestment: null,
                 totalSeasonInvestment: 0,
+                leadTime: null,
             };
 
             // start month=0 < 7 → seasonStartYear = 2021
@@ -109,6 +110,7 @@ describe('AccountingService', () => {
                 pending: null,
                 seasonInvestment: null,
                 totalSeasonInvestment: 0,
+                leadTime: null,
             };
 
             const getSeasonSpy = jest.spyOn(service, 'getSeason');
@@ -140,6 +142,7 @@ describe('AccountingService', () => {
                 pending: null,
                 seasonInvestment: null,
                 totalSeasonInvestment: 0,
+                leadTime: null,
             };
 
             const oldestMatchSale = {
@@ -285,6 +288,7 @@ describe('AccountingService', () => {
             it('should return the accounting and set the cache', async () => {
                 redisService.get.mockResolvedValueOnce(null);
                 seasonPassesDbService.findAll.mockResolvedValueOnce([]);
+                accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
 
                 const userId = 'userId';
                 const dates = {
@@ -307,6 +311,7 @@ describe('AccountingService', () => {
                     pending,
                     seasonInvestment: null,
                     totalSeasonInvestment: 0,
+                    leadTime: null,
                 };
 
                 await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
@@ -488,6 +493,99 @@ describe('AccountingService', () => {
             expect(key).toBe(CACHE_KEYS.amortization(userId, seasonStartYear));
             expect(ttl).toBe(24 * 60 * 60);
             expect((value as { progress: number }).progress).toBe(1);
+        });
+    });
+
+    describe('getSeason — lead-time aggregation', () => {
+        const userId = 'userUuid';
+        const dates = { start: new Date('2024-08-01'), end: new Date('2025-07-31') };
+
+        beforeEach(() => {
+            redisService.get.mockResolvedValue(null);
+            seasonPassesDbService.findBySeason.mockResolvedValue(null);
+            seasonPassesDbService.findAll.mockResolvedValue([]);
+            jest.spyOn(service, 'getAccounting').mockResolvedValue(null);
+        });
+
+        it('returns null leadTime when no sold sales in range', async () => {
+            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
+
+            const result = await service.getSeason(userId, dates, 2024);
+
+            expect(result.leadTime).toBeNull();
+        });
+
+        it('computes avg/median/min/max lead days from soldAt vs match date', async () => {
+            // lead days: 10, 5, 1 → sorted [1, 5, 10], avg 5.33→5.3, median 5
+            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
+                {
+                    soldAt: new Date('2024-09-01T00:00:00Z'),
+                    matchDate: new Date('2024-09-11T00:00:00Z'),
+                },
+                {
+                    soldAt: new Date('2024-10-01T00:00:00Z'),
+                    matchDate: new Date('2024-10-06T00:00:00Z'),
+                },
+                {
+                    soldAt: new Date('2024-11-01T00:00:00Z'),
+                    matchDate: new Date('2024-11-02T00:00:00Z'),
+                },
+            ]);
+
+            const result = await service.getSeason(userId, dates, 2024);
+
+            expect(result.leadTime).toEqual({
+                soldCount: 3,
+                avgLeadDays: 5.3,
+                medianLeadDays: 5,
+                minLeadDays: 1,
+                maxLeadDays: 10,
+            });
+        });
+
+        it('clamps negative lead days to 0 (defensive against legacy backfill)', async () => {
+            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
+                {
+                    soldAt: new Date('2024-09-15T00:00:00Z'),
+                    matchDate: new Date('2024-09-10T00:00:00Z'),
+                },
+            ]);
+
+            const result = await service.getSeason(userId, dates, 2024);
+
+            expect(result.leadTime).toEqual({
+                soldCount: 1,
+                avgLeadDays: 0,
+                medianLeadDays: 0,
+                minLeadDays: 0,
+                maxLeadDays: 0,
+            });
+        });
+
+        it('averages the two middle values for an even-length sample', async () => {
+            // 2, 4, 6, 10 → median = (4+6)/2 = 5
+            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
+                {
+                    soldAt: new Date('2024-09-01T00:00:00Z'),
+                    matchDate: new Date('2024-09-03T00:00:00Z'),
+                },
+                {
+                    soldAt: new Date('2024-10-01T00:00:00Z'),
+                    matchDate: new Date('2024-10-05T00:00:00Z'),
+                },
+                {
+                    soldAt: new Date('2024-11-01T00:00:00Z'),
+                    matchDate: new Date('2024-11-07T00:00:00Z'),
+                },
+                {
+                    soldAt: new Date('2024-12-01T00:00:00Z'),
+                    matchDate: new Date('2024-12-11T00:00:00Z'),
+                },
+            ]);
+
+            const result = await service.getSeason(userId, dates, 2024);
+
+            expect(result.leadTime?.medianLeadDays).toBe(5);
         });
     });
 });

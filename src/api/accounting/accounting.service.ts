@@ -15,6 +15,8 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { ONE_DAY_TTL } from '../../shared/constants';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { Amortization, AmortizationMatchRow } from './types/amortization.type';
+import { LeadTime } from './types/lead-time.type';
+import { SoldLeadTime } from '../../db/accounting/types/sold-lead-time.type';
 
 function seasonStartYearFromDate(date: Date): number {
     return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
@@ -129,6 +131,7 @@ export class AccountingService implements IAccountingService {
                     unrealized: null,
                     seasonInvestment: null,
                     totalSeasonInvestment: 0,
+                    leadTime: null,
                 }
             );
         }
@@ -139,6 +142,7 @@ export class AccountingService implements IAccountingService {
             pendingAccounting,
             seasonInvestment,
             allPasses,
+            leadTimes,
         ] = await Promise.all([
             this.getAccounting(userId, 'realized', dates),
             this.getAccounting(userId, 'unrealized', dates),
@@ -149,6 +153,7 @@ export class AccountingService implements IAccountingService {
             seasonStartYear === null
                 ? this.seasonPassesDbService.findAll(userId)
                 : Promise.resolve([]),
+            this.accountingDbService.getSoldLeadTimes(userId, dates.start, dates.end),
         ]);
 
         const seasonInvestmentInfo: SeasonInvestment | null = seasonInvestment
@@ -178,6 +183,7 @@ export class AccountingService implements IAccountingService {
             pending: pendingAccounting,
             seasonInvestment: seasonInvestmentInfo,
             totalSeasonInvestment,
+            leadTime: computeLeadTime(leadTimes),
         };
 
         await this.redisService.set(cacheKey, accounting, ONE_DAY_TTL);
@@ -269,6 +275,35 @@ export class AccountingService implements IAccountingService {
 
         return result;
     }
+}
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function leadDays(soldAt: Date, matchDate: Date): number {
+    // Sale-after-kickoff is rejected at the api layer, so this is always ≥ 0;
+    // clamp defensively against legacy/backfilled rows.
+    return Math.max(0, Math.floor((matchDate.getTime() - soldAt.getTime()) / MS_PER_DAY));
+}
+
+function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
+    if (rows.length === 0) {
+        return null;
+    }
+
+    const days = rows.map((row) => leadDays(row.soldAt, row.matchDate));
+    const sorted = [...days].sort((firstDay, secondDay) => firstDay - secondDay);
+    const sum = days.reduce((acc, day) => acc + day, 0);
+    const mid = Math.floor(sorted.length / 2);
+    const median =
+        sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    return {
+        soldCount: rows.length,
+        avgLeadDays: Math.round((sum / rows.length) * 10) / 10,
+        medianLeadDays: Math.round(median * 10) / 10,
+        minLeadDays: sorted[0],
+        maxLeadDays: sorted[sorted.length - 1],
+    };
 }
 
 function emptyAmortization(seasonStartYear: number): Amortization {

@@ -63,6 +63,7 @@ export class SalesService implements ISalesService {
                 id: sale.Match.Opponent.id,
                 name: sale.Match.Opponent.name,
             },
+            matchDate: sale.Match.date,
         };
     }
 
@@ -77,6 +78,20 @@ export class SalesService implements ISalesService {
     }
 
     async updateSale(userId: string, payload: UpdateSaleDto): Promise<void> {
+        // A sale can't be marked SOLD after the match has kicked off. We check
+        // here (api layer) so the domain rule has a single source of truth.
+        if (payload.sold) {
+            const sale = await this.salesDbService.getOneSale(userId, payload.saleId);
+
+            if (!sale) {
+                throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            }
+
+            if (sale.Match.date.getTime() <= Date.now()) {
+                throw new DomainException(ErrorCode.SALE_AFTER_KICKOFF);
+            }
+        }
+
         await this.salesDbService.updateSale({
             userId,
             ...payload,

@@ -4,8 +4,40 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { tick } from 'svelte';
-    import { competitionLabel, dateTime, money, signedMoney } from '$lib/format';
+    import {
+        competitionLabel,
+        dateTime,
+        daysBetween,
+        leadDaysLabel,
+        money,
+        signedMoney,
+    } from '$lib/format';
+    import type { SaleListItem } from '$lib/types';
     import Spinner from '$lib/ui/Spinner.svelte';
+
+    /**
+     * Single-line temporal note for a sale row. Quiet, present-tense, no
+     * decorative glyphs — pairs with the status pill rather than replacing it.
+     */
+    function lifecycleNote(sale: SaleListItem): string | null {
+        if (sale.status === 'SOLD' && sale.soldAt && sale.matchDate) {
+            const lead = Math.max(0, daysBetween(sale.soldAt, sale.matchDate));
+
+            return `Sold ${leadDaysLabel(lead)}`;
+        }
+
+        if (sale.status === 'PENDING' && sale.createdAt) {
+            const ageDays = Math.max(0, daysBetween(sale.createdAt, new Date()));
+
+            if (ageDays === 0) {
+                return 'Listed today';
+            }
+
+            return `Listed ${ageDays} d ago`;
+        }
+
+        return null;
+    }
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -701,6 +733,7 @@
     <ul class="grid gap-3 sm:hidden">
         {#each sortedSales as sale (sale.id)}
             {@const isOpen = editId === sale.id}
+            {@const mobileNote = lifecycleNote(sale)}
             <li
                 class="bg-surface rounded-lg border {isOpen
                     ? 'border-line-strong'
@@ -712,7 +745,7 @@
                     aria-controls={isOpen ? `edit-${sale.id}` : undefined}
                     class="block p-4 hover:bg-surface-subtle transition-colors"
                 >
-                    <header class="flex items-baseline justify-between gap-3 mb-2">
+                    <header class="flex items-baseline justify-between gap-3 mb-1">
                         <span class="font-medium text-ink truncate">{sale.opponent.name}</span>
                         <span
                             class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
@@ -722,6 +755,9 @@
                             {sale.status}
                         </span>
                     </header>
+                    {#if mobileNote}
+                        <p class="mb-2 text-xs text-ink-faint">{mobileNote}</p>
+                    {/if}
                     <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                         <dt class="text-ink-muted">Tickets</dt>
                         <dd class="text-right font-mono text-ink">{sale.nbTickets}</dd>
@@ -830,6 +866,7 @@
             <tbody class="divide-y divide-line">
                 {#each sortedSales as sale (sale.id)}
                     {@const isOpen = editId === sale.id}
+                    {@const desktopNote = lifecycleNote(sale)}
                     <tr class={isOpen ? 'bg-surface-subtle' : ''}>
                         <td class="px-4 py-2 text-ink">{sale.opponent.name}</td>
                         <td class="px-4 py-2 text-right font-mono text-ink">
@@ -857,6 +894,11 @@
                             >
                                 {sale.status}
                             </span>
+                            {#if desktopNote}
+                                <div class="mt-1 text-[0.65rem] text-ink-faint leading-snug">
+                                    {desktopNote}
+                                </div>
+                            {/if}
                         </td>
                         <td class="px-4 py-2 text-right">
                             <a

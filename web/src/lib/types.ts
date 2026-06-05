@@ -39,6 +39,10 @@ export type SaleListItem = {
     nbTickets: number;
     status: SaleStatus;
     opponent: { id: string; name: string };
+    matchDate?: string;
+    createdAt?: string;
+    soldAt?: string | null;
+    cancelledAt?: string | null;
 };
 
 export type SaleDetail = {
@@ -50,6 +54,9 @@ export type SaleDetail = {
     invest: number;
     nbTickets: number;
     status: SaleStatus;
+    createdAt?: string;
+    soldAt?: string | null;
+    cancelledAt?: string | null;
     Match: {
         date: string;
         Opponent: { id: string; name: string };
@@ -88,12 +95,21 @@ export type SeasonInvestment = {
     seat: string | null;
 };
 
+export type LeadTime = {
+    soldCount: number;
+    avgLeadDays: number;
+    medianLeadDays: number;
+    minLeadDays: number;
+    maxLeadDays: number;
+};
+
 export type TimePeriodAccounting = {
     realized: Accounting | null;
     unrealized: Accounting | null;
     pending: Accounting | null;
     seasonInvestment: SeasonInvestment | null;
     totalSeasonInvestment: number;
+    leadTime: LeadTime | null;
 };
 
 export type AmortizationMatchRow = {

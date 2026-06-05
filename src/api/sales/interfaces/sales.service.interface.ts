@@ -4,6 +4,7 @@ import { UpdateSaleDto } from '../dto/update-sale.dto';
 
 export type FormattedSale = Omit<Sale, 'Match' | 'userId' | 'matchId'> & {
     opponent: { id: string; name: string };
+    matchDate: Date;
 };
 
 export abstract class ISalesService {

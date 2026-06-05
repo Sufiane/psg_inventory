@@ -103,6 +103,10 @@ model Sales {
   invest      Int             @default(0)
   nbTickets   Int             @map("nb_tickets")
   status      SaleStatus
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  soldAt      DateTime?       @map("sold_at")
+  cancelledAt DateTime?       @map("cancelled_at")
   SaleHistory SaleHistories[]
   Match       Matches         @relation(fields: [matchId], references: [id])
   User        Users           @relation(fields: [userId], references: [id])
@@ -116,8 +120,10 @@ model SaleHistories {
   listedPrice Int        @map("listed_price")
   profit      Int
   status      SaleStatus
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   Sale Sales @relation(fields: [saleId], references: [id])
 
+  @@index([saleId, createdAt])
   @@map("sale_histories")
 }
