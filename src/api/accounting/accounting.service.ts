@@ -129,7 +129,7 @@ export class AccountingService implements IAccountingService {
                     realized: null,
                     pending: null,
                     unrealized: null,
-                    seasonInvestment: null,
+                    seasonInvestments: [],
                     totalSeasonInvestment: 0,
                     leadTime: null,
                 }
@@ -140,7 +140,7 @@ export class AccountingService implements IAccountingService {
             realizedAccounting,
             unrealizedAccounting,
             pendingAccounting,
-            seasonInvestment,
+            seasonPasses,
             allPasses,
             leadTimes,
         ] = await Promise.all([
@@ -149,22 +149,22 @@ export class AccountingService implements IAccountingService {
             this.getAccounting(userId, 'pending', dates),
             seasonStartYear !== null
                 ? this.seasonPassesDbService.findBySeason(userId, seasonStartYear)
-                : Promise.resolve(null),
+                : Promise.resolve([]),
             seasonStartYear === null
                 ? this.seasonPassesDbService.findAll(userId)
                 : Promise.resolve([]),
             this.accountingDbService.getSoldLeadTimes(userId, dates.start, dates.end),
         ]);
 
-        const seasonInvestmentInfo: SeasonInvestment | null = seasonInvestment
-            ? {
-                  price: seasonInvestment.price,
-                  seasonStartYear: seasonInvestment.seasonStartYear,
-                  category: seasonInvestment.category,
-                  row: seasonInvestment.row,
-                  seat: seasonInvestment.seat,
-              }
-            : null;
+        const seasonInvestments: SeasonInvestment[] = seasonPasses.map((pass) => ({
+            id: pass.id,
+            price: pass.price,
+            seasonStartYear: pass.seasonStartYear,
+            label: pass.label,
+            category: pass.category,
+            row: pass.row,
+            seat: pass.seat,
+        }));
 
         // For the all-time view, only count passes for seasons that have already
         // started — a future season's pass is paid but not yet "in use", so
@@ -175,13 +175,13 @@ export class AccountingService implements IAccountingService {
                 ? allPasses
                       .filter((pass) => pass.seasonStartYear <= currentSeasonStartYear)
                       .reduce((sum, pass) => sum + pass.price, 0)
-                : (seasonInvestmentInfo?.price ?? 0);
+                : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0);
 
         const accounting: TimePeriodAccounting = {
             realized: realizedAccounting,
             unrealized: unrealizedAccounting,
             pending: pendingAccounting,
-            seasonInvestment: seasonInvestmentInfo,
+            seasonInvestments,
             totalSeasonInvestment,
             leadTime: computeLeadTime(leadTimes),
         };
@@ -207,7 +207,7 @@ export class AccountingService implements IAccountingService {
             end: new Date(seasonStartYear + 1, 6, 31),
         };
 
-        const [pass, matchRows] = await Promise.all([
+        const [passes, matchRows] = await Promise.all([
             this.seasonPassesDbService.findBySeason(userId, seasonStartYear),
             this.accountingDbService.getRealizedProfitPerMatch(
                 userId,
@@ -216,8 +216,13 @@ export class AccountingService implements IAccountingService {
             ),
         ]);
 
-        const hasPass = pass !== null;
-        const passPrice = pass?.price ?? 0;
+        const hasPass = passes.length > 0;
+        const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
+        const passSummaries = passes.map((pass) => ({
+            id: pass.id,
+            label: pass.label,
+            price: pass.price,
+        }));
 
         let cumulative = 0;
         let breakEvenAssigned = false;
@@ -269,6 +274,7 @@ export class AccountingService implements IAccountingService {
                   }
                 : null,
             perMatch,
+            passes: passSummaries,
         };
 
         await this.redisService.set(cacheKey, result, ONE_DAY_TTL);
@@ -317,5 +323,6 @@ function emptyAmortization(seasonStartYear: number): Amortization {
         surplus: 0,
         breakEven: null,
         perMatch: [],
+        passes: [],
     };
 }

@@ -16,6 +16,12 @@ export type AmortizationBreakEven = {
     cumulative: number;
 };
 
+export type AmortizationPass = {
+    id: string;
+    label: string;
+    price: number;
+};
+
 export type Amortization = {
     seasonStartYear: number;
     passPrice: number;
@@ -26,4 +32,5 @@ export type Amortization = {
     surplus: number;
     breakEven: AmortizationBreakEven | null;
     perMatch: AmortizationMatchRow[];
+    passes: AmortizationPass[];
 };

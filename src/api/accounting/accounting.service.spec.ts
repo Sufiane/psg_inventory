@@ -72,7 +72,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
-                seasonInvestment: null,
+                seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
             };
@@ -108,7 +108,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
-                seasonInvestment: null,
+                seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
             };
@@ -140,7 +140,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
-                seasonInvestment: null,
+                seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
             };
@@ -309,7 +309,7 @@ describe('AccountingService', () => {
                     realized,
                     unrealized,
                     pending,
-                    seasonInvestment: null,
+                    seasonInvestments: [],
                     totalSeasonInvestment: 0,
                     leadTime: null,
                 };
@@ -356,9 +356,10 @@ describe('AccountingService', () => {
                 userId,
                 seasonStartYear,
                 price,
-                category: null,
-                row: null,
-                seat: null,
+                label: 'Pass',
+                category: '-',
+                row: '-',
+                seat: '-',
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
@@ -369,7 +370,7 @@ describe('AccountingService', () => {
         });
 
         it('returns zeroed result when no sales and no pass', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(null);
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([]);
 
             const result = await service.getAmortization(userId, seasonStartYear);
@@ -385,7 +386,7 @@ describe('AccountingService', () => {
         });
 
         it('reports progress without break-even when below pass price', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(1000));
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(1000)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 200 }),
                 row({ matchId: 'm2', date: new Date('2024-10-01'), matchProfit: 300 }),
@@ -404,7 +405,7 @@ describe('AccountingService', () => {
         });
 
         it('flags the first match whose cumulative crosses pass price', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(500));
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(500)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 200 }),
                 row({
@@ -431,7 +432,7 @@ describe('AccountingService', () => {
         });
 
         it('caps progress at 1 and reports surplus on overshoot', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(300));
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(300)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 800 }),
             ]);
@@ -444,7 +445,7 @@ describe('AccountingService', () => {
         });
 
         it('treats missing pass as no progress; surplus tracks total realized', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(null);
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 150 }),
             ]);
@@ -481,7 +482,7 @@ describe('AccountingService', () => {
         });
 
         it('writes the computed result to cache', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce(pass(100));
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(100)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({ matchId: 'm1', date: new Date('2024-09-01'), matchProfit: 100 }),
             ]);
@@ -502,7 +503,7 @@ describe('AccountingService', () => {
 
         beforeEach(() => {
             redisService.get.mockResolvedValue(null);
-            seasonPassesDbService.findBySeason.mockResolvedValue(null);
+            seasonPassesDbService.findBySeason.mockResolvedValue([]);
             seasonPassesDbService.findAll.mockResolvedValue([]);
             jest.spyOn(service, 'getAccounting').mockResolvedValue(null);
         });

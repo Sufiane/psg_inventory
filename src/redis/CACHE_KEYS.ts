@@ -15,8 +15,10 @@ export default {
         `user:id:${userId}:sales:start:${from.toISOString()}:end:${to.toISOString()}`,
     invalidateSales: (userId: string) => `user:id:${userId}:sales*`,
     userByEmail: (email: string) => `user:email:${email}`,
-    seasonPass: (userId: string, seasonStartYear: number) =>
-        `user:id:${userId}:season-pass:${seasonStartYear}`,
+    seasonPass: (id: string) => `season-pass:id:${id}`,
+    seasonPassesBySeason: (userId: string, seasonStartYear: number) =>
+        `user:id:${userId}:season-passes:season:${seasonStartYear}`,
     seasonPasses: (userId: string) => `user:id:${userId}:season-passes`,
     invalidateSeasonPasses: (userId: string) => `user:id:${userId}:season-pass*`,
+    invalidateSeasonPassById: (id: string) => `season-pass:id:${id}*`,
 };

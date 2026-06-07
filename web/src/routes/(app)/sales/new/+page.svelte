@@ -45,17 +45,38 @@
         </select>
     </label>
 
-    <label class="block">
-        <span class="text-sm text-ink-muted">Number of tickets</span>
-        <input
-            type="number"
-            name="nbTickets"
-            min="1"
-            step="1"
-            required
-            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-        />
-    </label>
+    <fieldset class="rounded border border-line p-3 space-y-2">
+        <legend class="text-sm text-ink-muted px-1">Tickets per pass</legend>
+
+        {#if data.passes.length === 0}
+            <p class="text-xs text-negative-strong">
+                No season pass yet — <a
+                    href="/season"
+                    class="text-primary hover:text-primary-hover hover:underline"
+                    >create one</a
+                > before logging sales.
+            </p>
+        {:else}
+            {#each data.passes as pass (pass.id)}
+                <label class="flex items-center justify-between gap-3">
+                    <span class="text-sm text-ink-muted truncate">
+                        {pass.seasonStartYear} · {pass.label}
+                        <span class="text-ink-faint">
+                            ({pass.category} · {pass.row}/{pass.seat})
+                        </span>
+                    </span>
+                    <input
+                        type="number"
+                        name={`alloc_${pass.id}`}
+                        min="0"
+                        step="1"
+                        value="0"
+                        class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
+                    />
+                </label>
+            {/each}
+        {/if}
+    </fieldset>
 
     <label class="block">
         <span class="text-sm text-ink-muted">Listed price (€)</span>

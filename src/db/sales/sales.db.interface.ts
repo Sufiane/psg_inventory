@@ -3,6 +3,11 @@ import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 
+export type SaleAllocationInput = {
+    seasonPassId: string;
+    nbTickets: number;
+};
+
 export abstract class ISalesDbService {
     abstract getOneSale(userId: string, saleId: string): Promise<Sale | null>;
     abstract getSales(userId: string): Promise<Sale[]>;
@@ -13,20 +18,20 @@ export abstract class ISalesDbService {
     abstract addSale(payload: {
         userId: string;
         profit: number;
-        nbTickets: number;
         invest: number;
         matchId: string;
         listedPrice: number;
+        allocations: SaleAllocationInput[];
     }): Promise<{ id: string }>;
     abstract updateSale(payload: {
         saleId: string;
         userId: string;
         profit: number | undefined;
-        nbTickets?: number;
         invest?: number;
         listedPrice?: number;
         sold?: boolean;
         status?: SaleStatus;
+        allocations?: SaleAllocationInput[];
     }): Promise<void>;
     abstract deleteSale(userId: string, saleId: string): Promise<void>;
     abstract getOneByWithFullMatch(query: {

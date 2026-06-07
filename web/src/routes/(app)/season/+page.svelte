@@ -8,8 +8,8 @@
 
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-    let pass = $derived(data.pass);
-    let submitting = $state<'upsert' | 'remove' | null>(null);
+    let seasonPasses = $derived(data.seasonPasses);
+    let submitting = $state<string | null>(null);
 </script>
 
 <div class="flex items-center justify-between mb-6">
@@ -47,118 +47,241 @@
     </p>
 {/if}
 
-<div class="grid md:grid-cols-2 gap-6">
-    <section class="bg-surface rounded-lg border border-line p-6">
-        <h2 class="text-base font-semibold tracking-tight text-ink mb-4">
-            Season {data.year} pass
-        </h2>
+<div class="grid lg:grid-cols-2 gap-6">
+    <section class="bg-surface rounded-lg border border-line p-6 space-y-6">
+        <header class="flex items-center justify-between">
+            <h2 class="text-base font-semibold tracking-tight text-ink">
+                Season {data.year} passes
+            </h2>
+            <span class="text-xs text-ink-faint">{seasonPasses.length} pass(es)</span>
+        </header>
 
-        <form
-            method="POST"
-            action="?/upsert"
-            class="space-y-4"
-            use:enhance={() => {
-                submitting = 'upsert';
+        {#if seasonPasses.length === 0}
+            <p class="text-ink-faint text-sm">
+                No pass for this season yet. Add one below.
+            </p>
+        {:else}
+            <ul class="space-y-4">
+                {#each seasonPasses as pass (pass.id)}
+                    <li class="rounded-lg border border-line p-4">
+                        <form
+                            method="POST"
+                            action="?/update"
+                            class="space-y-3"
+                            use:enhance={() => {
+                                submitting = `update:${pass.id}`;
 
-                return async ({ update }) => {
-                    await update();
-                    submitting = null;
-                };
-            }}
-        >
-            <input type="hidden" name="seasonStartYear" value={data.year} />
+                                return async ({ update }) => {
+                                    await update();
+                                    submitting = null;
+                                };
+                            }}
+                        >
+                            <input type="hidden" name="passId" value={pass.id} />
 
-            <label class="block">
-                <span class="text-sm text-ink-muted">Price (€)</span>
-                <input
-                    type="number"
-                    name="price"
-                    min="0"
-                    step="1"
-                    required
-                    value={pass?.price ?? ''}
-                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-                />
-            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="block">
+                                    <span class="text-sm text-ink-muted">Label</span>
+                                    <input
+                                        type="text"
+                                        name="label"
+                                        maxlength="64"
+                                        required
+                                        value={pass.label}
+                                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                                    />
+                                </label>
 
-            <label class="block">
-                <span class="text-sm text-ink-muted">Category</span>
-                <input
-                    type="text"
-                    name="category"
-                    maxlength="64"
-                    value={pass?.category ?? ''}
-                    placeholder="e.g. Tribune Boulogne"
-                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-                />
-            </label>
+                                <label class="block">
+                                    <span class="text-sm text-ink-muted">Price (€)</span>
+                                    <input
+                                        type="number"
+                                        name="price"
+                                        min="0"
+                                        step="1"
+                                        required
+                                        value={pass.price}
+                                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                                    />
+                                </label>
+                            </div>
 
-            <div class="grid grid-cols-2 gap-3">
+                            <label class="block">
+                                <span class="text-sm text-ink-muted">Category</span>
+                                <input
+                                    type="text"
+                                    name="category"
+                                    maxlength="64"
+                                    required
+                                    value={pass.category}
+                                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                                />
+                            </label>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <label class="block">
+                                    <span class="text-sm text-ink-muted">Row</span>
+                                    <input
+                                        type="text"
+                                        name="row"
+                                        maxlength="32"
+                                        required
+                                        value={pass.row}
+                                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                                    />
+                                </label>
+
+                                <label class="block">
+                                    <span class="text-sm text-ink-muted">Seat</span>
+                                    <input
+                                        type="text"
+                                        name="seat"
+                                        maxlength="32"
+                                        required
+                                        value={pass.seat}
+                                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                                    />
+                                </label>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <button
+                                    type="submit"
+                                    disabled={submitting !== null}
+                                    class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                                >
+                                    {#if submitting === `update:${pass.id}`}
+                                        <Spinner size="1em" />
+                                    {/if}
+                                    Save
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    formaction="?/remove"
+                                    formnovalidate
+                                    disabled={submitting !== null}
+                                    class="rounded border border-negative text-negative-strong px-4 py-2 text-sm font-medium hover:bg-negative/5 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                                    onclick={(event) => {
+                                        if (!confirm(`Delete pass "${pass.label}"?`)) {
+                                            event.preventDefault();
+
+                                            return;
+                                        }
+
+                                        submitting = `remove:${pass.id}`;
+                                    }}
+                                >
+                                    {#if submitting === `remove:${pass.id}`}
+                                        <Spinner size="1em" />
+                                    {/if}
+                                    Delete
+                                </button>
+                            </div>
+                        </form>
+                    </li>
+                {/each}
+            </ul>
+        {/if}
+
+        <details class="rounded-lg border border-line p-4">
+            <summary class="cursor-pointer text-sm font-medium text-ink"
+                >+ Add another pass</summary
+            >
+
+            <form
+                method="POST"
+                action="?/create"
+                class="mt-4 space-y-3"
+                use:enhance={() => {
+                    submitting = 'create';
+
+                    return async ({ update }) => {
+                        await update();
+                        submitting = null;
+                    };
+                }}
+            >
+                <input type="hidden" name="seasonStartYear" value={data.year} />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label class="block">
+                        <span class="text-sm text-ink-muted">Label</span>
+                        <input
+                            type="text"
+                            name="label"
+                            maxlength="64"
+                            required
+                            placeholder="e.g. Tribune Auteuil"
+                            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                        />
+                    </label>
+
+                    <label class="block">
+                        <span class="text-sm text-ink-muted">Price (€)</span>
+                        <input
+                            type="number"
+                            name="price"
+                            min="0"
+                            step="1"
+                            required
+                            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                        />
+                    </label>
+                </div>
+
                 <label class="block">
-                    <span class="text-sm text-ink-muted">Row</span>
+                    <span class="text-sm text-ink-muted">Category</span>
                     <input
                         type="text"
-                        name="row"
-                        maxlength="32"
-                        value={pass?.row ?? ''}
+                        name="category"
+                        maxlength="64"
+                        required
                         class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
                     />
                 </label>
 
-                <label class="block">
-                    <span class="text-sm text-ink-muted">Seat #</span>
-                    <input
-                        type="text"
-                        name="seat"
-                        maxlength="32"
-                        value={pass?.seat ?? ''}
-                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-                    />
-                </label>
-            </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="block">
+                        <span class="text-sm text-ink-muted">Row</span>
+                        <input
+                            type="text"
+                            name="row"
+                            maxlength="32"
+                            required
+                            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                        />
+                    </label>
 
-            <div class="flex items-center gap-3">
+                    <label class="block">
+                        <span class="text-sm text-ink-muted">Seat</span>
+                        <input
+                            type="text"
+                            name="seat"
+                            maxlength="32"
+                            required
+                            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                        />
+                    </label>
+                </div>
+
                 <button
                     type="submit"
                     disabled={submitting !== null}
                     class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                 >
-                    {#if submitting === 'upsert'}
+                    {#if submitting === 'create'}
                         <Spinner size="1em" />
                     {/if}
-                    {pass ? 'Update' : 'Create'}
+                    Add pass
                 </button>
-
-                {#if pass}
-                    <button
-                        type="submit"
-                        formaction="?/remove"
-                        formnovalidate
-                        disabled={submitting !== null}
-                        class="rounded border border-negative text-negative-strong px-4 py-2 text-sm font-medium hover:bg-negative/5 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                        onclick={(event) => {
-                            if (!confirm(`Delete season ${data.year} pass?`)) {
-                                event.preventDefault();
-
-                                return;
-                            }
-
-                            submitting = 'remove';
-                        }}
-                    >
-                        {#if submitting === 'remove'}
-                            <Spinner size="1em" />
-                        {/if}
-                        Delete
-                    </button>
-                {/if}
-            </div>
-        </form>
+            </form>
+        </details>
     </section>
 
     <section class="bg-surface rounded-lg border border-line p-6">
         <h2 class="text-base font-semibold tracking-tight text-ink mb-4">
-            All recorded seasons
+            All recorded passes
         </h2>
 
         {#if data.passes.length === 0}
@@ -173,13 +296,7 @@
                             >{p.seasonStartYear}</a
                         >
                         <span class="flex-1 text-ink-muted">
-                            {#if p.category || p.row || p.seat}
-                                {p.category ?? ''}{p.row ? ` · Row ${p.row}` : ''}{p.seat
-                                    ? ` · Seat ${p.seat}`
-                                    : ''}
-                            {:else}
-                                <span class="text-ink-faint">No seat info</span>
-                            {/if}
+                            {p.label} · {p.category} · Row {p.row} · Seat {p.seat}
                         </span>
                         <span class="text-right font-mono text-ink">{money(p.price)}</span>
                     </li>

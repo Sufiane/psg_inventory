@@ -31,6 +31,12 @@ export type FormattedMatch = {
 
 export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
 
+export type SaleAllocation = {
+    id?: string;
+    seasonPassId: string;
+    nbTickets: number;
+};
+
 export type SaleListItem = {
     id: string;
     listedPrice: number;
@@ -43,6 +49,7 @@ export type SaleListItem = {
     createdAt?: string;
     soldAt?: string | null;
     cancelledAt?: string | null;
+    Allocations?: SaleAllocation[];
 };
 
 export type SaleDetail = {
@@ -61,6 +68,7 @@ export type SaleDetail = {
         date: string;
         Opponent: { id: string; name: string };
     };
+    Allocations?: SaleAllocation[];
 };
 
 type MatchInfo = {
@@ -88,11 +96,13 @@ export type Accounting = {
 };
 
 export type SeasonInvestment = {
+    id: string;
     price: number;
     seasonStartYear: number;
-    category: string | null;
-    row: string | null;
-    seat: string | null;
+    label: string;
+    category: string;
+    row: string;
+    seat: string;
 };
 
 export type LeadTime = {
@@ -107,7 +117,7 @@ export type TimePeriodAccounting = {
     realized: Accounting | null;
     unrealized: Accounting | null;
     pending: Accounting | null;
-    seasonInvestment: SeasonInvestment | null;
+    seasonInvestments: SeasonInvestment[];
     totalSeasonInvestment: number;
     leadTime: LeadTime | null;
 };
@@ -130,6 +140,12 @@ export type AmortizationBreakEven = {
     cumulative: number;
 };
 
+export type AmortizationPass = {
+    id: string;
+    label: string;
+    price: number;
+};
+
 export type Amortization = {
     seasonStartYear: number;
     passPrice: number;
@@ -140,6 +156,7 @@ export type Amortization = {
     surplus: number;
     breakEven: AmortizationBreakEven | null;
     perMatch: AmortizationMatchRow[];
+    passes: AmortizationPass[];
 };
 
 export type SeasonPass = {
@@ -147,30 +164,44 @@ export type SeasonPass = {
     userId: string;
     seasonStartYear: number;
     price: number;
-    category: string | null;
-    row: string | null;
-    seat: string | null;
+    label: string;
+    category: string;
+    row: string;
+    seat: string;
     createdAt: string;
     updatedAt: string;
 };
 
-export type UpsertSeasonPassPayload = {
+export type CreateSeasonPassPayload = {
+    seasonStartYear: number;
     price: number;
-    category?: string;
-    row?: string;
-    seat?: string;
+    label: string;
+    category: string;
+    row: string;
+    seat: string;
+};
+
+export type UpdateSeasonPassPayload = {
+    price: number;
+    label: string;
+    category: string;
+    row: string;
+    seat: string;
 };
 
 export type AddSalePayload = {
     matchId: string;
-    nbTickets: number;
+    allocations: SaleAllocation[];
     invest?: number;
     listedPrice: number;
 };
 
-export type UpdateSalePayload = Partial<AddSalePayload> & {
+export type UpdateSalePayload = {
     saleId: string;
     sold: boolean;
+    invest?: number;
+    listedPrice?: number;
+    allocations?: SaleAllocation[];
 };
 
 export type CreateMatchPayload = {

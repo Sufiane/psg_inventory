@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
-import type { FormattedMatch, SaleDetail, SaleListItem } from '$lib/types';
+import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import type { FormattedMatch, SaleDetail, SaleListItem, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
     const yearParam = event.url.searchParams.get('year');
@@ -24,6 +25,11 @@ export const load: PageServerLoad = async (event) => {
     }
 
     let matches: FormattedMatch[] = [];
+    let passes: SeasonPass[] = [];
+
+    if ((isNew && !editId) || editSale != null) {
+        passes = await api<SeasonPass[]>(event, '/season-passes');
+    }
 
     if (isNew && !editId) {
         const allMatches = await api<FormattedMatch[]>(event, '/matches/current-season');
@@ -38,7 +44,7 @@ export const load: PageServerLoad = async (event) => {
         );
     }
 
-    return { sales, year, editSale, matches, isNew };
+    return { sales, year, editSale, matches, isNew, passes };
 };
 
 function readPayload(form: FormData): {
@@ -54,16 +60,10 @@ function readPayload(form: FormData): {
     const sold = form.get('sold') === 'on' || form.get('sold') === 'true';
     const payload: Record<string, unknown> = { saleId, sold };
 
-    const nbTicketsRaw = form.get('nbTickets');
+    const allocations = parseAllocationsFromForm(form);
 
-    if (typeof nbTicketsRaw === 'string' && nbTicketsRaw.length > 0) {
-        const value = Number(nbTicketsRaw);
-
-        if (!Number.isInteger(value) || value < 1) {
-            return { error: 'Tickets must be at least 1.' };
-        }
-
-        payload.nbTickets = value;
+    if (allocations.length > 0) {
+        payload.allocations = allocations;
     }
 
     const listedPriceRaw = form.get('listedPrice');
@@ -145,18 +145,20 @@ export const actions: Actions = {
     create: async (event) => {
         const form = await event.request.formData();
         const matchId = form.get('matchId');
-        const nbTickets = Number(form.get('nbTickets'));
         const listedPrice = Number(form.get('listedPrice'));
         const investRaw = form.get('invest');
         const invest =
             investRaw !== null && investRaw !== '' ? Number(investRaw) : undefined;
+        const allocations = parseAllocationsFromForm(form);
 
         if (typeof matchId !== 'string' || matchId.length === 0) {
             return fail(400, { message: 'Match is required.' });
         }
 
-        if (!Number.isInteger(nbTickets) || nbTickets < 1) {
-            return fail(400, { message: 'Tickets must be at least 1.' });
+        if (allocations.length === 0) {
+            return fail(400, {
+                message: 'Pick at least one pass and how many tickets it contributes.',
+            });
         }
 
         if (!Number.isFinite(listedPrice) || listedPrice < 1) {
@@ -172,7 +174,7 @@ export const actions: Actions = {
                 method: 'POST',
                 json: {
                     matchId,
-                    nbTickets,
+                    allocations,
                     listedPrice,
                     ...(invest !== undefined ? { invest } : {}),
                 },

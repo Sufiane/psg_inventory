@@ -11,7 +11,11 @@ import { ONE_HOUR_TTL } from '../../shared/constants';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
-import { ISalesDbService } from './sales.db.interface';
+import { ISalesDbService, SaleAllocationInput } from './sales.db.interface';
+
+function sumTickets(allocations: SaleAllocationInput[]): number {
+    return allocations.reduce((total, allocation) => total + allocation.nbTickets, 0);
+}
 
 @Injectable()
 export class SalesService implements ISalesDbService {
@@ -26,6 +30,13 @@ export class SalesService implements ISalesDbService {
                 select: {
                     date: true,
                     Opponent: true,
+                },
+            },
+            Allocations: {
+                select: {
+                    id: true,
+                    seasonPassId: true,
+                    nbTickets: true,
                 },
             },
         },
@@ -117,15 +128,28 @@ export class SalesService implements ISalesDbService {
     async addSale(payload: {
         userId: string;
         profit: number;
-        nbTickets: number;
         invest: number;
         matchId: string;
         listedPrice: number;
+        allocations: SaleAllocationInput[];
     }): Promise<{ id: string }> {
+        const nbTickets = sumTickets(payload.allocations);
+
         const dbResult = await this.prisma.sales.create({
             data: {
-                ...payload,
+                userId: payload.userId,
+                profit: payload.profit,
+                invest: payload.invest,
+                matchId: payload.matchId,
+                listedPrice: payload.listedPrice,
+                nbTickets,
                 status: SaleStatus.PENDING,
+                Allocations: {
+                    create: payload.allocations.map((allocation) => ({
+                        seasonPassId: allocation.seasonPassId,
+                        nbTickets: allocation.nbTickets,
+                    })),
+                },
             },
             select: {
                 id: true,
@@ -145,11 +169,11 @@ export class SalesService implements ISalesDbService {
         saleId: string;
         userId: string;
         profit: number | undefined;
-        nbTickets?: number;
         invest?: number;
         listedPrice?: number;
         sold?: boolean;
         status?: SaleStatus;
+        allocations?: SaleAllocationInput[];
     }): Promise<void> {
         const currentSale = await this.prisma.sales.findUnique({
             where: {
@@ -195,13 +219,18 @@ export class SalesService implements ISalesDbService {
         }
 
         await this.prisma.$transaction(async (tx) => {
+            const nbTicketsPatch =
+                payload.allocations != null
+                    ? { nbTickets: sumTickets(payload.allocations) }
+                    : {};
+
             await tx.sales.update({
                 data: shake({
                     profit: payload.profit,
-                    nbTickets: payload.nbTickets,
                     invest: payload.invest,
                     listedPrice: payload.listedPrice,
                     status: nextStatus,
+                    ...nbTicketsPatch,
                     ...timestampPatch,
                 }),
                 where: {
@@ -209,6 +238,19 @@ export class SalesService implements ISalesDbService {
                     userId: payload.userId,
                 },
             });
+
+            if (payload.allocations != null) {
+                await tx.salePassAllocations.deleteMany({
+                    where: { saleId: payload.saleId },
+                });
+                await tx.salePassAllocations.createMany({
+                    data: payload.allocations.map((allocation) => ({
+                        saleId: payload.saleId,
+                        seasonPassId: allocation.seasonPassId,
+                        nbTickets: allocation.nbTickets,
+                    })),
+                });
+            }
 
             await tx.saleHistories.create({
                 data: {
@@ -232,6 +274,10 @@ export class SalesService implements ISalesDbService {
                 where: {
                     saleId,
                 },
+            });
+
+            await tx.salePassAllocations.deleteMany({
+                where: { saleId },
             });
 
             await tx.sales.delete({

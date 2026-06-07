@@ -121,17 +121,34 @@
         };
     }}
 >
-    <label class="block">
-        <span class="text-sm text-ink-muted">Tickets</span>
-        <input
-            type="number"
-            name="nbTickets"
-            min="1"
-            step="1"
-            value={sale.nbTickets}
-            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-        />
-    </label>
+    <fieldset class="rounded border border-line p-3 space-y-2">
+        <legend class="text-sm text-ink-muted px-1">Tickets per pass</legend>
+        {#each data.passes as pass (pass.id)}
+            {@const current =
+                sale.Allocations?.find((alloc) => alloc.seasonPassId === pass.id)
+                    ?.nbTickets ?? 0}
+            <label class="flex items-center justify-between gap-3">
+                <span class="text-sm text-ink-muted truncate">
+                    {pass.seasonStartYear} · {pass.label}
+                    <span class="text-ink-faint">
+                        ({pass.category} · {pass.row}/{pass.seat})
+                    </span>
+                </span>
+                <input
+                    type="number"
+                    name={`alloc_${pass.id}`}
+                    min="0"
+                    step="1"
+                    value={current}
+                    class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
+                />
+            </label>
+        {/each}
+        <p class="text-xs text-ink-faint">
+            Leave the rows you don't want to change untouched; submit only fills in
+            allocations when at least one value is &gt; 0.
+        </p>
+    </fieldset>
 
     <label class="block">
         <span class="text-sm text-ink-muted">Listed price (€)</span>

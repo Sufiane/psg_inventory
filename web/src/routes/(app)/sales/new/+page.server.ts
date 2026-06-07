@@ -1,35 +1,41 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
-import type { FormattedMatch } from '$lib/types';
+import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import type { FormattedMatch, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
-    const all = await api<FormattedMatch[]>(event, '/matches/current-season');
+    const [allMatches, passes] = await Promise.all([
+        api<FormattedMatch[]>(event, '/matches/current-season'),
+        api<SeasonPass[]>(event, '/season-passes'),
+    ]);
     // Most recent fixtures first; users log sales close to the match date.
-    const matches = [...all].sort(
+    const matches = [...allMatches].sort(
         (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
     );
     const presetMatchId = event.url.searchParams.get('matchId');
 
-    return { matches, presetMatchId };
+    return { matches, presetMatchId, passes };
 };
 
 export const actions: Actions = {
     default: async (event) => {
         const form = await event.request.formData();
         const matchId = form.get('matchId');
-        const nbTickets = Number(form.get('nbTickets'));
         const listedPrice = Number(form.get('listedPrice'));
         const investRaw = form.get('invest');
         const invest =
             investRaw !== null && investRaw !== '' ? Number(investRaw) : undefined;
+        const allocations = parseAllocationsFromForm(form);
 
         if (typeof matchId !== 'string' || matchId.length === 0) {
             return fail(400, { message: 'Match is required.' });
         }
 
-        if (!Number.isInteger(nbTickets) || nbTickets < 1) {
-            return fail(400, { message: 'Tickets must be at least 1.' });
+        if (allocations.length === 0) {
+            return fail(400, {
+                message: 'Pick at least one pass and how many tickets it contributes.',
+            });
         }
 
         if (!Number.isFinite(listedPrice) || listedPrice < 1) {
@@ -45,7 +51,7 @@ export const actions: Actions = {
                 method: 'POST',
                 json: {
                     matchId,
-                    nbTickets,
+                    allocations,
                     listedPrice,
                     ...(invest !== undefined ? { invest } : {}),
                 },

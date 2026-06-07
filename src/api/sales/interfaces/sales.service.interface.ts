@@ -8,7 +8,7 @@ export type FormattedSale = Omit<Sale, 'Match' | 'userId' | 'matchId'> & {
 };
 
 export abstract class ISalesService {
-    abstract getSale(userId: string, saleId: string): Promise<Sale | null>;
+    abstract getSale(userId: string, saleId: string): Promise<Sale>;
     abstract getSales(userId: string): Promise<FormattedSale[]>;
     abstract getCurrentSeasonSales(userId: string): Promise<FormattedSale[]>;
     abstract getSeasonSales(

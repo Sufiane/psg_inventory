@@ -1,12 +1,25 @@
-import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+    ArrayMinSize,
+    IsArray,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Min,
+    ValidateNested,
+} from 'class-validator';
+
+import { SaleAllocationDto } from './sale-allocation.dto';
 
 export class AddSaleDto {
     @IsString()
     matchId: string;
 
-    @IsInt()
-    @Min(1)
-    nbTickets: number;
+    @IsArray()
+    @ArrayMinSize(1)
+    @ValidateNested({ each: true })
+    @Type(() => SaleAllocationDto)
+    allocations: SaleAllocationDto[];
 
     @IsOptional()
     @IsNumber()

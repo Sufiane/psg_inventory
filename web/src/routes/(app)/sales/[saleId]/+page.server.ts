@@ -1,13 +1,17 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
-import type { SaleDetail } from '$lib/types';
+import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import type { SaleDetail, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
     const { saleId } = event.params;
-    const sale = await api<SaleDetail>(event, `/sales/${saleId}`);
+    const [sale, passes] = await Promise.all([
+        api<SaleDetail>(event, `/sales/${saleId}`),
+        api<SeasonPass[]>(event, '/season-passes'),
+    ]);
 
-    return { sale };
+    return { sale, passes };
 };
 
 export const actions: Actions = {
@@ -15,20 +19,15 @@ export const actions: Actions = {
         const { saleId } = event.params;
         const form = await event.request.formData();
         const sold = form.get('sold') === 'on' || form.get('sold') === 'true';
-        const nbTicketsRaw = form.get('nbTickets');
         const listedPriceRaw = form.get('listedPrice');
         const investRaw = form.get('invest');
 
         const payload: Record<string, unknown> = { saleId, sold };
 
-        if (typeof nbTicketsRaw === 'string' && nbTicketsRaw.length > 0) {
-            const value = Number(nbTicketsRaw);
+        const allocations = parseAllocationsFromForm(form);
 
-            if (!Number.isInteger(value) || value < 1) {
-                return fail(400, { message: 'Tickets must be at least 1.' });
-            }
-
-            payload.nbTickets = value;
+        if (allocations.length > 0) {
+            payload.allocations = allocations;
         }
 
         if (typeof listedPriceRaw === 'string' && listedPriceRaw.length > 0) {

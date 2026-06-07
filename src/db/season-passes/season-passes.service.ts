@@ -5,8 +5,9 @@ import { RedisService } from '../../redis/redis.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { PrismaService } from '../prisma.service';
 import {
+    CreateSeasonPassInput,
     ISeasonPassesDbService,
-    UpsertSeasonPassInput,
+    UpdateSeasonPassInput,
 } from './season-passes.db.interface';
 import { SeasonPass } from './type/season-pass.type';
 
@@ -17,11 +18,8 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         private readonly redisService: RedisService,
     ) {}
 
-    async findBySeason(
-        userId: string,
-        seasonStartYear: number,
-    ): Promise<SeasonPass | null> {
-        const cacheKey = CACHE_KEYS.seasonPass(userId, seasonStartYear);
+    async findById(id: string): Promise<SeasonPass | null> {
+        const cacheKey = CACHE_KEYS.seasonPass(id);
         const cached = await this.redisService.get<SeasonPass>(cacheKey);
 
         if (cached !== null) {
@@ -29,9 +27,25 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         }
 
         const result = await this.prisma.seasonPasses.findUnique({
-            where: {
-                userId_seasonStartYear: { userId, seasonStartYear },
-            },
+            where: { id },
+        });
+
+        await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
+
+        return result;
+    }
+
+    async findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass[]> {
+        const cacheKey = CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear);
+        const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
+
+        if (cached !== null) {
+            return cached.value ?? [];
+        }
+
+        const result = await this.prisma.seasonPasses.findMany({
+            where: { userId, seasonStartYear },
+            orderBy: [{ category: 'asc' }, { row: 'asc' }, { seat: 'asc' }],
         });
 
         await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
@@ -49,7 +63,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
         const result = await this.prisma.seasonPasses.findMany({
             where: { userId },
-            orderBy: { seasonStartYear: 'desc' },
+            orderBy: [{ seasonStartYear: 'desc' }, { label: 'asc' }],
         });
 
         await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
@@ -57,49 +71,52 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         return result;
     }
 
-    async upsert(payload: UpsertSeasonPassInput): Promise<SeasonPass> {
-        const result = await this.prisma.seasonPasses.upsert({
-            where: {
-                userId_seasonStartYear: {
-                    userId: payload.userId,
-                    seasonStartYear: payload.seasonStartYear,
-                },
-            },
-            create: {
-                userId: payload.userId,
-                seasonStartYear: payload.seasonStartYear,
-                price: payload.price,
-                category: payload.category ?? null,
-                row: payload.row ?? null,
-                seat: payload.seat ?? null,
-            },
-            update: {
-                price: payload.price,
-                category: payload.category ?? null,
-                row: payload.row ?? null,
-                seat: payload.seat ?? null,
-            },
+    async create(payload: CreateSeasonPassInput): Promise<SeasonPass> {
+        const result = await this.prisma.seasonPasses.create({
+            data: payload,
         });
 
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateSeasonPasses(payload.userId),
-        );
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateAccounting(payload.userId),
-        );
+        await this.invalidate(payload.userId, result.id);
 
         return result;
     }
 
-    async remove(userId: string, seasonStartYear: number): Promise<void> {
-        await this.prisma.seasonPasses.delete({
-            where: {
-                userId_seasonStartYear: { userId, seasonStartYear },
-            },
+    async update(id: string, payload: UpdateSeasonPassInput): Promise<SeasonPass> {
+        const result = await this.prisma.seasonPasses.update({
+            where: { id },
+            data: payload,
         });
 
+        await this.invalidate(result.userId, id);
+
+        return result;
+    }
+
+    async remove(id: string): Promise<void> {
+        const existing = await this.prisma.seasonPasses.findUnique({
+            where: { id },
+            select: { userId: true },
+        });
+
+        await this.prisma.seasonPasses.delete({ where: { id } });
+
+        if (existing) {
+            await this.invalidate(existing.userId, id);
+        }
+    }
+
+    countAllocations(seasonPassId: string): Promise<number> {
+        return this.prisma.salePassAllocations.count({
+            where: { seasonPassId },
+        });
+    }
+
+    private async invalidate(userId: string, seasonPassId: string): Promise<void> {
         await this.redisService.invalidatePattern(
             CACHE_KEYS.invalidateSeasonPasses(userId),
+        );
+        await this.redisService.invalidatePattern(
+            CACHE_KEYS.invalidateSeasonPassById(seasonPassId),
         );
         await this.redisService.invalidatePattern(
             CACHE_KEYS.invalidateAccounting(userId),

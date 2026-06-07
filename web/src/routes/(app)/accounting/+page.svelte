@@ -136,19 +136,15 @@
             </dd>
         </dl>
 
-        {#if accounting.seasonInvestment}
-            <p class="mt-4 text-xs text-ink-muted">
-                Season {accounting.seasonInvestment.seasonStartYear}
-                {#if accounting.seasonInvestment.category}
-                    · {accounting.seasonInvestment.category}
-                {/if}
-                {#if accounting.seasonInvestment.row}
-                    · Row {accounting.seasonInvestment.row}
-                {/if}
-                {#if accounting.seasonInvestment.seat}
-                    · Seat {accounting.seasonInvestment.seat}
-                {/if}
-            </p>
+        {#if accounting.seasonInvestments.length > 0}
+            <ul class="mt-4 space-y-1 text-xs text-ink-muted">
+                {#each accounting.seasonInvestments as pass (pass.id)}
+                    <li>
+                        Season {pass.seasonStartYear} · {pass.label} · {pass.category}
+                        · Row {pass.row} · Seat {pass.seat}
+                    </li>
+                {/each}
+            </ul>
         {:else if tab !== 'all-time'}
             <p class="mt-4 text-xs text-ink-muted">
                 No season pass recorded.

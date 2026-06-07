@@ -34,19 +34,34 @@ model Users {
 }
 
 model SeasonPasses {
-  id              String   @id @default(uuid())
-  userId          String   @map("user_id")
-  seasonStartYear Int      @map("season_start_year")
+  id              String                @id @default(uuid())
+  userId          String                @map("user_id")
+  seasonStartYear Int                   @map("season_start_year")
   price           Int
-  category        String?
-  row             String?
-  seat            String?
-  User            Users    @relation(fields: [userId], references: [id])
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt() @map("updated_at")
+  label           String
+  category        String
+  row             String
+  seat            String
+  User            Users                 @relation(fields: [userId], references: [id])
+  Allocations     SalePassAllocations[]
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt() @map("updated_at")
 
-  @@unique([userId, seasonStartYear])
+  @@index([userId, seasonStartYear])
   @@map("season_passes")
+}
+
+model SalePassAllocations {
+  id           String       @id @default(uuid())
+  saleId       String       @map("sale_id")
+  seasonPassId String       @map("season_pass_id")
+  nbTickets    Int          @map("nb_tickets")
+  Sale         Sales        @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  SeasonPass   SeasonPasses @relation(fields: [seasonPassId], references: [id])
+
+  @@unique([saleId, seasonPassId])
+  @@index([seasonPassId])
+  @@map("sale_pass_allocations")
 }
 
 enum Competition {
@@ -108,6 +123,7 @@ model Sales {
   soldAt      DateTime?       @map("sold_at")
   cancelledAt DateTime?       @map("cancelled_at")
   SaleHistory SaleHistories[]
+  Allocations SalePassAllocations[]
   Match       Matches         @relation(fields: [matchId], references: [id])
   User        Users           @relation(fields: [userId], references: [id])
 

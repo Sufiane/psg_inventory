@@ -7,4 +7,9 @@ export enum ErrorCode {
     INTERNAL_ERROR = 'internal_error',
     EMAIL_ALREADY_EXISTS = 'email_already_exists',
     SALE_AFTER_KICKOFF = 'sale_after_kickoff',
+    SEASON_PASS_NOT_FOUND = 'season_pass_not_found',
+    SEASON_PASS_FORBIDDEN = 'season_pass_forbidden',
+    SEASON_PASS_HAS_ALLOCATIONS = 'season_pass_has_allocations',
+    SALE_INVALID_ALLOCATIONS = 'sale_invalid_allocations',
+    SALE_ALLOCATION_PASS_MISMATCH = 'sale_allocation_pass_mismatch',
 }

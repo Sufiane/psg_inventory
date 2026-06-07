@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
-import { UpsertSeasonPassDto } from './dto/upsert-season-pass.dto';
+import { CreateSeasonPassDto } from './dto/create-season-pass.dto';
+import { UpdateSeasonPassDto } from './dto/update-season-pass.dto';
 import { ISeasonPassesService } from './interfaces/season-passes.service.interface';
 
 function seasonStartYearFromDate(date: Date): number {
@@ -13,13 +16,13 @@ function seasonStartYearFromDate(date: Date): number {
 export class SeasonPassesService implements ISeasonPassesService {
     constructor(private readonly db: ISeasonPassesDbService) {}
 
-    findCurrentSeason(userId: string): Promise<SeasonPass | null> {
+    findCurrentSeason(userId: string): Promise<SeasonPass[]> {
         const year = seasonStartYearFromDate(new Date());
 
         return this.db.findBySeason(userId, year);
     }
 
-    findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass | null> {
+    findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass[]> {
         return this.db.findBySeason(userId, seasonStartYear);
     }
 
@@ -27,22 +30,62 @@ export class SeasonPassesService implements ISeasonPassesService {
         return this.db.findAll(userId);
     }
 
-    upsert(
-        userId: string,
-        seasonStartYear: number,
-        payload: UpsertSeasonPassDto,
-    ): Promise<SeasonPass> {
-        return this.db.upsert({
+    async findOne(userId: string, passId: string): Promise<SeasonPass> {
+        const pass = await this.loadOwned(userId, passId);
+
+        return pass;
+    }
+
+    create(userId: string, payload: CreateSeasonPassDto): Promise<SeasonPass> {
+        return this.db.create({
             userId,
-            seasonStartYear,
+            seasonStartYear: payload.seasonStartYear,
             price: payload.price,
-            category: payload.category ?? null,
-            row: payload.row ?? null,
-            seat: payload.seat ?? null,
+            label: payload.label,
+            category: payload.category,
+            row: payload.row,
+            seat: payload.seat,
         });
     }
 
-    remove(userId: string, seasonStartYear: number): Promise<void> {
-        return this.db.remove(userId, seasonStartYear);
+    async update(
+        userId: string,
+        passId: string,
+        payload: UpdateSeasonPassDto,
+    ): Promise<SeasonPass> {
+        await this.loadOwned(userId, passId);
+
+        return this.db.update(passId, {
+            price: payload.price,
+            label: payload.label,
+            category: payload.category,
+            row: payload.row,
+            seat: payload.seat,
+        });
+    }
+
+    async remove(userId: string, passId: string): Promise<void> {
+        await this.loadOwned(userId, passId);
+        const allocationCount = await this.db.countAllocations(passId);
+
+        if (allocationCount > 0) {
+            throw new DomainException(ErrorCode.SEASON_PASS_HAS_ALLOCATIONS);
+        }
+
+        await this.db.remove(passId);
+    }
+
+    private async loadOwned(userId: string, passId: string): Promise<SeasonPass> {
+        const pass = await this.db.findById(passId);
+
+        if (pass == null) {
+            throw new DomainException(ErrorCode.SEASON_PASS_NOT_FOUND);
+        }
+
+        if (pass.userId !== userId) {
+            throw new DomainException(ErrorCode.SEASON_PASS_FORBIDDEN);
+        }
+
+        return pass;
     }
 }

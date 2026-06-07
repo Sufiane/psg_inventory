@@ -1,6 +1,7 @@
 import {
     BadRequestException,
     ConflictException,
+    ForbiddenException,
     HttpException,
     InternalServerErrorException,
     Logger,
@@ -27,6 +28,16 @@ const map: Record<ErrorCode, () => HttpException> = {
         new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS),
     [ErrorCode.SALE_AFTER_KICKOFF]: () =>
         new BadRequestException(ErrorCode.SALE_AFTER_KICKOFF),
+    [ErrorCode.SEASON_PASS_NOT_FOUND]: () =>
+        new NotFoundException(ErrorCode.SEASON_PASS_NOT_FOUND),
+    [ErrorCode.SEASON_PASS_FORBIDDEN]: () =>
+        new ForbiddenException(ErrorCode.SEASON_PASS_FORBIDDEN),
+    [ErrorCode.SEASON_PASS_HAS_ALLOCATIONS]: () =>
+        new ConflictException(ErrorCode.SEASON_PASS_HAS_ALLOCATIONS),
+    [ErrorCode.SALE_INVALID_ALLOCATIONS]: () =>
+        new BadRequestException(ErrorCode.SALE_INVALID_ALLOCATIONS),
+    [ErrorCode.SALE_ALLOCATION_PASS_MISMATCH]: () =>
+        new BadRequestException(ErrorCode.SALE_ALLOCATION_PASS_MISMATCH),
 };
 
 export function toHttpException(e: unknown): HttpException {
