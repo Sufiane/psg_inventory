@@ -1,9 +1,11 @@
+import type { Percentage } from '@psg/shared';
+
 // App
 export const DEFAULT_PORT = 7777;
 
 // PSG
 export const PSG_ID = 524;
-export const PSG_COMMISSION = 12; // percentage
+export const PSG_COMMISSION = 12 as Percentage;
 
 // Cache TTLs (in seconds)
 export const ONE_HOUR_TTL = 60 * 60;

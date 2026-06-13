@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { SeasonYear, SoldCount, UserId } from '@psg/shared';
+import type { LeadDays, SeasonYear, SoldCount, UserId } from '@psg/shared';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
@@ -288,10 +288,13 @@ export class AccountingService implements IAccountingService {
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-function leadDays(soldAt: Date, matchDate: Date): number {
+function leadDays(soldAt: Date, matchDate: Date): LeadDays {
     // Sale-after-kickoff is rejected at the api layer, so this is always ≥ 0;
     // clamp defensively against legacy/backfilled rows.
-    return Math.max(0, Math.floor((matchDate.getTime() - soldAt.getTime()) / MS_PER_DAY));
+    return Math.max(
+        0,
+        Math.floor((matchDate.getTime() - soldAt.getTime()) / MS_PER_DAY),
+    ) as LeadDays;
 }
 
 function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
@@ -308,8 +311,8 @@ function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
 
     return {
         soldCount: rows.length as SoldCount,
-        avgLeadDays: Math.round((sum / rows.length) * 10) / 10,
-        medianLeadDays: Math.round(median * 10) / 10,
+        avgLeadDays: (Math.round((sum / rows.length) * 10) / 10) as LeadDays,
+        medianLeadDays: (Math.round(median * 10) / 10) as LeadDays,
         minLeadDays: sorted[0],
         maxLeadDays: sorted[sorted.length - 1],
     };

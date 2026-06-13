@@ -5,6 +5,7 @@ import type {
     Email,
     Invest,
     JwtToken,
+    LeadDays,
     ListedPrice,
     MatchId,
     MatchScore,
@@ -133,10 +134,10 @@ export type SeasonInvestment = {
 
 export type LeadTime = {
     soldCount: SoldCount;
-    avgLeadDays: number;
-    medianLeadDays: number;
-    minLeadDays: number;
-    maxLeadDays: number;
+    avgLeadDays: LeadDays;
+    medianLeadDays: LeadDays;
+    minLeadDays: LeadDays;
+    maxLeadDays: LeadDays;
 };
 
 export type TimePeriodAccounting = {
