@@ -3,6 +3,7 @@ import type { Override } from '@psg/shared';
 import type {
     MatchId,
     OpponentId,
+    OpponentName,
     SaleId,
     SalePassAllocationId,
     SeasonPassId,
@@ -21,7 +22,10 @@ export type Sale = Override<
         Match: Override<
             SaleRow['Match'],
             {
-                Opponent: Override<SaleRow['Match']['Opponent'], { id: OpponentId }>;
+                Opponent: Override<
+                    SaleRow['Match']['Opponent'],
+                    { id: OpponentId; name: OpponentName }
+                >;
             }
         >;
         Allocations: Array<

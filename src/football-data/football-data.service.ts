@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { MatchScore, OpponentName } from '@psg/shared';
 
 import { DomainException } from '../common/exceptions/domain.exception';
 import { ErrorCode } from '../common/exceptions/error-codes.enum';
@@ -58,13 +59,15 @@ export class FootballDataService {
                 competition: match.competition.name,
                 date: match.utcDate,
                 atHome: isAtHome,
-                opponent: isAtHome ? match.awayTeam.name : match.homeTeam.name,
+                opponent: (isAtHome
+                    ? match.awayTeam.name
+                    : match.homeTeam.name) as OpponentName,
                 result: hasScore
                     ? {
                           isWin: isAtHome
                               ? match.score.winner === 'HOME_TEAM'
                               : match.score.winner === 'AWAY_TEAM',
-                          score: `${match.score.fullTime.home} - ${match.score.fullTime.away}`,
+                          score: `${match.score.fullTime.home} - ${match.score.fullTime.away}` as MatchScore,
                       }
                     : undefined,
             };

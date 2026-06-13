@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { SoldCount, UserId } from '@psg/shared';
+import type { SeasonYear, SoldCount, UserId } from '@psg/shared';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
@@ -19,8 +19,10 @@ import { Amortization, AmortizationMatchRow } from './types/amortization.type';
 import { LeadTime } from './types/lead-time.type';
 import { SoldLeadTime } from '../../db/accounting/types/sold-lead-time.type';
 
-function seasonStartYearFromDate(date: Date): number {
-    return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
+function seasonStartYearFromDate(date: Date): SeasonYear {
+    return (
+        date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear()
+    ) as SeasonYear;
 }
 
 @Injectable()
@@ -41,7 +43,7 @@ export class AccountingService implements IAccountingService {
 
     async getGivenSeason(
         userId: UserId,
-        seasonStartYear: number,
+        seasonStartYear: SeasonYear,
     ): Promise<TimePeriodAccounting> {
         const dates = {
             start: new Date(seasonStartYear, 7, 1),
@@ -119,7 +121,7 @@ export class AccountingService implements IAccountingService {
             start: Date;
             end?: Date;
         },
-        seasonStartYear: number | null,
+        seasonStartYear: SeasonYear | null,
     ): Promise<TimePeriodAccounting> {
         const cacheKey = CACHE_KEYS.accounting(userId, dates.start, dates.end);
         const cached = await this.redisService.get<TimePeriodAccounting>(cacheKey);
@@ -194,7 +196,7 @@ export class AccountingService implements IAccountingService {
 
     async getAmortization(
         userId: UserId,
-        seasonStartYear: number,
+        seasonStartYear: SeasonYear,
     ): Promise<Amortization> {
         const cacheKey = CACHE_KEYS.amortization(userId, seasonStartYear);
         const cached = await this.redisService.get<Amortization>(cacheKey);

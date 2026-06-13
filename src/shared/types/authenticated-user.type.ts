@@ -1,8 +1,8 @@
-import type { UserId } from '@psg/shared';
+import type { Email, UserId } from '@psg/shared';
 
 export type AuthenticatedUser = {
     id: UserId;
-    email: string;
+    email: Email;
     firstName: string;
     lastName: string;
     createdAt: Date;

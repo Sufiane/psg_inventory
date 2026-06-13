@@ -2,7 +2,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { UserId } from '@psg/shared';
+import type { Email, UserId } from '@psg/shared';
 import { IUsersDbService } from '../../db/users/users.db.interface';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { omit } from 'radash';
@@ -24,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // multiple db calls for the same user in a short period of time
     async validate(payload: {
         sub: UserId;
-        email: string;
+        email: Email;
     }): Promise<AuthenticatedUser | undefined> {
         const user = await this.usersDbService.findOneByEmail(payload.email);
 
@@ -34,6 +34,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
         const safe = omit(user, ['password', 'updatedAt']);
 
-        return { ...safe, id: safe.id as UserId };
+        return { ...safe, id: safe.id as UserId, email: safe.email as Email };
     }
 }

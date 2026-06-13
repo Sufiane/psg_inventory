@@ -1,9 +1,16 @@
 import { IsInt, IsString, MaxLength, Min } from 'class-validator';
+import type {
+    CategoryLabel,
+    PassLabel,
+    RowLabel,
+    SeasonYear,
+    SeatLabel,
+} from '@psg/shared';
 
 export class CreateSeasonPassDto {
     @IsInt()
     @Min(1900)
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
 
     @IsInt()
     @Min(0)
@@ -11,17 +18,17 @@ export class CreateSeasonPassDto {
 
     @IsString()
     @MaxLength(64)
-    label: string;
+    label: PassLabel;
 
     @IsString()
     @MaxLength(64)
-    category: string;
+    category: CategoryLabel;
 
     @IsString()
     @MaxLength(32)
-    row: string;
+    row: RowLabel;
 
     @IsString()
     @MaxLength(32)
-    seat: string;
+    seat: SeatLabel;
 }

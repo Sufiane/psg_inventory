@@ -20,7 +20,7 @@ import { Accounting } from './types/accounting.type';
 import { OldestMatchSale } from '../../db/sales/type/oldest-match-sale.type';
 import { MatchRealizedProfit } from '../../db/accounting/types/match-realized-profit.type';
 import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
-import type { MatchId, SeasonPassId, UserId } from '@psg/shared';
+import type { MatchId, SeasonPassId, SeasonYear, UserId } from '@psg/shared';
 
 jest.mock('../../shared/utils/season.utils');
 const getCurrentSeasonDateMocked = jest.mocked(getCurrentSeasonDate);
@@ -118,7 +118,7 @@ describe('AccountingService', () => {
             getSeasonSpy.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
-            const seasonStartYear = 2022;
+            const seasonStartYear = 2022 as SeasonYear;
 
             await expect(
                 service.getGivenSeason(userId, seasonStartYear),
@@ -334,7 +334,7 @@ describe('AccountingService', () => {
 
     describe('getAmortization', () => {
         const userId = 'userUuid' as UserId;
-        const seasonStartYear = 2024;
+        const seasonStartYear = 2024 as SeasonYear;
 
         function row(
             overrides: Partial<MatchRealizedProfit> & {
@@ -540,7 +540,7 @@ describe('AccountingService', () => {
         it('returns null leadTime when no sold sales in range', async () => {
             accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
 
-            const result = await service.getSeason(userId, dates, 2024);
+            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
 
             expect(result.leadTime).toBeNull();
         });
@@ -562,7 +562,7 @@ describe('AccountingService', () => {
                 },
             ]);
 
-            const result = await service.getSeason(userId, dates, 2024);
+            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
 
             expect(result.leadTime).toEqual({
                 soldCount: 3,
@@ -581,7 +581,7 @@ describe('AccountingService', () => {
                 },
             ]);
 
-            const result = await service.getSeason(userId, dates, 2024);
+            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
 
             expect(result.leadTime).toEqual({
                 soldCount: 1,
@@ -613,7 +613,7 @@ describe('AccountingService', () => {
                 },
             ]);
 
-            const result = await service.getSeason(userId, dates, 2024);
+            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
 
             expect(result.leadTime?.medianLeadDays).toBe(5);
         });

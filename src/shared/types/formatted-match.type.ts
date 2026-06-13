@@ -1,10 +1,12 @@
+import type { MatchScore, OpponentName } from '@psg/shared';
+
 export type FormattedMatch = {
     competition: string;
     date: string;
     atHome: boolean;
-    opponent: string;
+    opponent: OpponentName;
     result?: {
         isWin: boolean;
-        score: string;
+        score: MatchScore;
     };
 };

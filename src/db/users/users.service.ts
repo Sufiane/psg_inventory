@@ -1,3 +1,4 @@
+import type { Email, HashedPassword } from '@psg/shared';
 import { PrismaService } from '../prisma.service';
 import { Users } from '@prisma/client';
 import { RedisService } from '../../redis/redis.service';
@@ -17,10 +18,10 @@ export class UsersService implements IUsersDbService {
     ) {}
 
     async create(payload: {
-        email: string;
+        email: Email;
         firstName: string;
         lastName: string;
-        password: string;
+        password: HashedPassword;
     }): Promise<void> {
         try {
             await this.prisma.users.create({ data: payload });
@@ -32,7 +33,7 @@ export class UsersService implements IUsersDbService {
         }
     }
 
-    async findOneByEmail(email: string): Promise<Users | null> {
+    async findOneByEmail(email: Email): Promise<Users | null> {
         const cached = await this.redisService.get<Users>(CACHE_KEYS.userByEmail(email));
 
         if (cached !== null) {

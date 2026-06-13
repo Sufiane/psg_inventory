@@ -1,8 +1,9 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import type { Email } from '@psg/shared';
 
 export class CreateUserDto {
     @IsEmail()
-    email: string;
+    email: Email;
 
     @IsString()
     @MinLength(1)

@@ -1,10 +1,18 @@
 import type {
+    CategoryLabel,
+    Email,
+    JwtToken,
     MatchId,
+    MatchScore,
     OpponentId,
+    OpponentName,
+    PassLabel,
+    RowLabel,
     SaleCount,
     SaleId,
     SeasonPassId,
     SeasonYear,
+    SeatLabel,
     SoldCount,
     TicketCount,
     UserId,
@@ -14,7 +22,7 @@ export type Role = 'ADMIN' | 'USER';
 
 export type SessionUser = {
     sub: UserId;
-    email: string;
+    email: Email;
     role: Role;
     exp?: number;
 };
@@ -37,8 +45,8 @@ export type FormattedMatch = {
     date: string;
     atHome: boolean;
     competition: string;
-    opponent: string;
-    result?: { isWin?: boolean; score?: string };
+    opponent: OpponentName;
+    result?: { isWin?: boolean; score?: MatchScore };
 };
 
 export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
@@ -56,7 +64,7 @@ export type SaleListItem = {
     invest: number;
     nbTickets: TicketCount;
     status: SaleStatus;
-    opponent: { id: OpponentId; name: string };
+    opponent: { id: OpponentId; name: OpponentName };
     matchDate?: string;
     createdAt?: string;
     soldAt?: string | null;
@@ -78,7 +86,7 @@ export type SaleDetail = {
     cancelledAt?: string | null;
     Match: {
         date: string;
-        Opponent: { id: OpponentId; name: string };
+        Opponent: { id: OpponentId; name: OpponentName };
     };
     Allocations?: SaleAllocation[];
 };
@@ -111,10 +119,10 @@ export type SeasonInvestment = {
     id: SeasonPassId;
     price: number;
     seasonStartYear: SeasonYear;
-    label: string;
-    category: string;
-    row: string;
-    seat: string;
+    label: PassLabel;
+    category: CategoryLabel;
+    row: RowLabel;
+    seat: SeatLabel;
 };
 
 export type LeadTime = {
@@ -154,7 +162,7 @@ export type AmortizationBreakEven = {
 
 export type AmortizationPass = {
     id: SeasonPassId;
-    label: string;
+    label: PassLabel;
     price: number;
 };
 
@@ -176,10 +184,10 @@ export type SeasonPass = {
     userId: UserId;
     seasonStartYear: SeasonYear;
     price: number;
-    label: string;
-    category: string;
-    row: string;
-    seat: string;
+    label: PassLabel;
+    category: CategoryLabel;
+    row: RowLabel;
+    seat: SeatLabel;
     createdAt: string;
     updatedAt: string;
 };
@@ -187,18 +195,18 @@ export type SeasonPass = {
 export type CreateSeasonPassPayload = {
     seasonStartYear: SeasonYear;
     price: number;
-    label: string;
-    category: string;
-    row: string;
-    seat: string;
+    label: PassLabel;
+    category: CategoryLabel;
+    row: RowLabel;
+    seat: SeatLabel;
 };
 
 export type UpdateSeasonPassPayload = {
     price: number;
-    label: string;
-    category: string;
-    row: string;
-    seat: string;
+    label: PassLabel;
+    category: CategoryLabel;
+    row: RowLabel;
+    seat: SeatLabel;
 };
 
 export type AddSalePayload = {
@@ -217,11 +225,11 @@ export type UpdateSalePayload = {
 };
 
 export type CreateMatchPayload = {
-    opponent: string;
+    opponent: OpponentName;
     date: string;
     atHome: boolean;
     competition: Competition;
-    result?: { isWin: boolean; score: string };
+    result?: { isWin: boolean; score: MatchScore };
 };
 
-export type LoginResponse = { token: string };
+export type LoginResponse = { token: JwtToken };

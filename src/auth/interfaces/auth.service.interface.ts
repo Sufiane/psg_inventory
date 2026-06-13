@@ -1,10 +1,11 @@
+import type { Email, HashedPassword, JwtToken } from '@psg/shared';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 export abstract class IAuthService {
-    abstract hashPassword(passwordToHash: string): Promise<string>;
+    abstract hashPassword(passwordToHash: string): Promise<HashedPassword>;
     abstract validateUser(
-        email: string,
+        email: Email,
         password: string,
     ): Promise<AuthenticatedUser | null>;
-    abstract login(user: AuthenticatedUser): Promise<{ token: string }>;
+    abstract login(user: AuthenticatedUser): Promise<{ token: JwtToken }>;
 }

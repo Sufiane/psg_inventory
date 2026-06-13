@@ -8,6 +8,7 @@ import {
     Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type { MatchScore, OpponentName } from '@psg/shared';
 import { Competitions } from '../types/competitions.type';
 
 export class ResultDto {
@@ -15,12 +16,12 @@ export class ResultDto {
     isWin: boolean;
 
     @Matches(/^\d{1,2} - \d{1,2}$/)
-    score: string;
+    score: MatchScore;
 }
 
 export class CreateMatchDto {
     @IsString()
-    opponent: string;
+    opponent: OpponentName;
 
     @IsDateString({ strict: true })
     date: string;

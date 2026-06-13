@@ -1,4 +1,4 @@
-import type { UserId } from '@psg/shared';
+import type { Email, UserId } from '@psg/shared';
 import type { SessionUser } from './types';
 
 export function decodeJwt(token: string): SessionUser | null {
@@ -31,7 +31,7 @@ export function decodeJwt(token: string): SessionUser | null {
 
         return {
             sub: claims.sub as UserId,
-            email: claims.email,
+            email: claims.email as Email,
             role,
             exp: claims.exp,
         };

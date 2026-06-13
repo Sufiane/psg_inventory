@@ -1,11 +1,12 @@
 import { Users } from '@prisma/client';
+import type { Email, HashedPassword } from '@psg/shared';
 
 export abstract class IUsersDbService {
     abstract create(payload: {
-        email: string;
+        email: Email;
         firstName: string;
         lastName: string;
-        password: string;
+        password: HashedPassword;
     }): Promise<void>;
-    abstract findOneByEmail(email: string): Promise<Users | null>;
+    abstract findOneByEmail(email: Email): Promise<Users | null>;
 }
