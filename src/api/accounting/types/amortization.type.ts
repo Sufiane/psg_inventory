@@ -1,5 +1,7 @@
+import type { MatchId, SeasonPassId } from '@psg/shared';
+
 export type AmortizationMatchRow = {
-    matchId: string;
+    matchId: MatchId;
     date: Date;
     opponent: string;
     competition: string;
@@ -10,14 +12,14 @@ export type AmortizationMatchRow = {
 };
 
 export type AmortizationBreakEven = {
-    matchId: string;
+    matchId: MatchId;
     date: Date;
     opponent: string;
     cumulative: number;
 };
 
 export type AmortizationPass = {
-    id: string;
+    id: SeasonPassId;
     label: string;
     price: number;
 };

@@ -3,6 +3,7 @@ import { IUsersDbService } from '../db/users/users.db.interface';
 import { omit } from 'radash';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
+import type { UserId } from '@psg/shared';
 import { AuthenticatedUser } from '../shared/types/authenticated-user.type';
 import { BCRYPT_SALT_ROUNDS } from '../shared/constants';
 import { IAuthService } from './interfaces/auth.service.interface';
@@ -30,7 +31,9 @@ export class AuthService implements IAuthService {
             return null;
         }
 
-        return omit(user, ['password', 'updatedAt']);
+        const safe = omit(user, ['password', 'updatedAt']);
+
+        return { ...safe, id: safe.id as UserId };
     }
 
     async login(user: AuthenticatedUser & { role?: string }): Promise<{ token: string }> {

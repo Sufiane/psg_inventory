@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { SeasonPassId, UserId } from '@psg/shared';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
@@ -31,7 +32,7 @@ export class AccountingService implements IAccountingService {
         private readonly redisService: RedisService,
     ) {}
 
-    async getCurrentSeason(userId: string): Promise<TimePeriodAccounting> {
+    async getCurrentSeason(userId: UserId): Promise<TimePeriodAccounting> {
         const seasonDate = getCurrentSeasonDate();
         const year = seasonStartYearFromDate(seasonDate.start);
 
@@ -39,7 +40,7 @@ export class AccountingService implements IAccountingService {
     }
 
     async getGivenSeason(
-        userId: string,
+        userId: UserId,
         seasonStartYear: number,
     ): Promise<TimePeriodAccounting> {
         const dates = {
@@ -50,7 +51,7 @@ export class AccountingService implements IAccountingService {
         return this.getSeason(userId, dates, seasonStartYear);
     }
 
-    async getAllTime(userId: string): Promise<TimePeriodAccounting> {
+    async getAllTime(userId: UserId): Promise<TimePeriodAccounting> {
         const oldestMatchSale = await this.salesDbService.getOldestMatchSale(userId);
 
         return this.getSeason(
@@ -63,7 +64,7 @@ export class AccountingService implements IAccountingService {
     }
 
     async getAccounting(
-        userId: string,
+        userId: UserId,
         status: 'realized' | 'pending' | 'unrealized',
         date: {
             start: Date;
@@ -113,7 +114,7 @@ export class AccountingService implements IAccountingService {
     }
 
     async getSeason(
-        userId: string,
+        userId: UserId,
         dates: {
             start: Date;
             end?: Date;
@@ -192,7 +193,7 @@ export class AccountingService implements IAccountingService {
     }
 
     async getAmortization(
-        userId: string,
+        userId: UserId,
         seasonStartYear: number,
     ): Promise<Amortization> {
         const cacheKey = CACHE_KEYS.amortization(userId, seasonStartYear);
@@ -219,7 +220,7 @@ export class AccountingService implements IAccountingService {
         const hasPass = passes.length > 0;
         const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
         const passSummaries = passes.map((pass) => ({
-            id: pass.id,
+            id: pass.id as SeasonPassId,
             label: pass.label,
             price: pass.price,
         }));

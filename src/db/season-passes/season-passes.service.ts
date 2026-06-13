@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import type { SeasonPassId, UserId } from '@psg/shared';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
@@ -18,7 +19,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         private readonly redisService: RedisService,
     ) {}
 
-    async findById(id: string): Promise<SeasonPass | null> {
+    async findById(id: SeasonPassId): Promise<SeasonPass | null> {
         const cacheKey = CACHE_KEYS.seasonPass(id);
         const cached = await this.redisService.get<SeasonPass>(cacheKey);
 
@@ -32,10 +33,10 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
         await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
 
-        return result;
+        return result as SeasonPass | null;
     }
 
-    async findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass[]> {
+    async findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]> {
         const cacheKey = CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear);
         const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
 
@@ -50,10 +51,10 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
         await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
 
-        return result;
+        return result as SeasonPass[];
     }
 
-    async findAll(userId: string): Promise<SeasonPass[]> {
+    async findAll(userId: UserId): Promise<SeasonPass[]> {
         const cacheKey = CACHE_KEYS.seasonPasses(userId);
         const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
 
@@ -68,7 +69,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
         await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
 
-        return result;
+        return result as SeasonPass[];
     }
 
     async create(payload: CreateSeasonPassInput): Promise<SeasonPass> {
@@ -76,23 +77,23 @@ export class SeasonPassesService implements ISeasonPassesDbService {
             data: payload,
         });
 
-        await this.invalidate(payload.userId, result.id);
+        await this.invalidate(payload.userId, result.id as SeasonPassId);
 
         return result;
     }
 
-    async update(id: string, payload: UpdateSeasonPassInput): Promise<SeasonPass> {
+    async update(id: SeasonPassId, payload: UpdateSeasonPassInput): Promise<SeasonPass> {
         const result = await this.prisma.seasonPasses.update({
             where: { id },
             data: payload,
         });
 
-        await this.invalidate(result.userId, id);
+        await this.invalidate(result.userId as UserId, id);
 
         return result;
     }
 
-    async remove(id: string): Promise<void> {
+    async remove(id: SeasonPassId): Promise<void> {
         const existing = await this.prisma.seasonPasses.findUnique({
             where: { id },
             select: { userId: true },
@@ -101,17 +102,17 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         await this.prisma.seasonPasses.delete({ where: { id } });
 
         if (existing) {
-            await this.invalidate(existing.userId, id);
+            await this.invalidate(existing.userId as UserId, id);
         }
     }
 
-    countAllocations(seasonPassId: string): Promise<number> {
+    countAllocations(seasonPassId: SeasonPassId): Promise<number> {
         return this.prisma.salePassAllocations.count({
             where: { seasonPassId },
         });
     }
 
-    private async invalidate(userId: string, seasonPassId: string): Promise<void> {
+    private async invalidate(userId: UserId, seasonPassId: SeasonPassId): Promise<void> {
         await this.redisService.invalidatePattern(
             CACHE_KEYS.invalidateSeasonPasses(userId),
         );

@@ -6,6 +6,10 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     adapter: adapter(),
+    alias: {
+      '@psg/shared': '../shared/src/index.ts',
+      '@psg/shared/*': '../shared/src/*',
+    },
   },
 };
 

@@ -1,7 +1,8 @@
+import type { SeasonPassId, UserId } from '@psg/shared';
 import { SeasonPass } from './type/season-pass.type';
 
 export type CreateSeasonPassInput = {
-    userId: string;
+    userId: UserId;
     seasonStartYear: number;
     price: number;
     label: string;
@@ -19,11 +20,14 @@ export type UpdateSeasonPassInput = {
 };
 
 export abstract class ISeasonPassesDbService {
-    abstract findById(id: string): Promise<SeasonPass | null>;
-    abstract findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass[]>;
-    abstract findAll(userId: string): Promise<SeasonPass[]>;
+    abstract findById(id: SeasonPassId): Promise<SeasonPass | null>;
+    abstract findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]>;
+    abstract findAll(userId: UserId): Promise<SeasonPass[]>;
     abstract create(payload: CreateSeasonPassInput): Promise<SeasonPass>;
-    abstract update(id: string, payload: UpdateSeasonPassInput): Promise<SeasonPass>;
-    abstract remove(id: string): Promise<void>;
-    abstract countAllocations(seasonPassId: string): Promise<number>;
+    abstract update(
+        id: SeasonPassId,
+        payload: UpdateSeasonPassInput,
+    ): Promise<SeasonPass>;
+    abstract remove(id: SeasonPassId): Promise<void>;
+    abstract countAllocations(seasonPassId: SeasonPassId): Promise<number>;
 }

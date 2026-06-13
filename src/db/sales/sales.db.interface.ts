@@ -1,31 +1,32 @@
 import { SaleStatus } from '@prisma/client';
+import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 
 export type SaleAllocationInput = {
-    seasonPassId: string;
+    seasonPassId: SeasonPassId;
     nbTickets: number;
 };
 
 export abstract class ISalesDbService {
-    abstract getOneSale(userId: string, saleId: string): Promise<Sale | null>;
-    abstract getSales(userId: string): Promise<Sale[]>;
+    abstract getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null>;
+    abstract getSales(userId: UserId): Promise<Sale[]>;
     abstract getSalesByRange(
-        userId: string,
+        userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<Sale[]>;
     abstract addSale(payload: {
-        userId: string;
+        userId: UserId;
         profit: number;
         invest: number;
-        matchId: string;
+        matchId: MatchId;
         listedPrice: number;
         allocations: SaleAllocationInput[];
-    }): Promise<{ id: string }>;
+    }): Promise<{ id: SaleId }>;
     abstract updateSale(payload: {
-        saleId: string;
-        userId: string;
+        saleId: SaleId;
+        userId: UserId;
         profit: number | undefined;
         invest?: number;
         listedPrice?: number;
@@ -33,7 +34,7 @@ export abstract class ISalesDbService {
         status?: SaleStatus;
         allocations?: SaleAllocationInput[];
     }): Promise<void>;
-    abstract deleteSale(userId: string, saleId: string): Promise<void>;
+    abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;
     abstract getOneByWithFullMatch(query: {
         profit?: number;
         listedPrice?: number;
@@ -42,5 +43,5 @@ export abstract class ISalesDbService {
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch>;
     abstract cancelMany(): Promise<void>;
-    abstract getOldestMatchSale(userId: string): Promise<OldestMatchSale>;
+    abstract getOldestMatchSale(userId: UserId): Promise<OldestMatchSale>;
 }

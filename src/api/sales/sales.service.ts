@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { omit } from 'radash';
 
+import type { MatchId, OpponentId, SaleId, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
@@ -29,7 +30,7 @@ export class SalesService implements ISalesService {
         private readonly redisService: RedisService,
     ) {}
 
-    async getSale(userId: string, saleId: string): Promise<Sale> {
+    async getSale(userId: UserId, saleId: SaleId): Promise<Sale> {
         const sale = await this.salesDbService.getOneSale(userId, saleId);
 
         if (!sale) {
@@ -39,13 +40,13 @@ export class SalesService implements ISalesService {
         return sale;
     }
 
-    async getSales(userId: string): Promise<FormattedSale[]> {
+    async getSales(userId: UserId): Promise<FormattedSale[]> {
         const sales = await this.salesDbService.getSales(userId);
 
         return sales.map((sale) => this.formatSale(sale));
     }
 
-    async getCurrentSeasonSales(userId: string): Promise<FormattedSale[]> {
+    async getCurrentSeasonSales(userId: UserId): Promise<FormattedSale[]> {
         const { start, end } = getCurrentSeasonDate();
         const sales = await this.salesDbService.getSalesByRange(userId, {
             from: start,
@@ -56,7 +57,7 @@ export class SalesService implements ISalesService {
     }
 
     async getSeasonSales(
-        userId: string,
+        userId: UserId,
         seasonStartYear: number,
     ): Promise<FormattedSale[]> {
         const from = new Date(seasonStartYear, 7, 1);
@@ -70,14 +71,14 @@ export class SalesService implements ISalesService {
         return {
             ...omit(sale, ['Match', 'userId', 'matchId']),
             opponent: {
-                id: sale.Match.Opponent.id,
+                id: sale.Match.Opponent.id as OpponentId,
                 name: sale.Match.Opponent.name,
             },
             matchDate: sale.Match.date,
         };
     }
 
-    async addSale(userId: string, payload: AddSaleDto): Promise<{ id: string }> {
+    async addSale(userId: UserId, payload: AddSaleDto): Promise<{ id: SaleId }> {
         await this.validateAllocations(userId, payload.matchId, payload.allocations);
 
         const sale = await this.salesDbService.addSale({
@@ -92,7 +93,7 @@ export class SalesService implements ISalesService {
         return { id: sale.id };
     }
 
-    async updateSale(userId: string, payload: UpdateSaleDto): Promise<void> {
+    async updateSale(userId: UserId, payload: UpdateSaleDto): Promise<void> {
         const existing = await this.salesDbService.getOneSale(userId, payload.saleId);
 
         if (!existing) {
@@ -106,7 +107,11 @@ export class SalesService implements ISalesService {
         }
 
         if (payload.allocations != null) {
-            await this.validateAllocations(userId, existing.matchId, payload.allocations);
+            await this.validateAllocations(
+                userId,
+                existing.matchId as MatchId,
+                payload.allocations,
+            );
         }
 
         await this.salesDbService.updateSale({
@@ -128,7 +133,7 @@ export class SalesService implements ISalesService {
         return (price * (100 - PSG_COMMISSION)) / 100;
     }
 
-    async deleteSale(userId: string, saleId: string): Promise<void> {
+    async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {
         await this.salesDbService.deleteSale(userId, saleId);
 
         await this.redisService.invalidatePattern(
@@ -137,8 +142,8 @@ export class SalesService implements ISalesService {
     }
 
     private async validateAllocations(
-        userId: string,
-        matchId: string,
+        userId: UserId,
+        matchId: MatchId,
         allocations: SaleAllocationDto[] | SaleAllocationInput[],
     ): Promise<void> {
         if (allocations.length === 0) {

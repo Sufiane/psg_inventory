@@ -17,6 +17,7 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
+import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared';
 
 describe('SalesService', () => {
     let service: SalesService;
@@ -25,10 +26,10 @@ describe('SalesService', () => {
     let seasonPassesDbService: DeepMockProxy<SeasonPassesDbService>;
     let redisService: DeepMockProxy<RedisService>;
 
-    const userId = 'user-uuid';
-    const saleId = 'sale-uuid';
-    const matchId = 'match-uuid';
-    const passId = 'pass-uuid';
+    const userId = 'user-uuid' as UserId;
+    const saleId = 'sale-uuid' as SaleId;
+    const matchId = 'match-uuid' as MatchId;
+    const passId = 'pass-uuid' as SeasonPassId;
 
     function saleFixture(matchDate: Date, status: SaleStatus = SaleStatus.PENDING): Sale {
         return {
@@ -158,7 +159,7 @@ describe('SalesService', () => {
                 matchFixture(new Date('2024-09-15')),
             );
             seasonPassesDbService.findById.mockResolvedValueOnce(passFixture());
-            salesDbService.addSale.mockResolvedValueOnce({ id: 'new-sale' });
+            salesDbService.addSale.mockResolvedValueOnce({ id: 'new-sale' as SaleId });
 
             const result = await service.addSale(userId, validPayload);
 
@@ -177,7 +178,7 @@ describe('SalesService', () => {
                 matchFixture(new Date('2024-09-15')),
             );
             seasonPassesDbService.findById.mockResolvedValueOnce(
-                passFixture({ userId: 'someone-else' }),
+                passFixture({ userId: 'someone-else' as UserId }),
             );
 
             await expect(service.addSale(userId, validPayload)).rejects.toMatchObject({

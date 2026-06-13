@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import type { SeasonPassId, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
@@ -16,27 +17,27 @@ function seasonStartYearFromDate(date: Date): number {
 export class SeasonPassesService implements ISeasonPassesService {
     constructor(private readonly db: ISeasonPassesDbService) {}
 
-    findCurrentSeason(userId: string): Promise<SeasonPass[]> {
+    findCurrentSeason(userId: UserId): Promise<SeasonPass[]> {
         const year = seasonStartYearFromDate(new Date());
 
         return this.db.findBySeason(userId, year);
     }
 
-    findBySeason(userId: string, seasonStartYear: number): Promise<SeasonPass[]> {
+    findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]> {
         return this.db.findBySeason(userId, seasonStartYear);
     }
 
-    findAll(userId: string): Promise<SeasonPass[]> {
+    findAll(userId: UserId): Promise<SeasonPass[]> {
         return this.db.findAll(userId);
     }
 
-    async findOne(userId: string, passId: string): Promise<SeasonPass> {
+    async findOne(userId: UserId, passId: SeasonPassId): Promise<SeasonPass> {
         const pass = await this.loadOwned(userId, passId);
 
         return pass;
     }
 
-    create(userId: string, payload: CreateSeasonPassDto): Promise<SeasonPass> {
+    create(userId: UserId, payload: CreateSeasonPassDto): Promise<SeasonPass> {
         return this.db.create({
             userId,
             seasonStartYear: payload.seasonStartYear,
@@ -49,8 +50,8 @@ export class SeasonPassesService implements ISeasonPassesService {
     }
 
     async update(
-        userId: string,
-        passId: string,
+        userId: UserId,
+        passId: SeasonPassId,
         payload: UpdateSeasonPassDto,
     ): Promise<SeasonPass> {
         await this.loadOwned(userId, passId);
@@ -64,7 +65,7 @@ export class SeasonPassesService implements ISeasonPassesService {
         });
     }
 
-    async remove(userId: string, passId: string): Promise<void> {
+    async remove(userId: UserId, passId: SeasonPassId): Promise<void> {
         await this.loadOwned(userId, passId);
         const allocationCount = await this.db.countAllocations(passId);
 
@@ -75,7 +76,7 @@ export class SeasonPassesService implements ISeasonPassesService {
         await this.db.remove(passId);
     }
 
-    private async loadOwned(userId: string, passId: string): Promise<SeasonPass> {
+    private async loadOwned(userId: UserId, passId: SeasonPassId): Promise<SeasonPass> {
         const pass = await this.db.findById(passId);
 
         if (pass == null) {

@@ -6,6 +6,7 @@ import { Prisma } from '.prisma/client';
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
+import type { MatchId } from '@psg/shared';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IMatchesDbService } from './matches.db.interface';
@@ -55,10 +56,10 @@ export class MatchesService implements IMatchesDbService {
 
         await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
-        return dbResult;
+        return dbResult as Match[];
     }
 
-    async getOneMatch(id: string, withResult: boolean = false): Promise<Match | null> {
+    async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {
         const cacheKey = CACHE_KEYS.match(id);
         const cached = await this.redisService.get<Match>(cacheKey);
 
@@ -75,7 +76,7 @@ export class MatchesService implements IMatchesDbService {
 
         await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
-        return dbResult;
+        return dbResult as Match | null;
     }
 
     async loadMatches(matches: FormattedMatch[]): Promise<void> {

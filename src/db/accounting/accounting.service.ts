@@ -1,3 +1,4 @@
+import type { MatchId, UserId } from '@psg/shared';
 import { PrismaService } from '../prisma.service';
 import { AccountingAggregate } from './types/get-accounting.type';
 import { omit } from 'radash';
@@ -13,7 +14,7 @@ export class AccountingService implements IAccountingDbService {
     constructor(private readonly prisma: PrismaService) {}
 
     async getAccounting(
-        userId: string,
+        userId: UserId,
         status: SaleStatus,
         from: Date,
         to?: Date,
@@ -52,7 +53,7 @@ export class AccountingService implements IAccountingDbService {
     }
 
     async getRealizedProfitPerMatch(
-        userId: string,
+        userId: UserId,
         from: Date,
         to: Date,
     ): Promise<MatchRealizedProfit[]> {
@@ -76,18 +77,19 @@ export class AccountingService implements IAccountingDbService {
             },
         });
 
-        const byMatch = new Map<string, MatchRealizedProfit>();
+        const byMatch = new Map<MatchId, MatchRealizedProfit>();
 
         for (const sale of sales) {
-            const existing = byMatch.get(sale.matchId);
+            const matchId = sale.matchId as MatchId;
+            const existing = byMatch.get(matchId);
 
             if (existing) {
                 existing.matchProfit += sale.profit;
                 continue;
             }
 
-            byMatch.set(sale.matchId, {
-                matchId: sale.matchId,
+            byMatch.set(matchId, {
+                matchId,
                 date: sale.Match.date,
                 opponent: sale.Match.Opponent.name,
                 competition: sale.Match.competition,
@@ -103,7 +105,7 @@ export class AccountingService implements IAccountingDbService {
     }
 
     async getSoldLeadTimes(
-        userId: string,
+        userId: UserId,
         from: Date,
         to?: Date,
     ): Promise<SoldLeadTime[]> {

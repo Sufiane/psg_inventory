@@ -1,7 +1,9 @@
+import type { MatchId, OpponentId, SaleId, SeasonPassId, UserId } from '@psg/shared';
+
 export type Role = 'ADMIN' | 'USER';
 
 export type SessionUser = {
-    sub: string;
+    sub: UserId;
     email: string;
     role: Role;
     exp?: number;
@@ -21,7 +23,7 @@ export const COMPETITIONS: Competition[] = [
 ];
 
 export type FormattedMatch = {
-    id: string;
+    id: MatchId;
     date: string;
     atHome: boolean;
     competition: string;
@@ -32,19 +34,19 @@ export type FormattedMatch = {
 export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
 
 export type SaleAllocation = {
-    id?: string;
-    seasonPassId: string;
+    id?: SeasonPassId;
+    seasonPassId: SeasonPassId;
     nbTickets: number;
 };
 
 export type SaleListItem = {
-    id: string;
+    id: SaleId;
     listedPrice: number;
     profit: number;
     invest: number;
     nbTickets: number;
     status: SaleStatus;
-    opponent: { id: string; name: string };
+    opponent: { id: OpponentId; name: string };
     matchDate?: string;
     createdAt?: string;
     soldAt?: string | null;
@@ -53,9 +55,9 @@ export type SaleListItem = {
 };
 
 export type SaleDetail = {
-    id: string;
-    userId: string;
-    matchId: string;
+    id: SaleId;
+    userId: UserId;
+    matchId: MatchId;
     listedPrice: number;
     profit: number;
     invest: number;
@@ -66,7 +68,7 @@ export type SaleDetail = {
     cancelledAt?: string | null;
     Match: {
         date: string;
-        Opponent: { id: string; name: string };
+        Opponent: { id: OpponentId; name: string };
     };
     Allocations?: SaleAllocation[];
 };
@@ -96,7 +98,7 @@ export type Accounting = {
 };
 
 export type SeasonInvestment = {
-    id: string;
+    id: SeasonPassId;
     price: number;
     seasonStartYear: number;
     label: string;
@@ -123,7 +125,7 @@ export type TimePeriodAccounting = {
 };
 
 export type AmortizationMatchRow = {
-    matchId: string;
+    matchId: MatchId;
     date: string;
     opponent: string;
     competition: string;
@@ -134,14 +136,14 @@ export type AmortizationMatchRow = {
 };
 
 export type AmortizationBreakEven = {
-    matchId: string;
+    matchId: MatchId;
     date: string;
     opponent: string;
     cumulative: number;
 };
 
 export type AmortizationPass = {
-    id: string;
+    id: SeasonPassId;
     label: string;
     price: number;
 };
@@ -160,8 +162,8 @@ export type Amortization = {
 };
 
 export type SeasonPass = {
-    id: string;
-    userId: string;
+    id: SeasonPassId;
+    userId: UserId;
     seasonStartYear: number;
     price: number;
     label: string;
@@ -190,14 +192,14 @@ export type UpdateSeasonPassPayload = {
 };
 
 export type AddSalePayload = {
-    matchId: string;
+    matchId: MatchId;
     allocations: SaleAllocation[];
     invest?: number;
     listedPrice: number;
 };
 
 export type UpdateSalePayload = {
-    saleId: string;
+    saleId: SaleId;
     sold: boolean;
     invest?: number;
     listedPrice?: number;

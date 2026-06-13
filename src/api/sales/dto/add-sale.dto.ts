@@ -9,11 +9,12 @@ import {
     ValidateNested,
 } from 'class-validator';
 
+import type { MatchId } from '@psg/shared';
 import { SaleAllocationDto } from './sale-allocation.dto';
 
 export class AddSaleDto {
     @IsString()
-    matchId: string;
+    matchId: MatchId;
 
     @IsArray()
     @ArrayMinSize(1)

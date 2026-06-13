@@ -1,26 +1,27 @@
+import type { UserId } from '@psg/shared';
 import { Accounting } from '../types/accounting.type';
 import { Amortization } from '../types/amortization.type';
 import { TimePeriodAccounting } from '../types/time-period-accounting.type';
 
 export abstract class IAccountingService {
-    abstract getCurrentSeason(userId: string): Promise<TimePeriodAccounting>;
+    abstract getCurrentSeason(userId: UserId): Promise<TimePeriodAccounting>;
     abstract getGivenSeason(
-        userId: string,
+        userId: UserId,
         seasonStartYear: number,
     ): Promise<TimePeriodAccounting>;
-    abstract getAllTime(userId: string): Promise<TimePeriodAccounting>;
+    abstract getAllTime(userId: UserId): Promise<TimePeriodAccounting>;
     abstract getAccounting(
-        userId: string,
+        userId: UserId,
         status: 'realized' | 'pending' | 'unrealized',
         date: { start: Date; end?: Date },
     ): Promise<Accounting | null>;
     abstract getSeason(
-        userId: string,
+        userId: UserId,
         dates: { start: Date; end?: Date },
         seasonStartYear: number | null,
     ): Promise<TimePeriodAccounting>;
     abstract getAmortization(
-        userId: string,
+        userId: UserId,
         seasonStartYear: number,
     ): Promise<Amortization>;
 }

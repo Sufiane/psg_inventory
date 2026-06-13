@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import type { MatchId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
@@ -41,7 +42,7 @@ export class MatchesService implements IMatchesService {
         return dbResponse.map((match) => formatMatch(match, withResult));
     }
 
-    async getMatch(matchId: string, withResult: boolean = false) {
+    async getMatch(matchId: MatchId, withResult: boolean = false) {
         const match = await this.matchsDbService.getOneMatch(matchId, withResult);
 
         if (!match) {

@@ -1,5 +1,7 @@
+import type { MatchId } from '@psg/shared';
+
 export type MatchRealizedProfit = {
-    matchId: string;
+    matchId: MatchId;
     date: Date;
     opponent: string;
     competition: string;

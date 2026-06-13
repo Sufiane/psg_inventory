@@ -1,3 +1,4 @@
+import type { SeasonPassId } from '@psg/shared';
 import type { SaleAllocation } from './types';
 
 const ALLOC_PREFIX = 'alloc_';
@@ -10,7 +11,7 @@ export function parseAllocationsFromForm(form: FormData): SaleAllocation[] {
             continue;
         }
 
-        const seasonPassId = key.slice(ALLOC_PREFIX.length);
+        const seasonPassId = key.slice(ALLOC_PREFIX.length) as SeasonPassId;
 
         if (typeof value !== 'string' || value.length === 0) {
             continue;

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
+import type { MatchId, SaleId, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
@@ -42,7 +43,7 @@ export class SalesService implements ISalesDbService {
         },
     };
 
-    async getOneSale(userId: string, saleId: string): Promise<Sale | null> {
+    async getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
         const cacheKey = CACHE_KEYS.sale(saleId);
         const cached = await this.redisService.get<Sale>(cacheKey);
 
@@ -60,10 +61,10 @@ export class SalesService implements ISalesDbService {
 
         await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
-        return dbResult;
+        return dbResult as Sale | null;
     }
 
-    async getSales(userId: string): Promise<Sale[]> {
+    async getSales(userId: UserId): Promise<Sale[]> {
         const cacheKey = CACHE_KEYS.sales(userId);
         const cached = await this.redisService.get<Sale[]>(cacheKey);
 
@@ -86,11 +87,11 @@ export class SalesService implements ISalesDbService {
 
         await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
-        return dbResult;
+        return dbResult as Sale[];
     }
 
     async getSalesByRange(
-        userId: string,
+        userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<Sale[]> {
         const cacheKey = CACHE_KEYS.salesByRange(userId, range.from, range.to);
@@ -122,17 +123,17 @@ export class SalesService implements ISalesDbService {
 
         await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
 
-        return dbResult;
+        return dbResult as Sale[];
     }
 
     async addSale(payload: {
-        userId: string;
+        userId: UserId;
         profit: number;
         invest: number;
-        matchId: string;
+        matchId: MatchId;
         listedPrice: number;
         allocations: SaleAllocationInput[];
-    }): Promise<{ id: string }> {
+    }): Promise<{ id: SaleId }> {
         const nbTickets = sumTickets(payload.allocations);
 
         const dbResult = await this.prisma.sales.create({
@@ -161,13 +162,13 @@ export class SalesService implements ISalesDbService {
         );
 
         return {
-            id: dbResult.id,
+            id: dbResult.id as SaleId,
         };
     }
 
     async updateSale(payload: {
-        saleId: string;
-        userId: string;
+        saleId: SaleId;
+        userId: UserId;
         profit: number | undefined;
         invest?: number;
         listedPrice?: number;
@@ -268,7 +269,7 @@ export class SalesService implements ISalesDbService {
         await this.redisService.invalidate(CACHE_KEYS.sale(payload.saleId));
     }
 
-    async deleteSale(userId: string, saleId: string): Promise<void> {
+    async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
             await tx.saleHistories.deleteMany({
                 where: {
@@ -313,7 +314,7 @@ export class SalesService implements ISalesDbService {
                     date: 'asc',
                 },
             },
-        }) as Promise<SaleWithFullMatch>;
+        }) as unknown as Promise<SaleWithFullMatch>;
     }
 
     async cancelMany() {
@@ -349,7 +350,7 @@ export class SalesService implements ISalesDbService {
             },
         });
 
-        const userIds = [...new Set(affected.map((s) => s.userId))];
+        const userIds = [...new Set(affected.map((s) => s.userId as UserId))];
 
         await Promise.allSettled([
             ...affected.map((s) => this.redisService.invalidate(CACHE_KEYS.sale(s.id))),
@@ -362,7 +363,7 @@ export class SalesService implements ISalesDbService {
         ]);
     }
 
-    getOldestMatchSale(userId: string): Promise<OldestMatchSale> {
+    getOldestMatchSale(userId: UserId): Promise<OldestMatchSale> {
         return this.prisma.sales.findFirstOrThrow({
             include: {
                 Match: true,
@@ -375,6 +376,6 @@ export class SalesService implements ISalesDbService {
                     date: 'asc',
                 },
             },
-        });
+        }) as unknown as Promise<OldestMatchSale>;
     }
 }
