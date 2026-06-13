@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { SeasonPassId, UserId } from '@psg/shared';
+import type { UserId } from '@psg/shared';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
@@ -220,7 +220,7 @@ export class AccountingService implements IAccountingService {
         const hasPass = passes.length > 0;
         const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
         const passSummaries = passes.map((pass) => ({
-            id: pass.id as SeasonPassId,
+            id: pass.id,
             label: pass.label,
             price: pass.price,
         }));

@@ -73,22 +73,22 @@ export class SeasonPassesService implements ISeasonPassesDbService {
     }
 
     async create(payload: CreateSeasonPassInput): Promise<SeasonPass> {
-        const result = await this.prisma.seasonPasses.create({
+        const result = (await this.prisma.seasonPasses.create({
             data: payload,
-        });
+        })) as SeasonPass;
 
-        await this.invalidate(payload.userId, result.id as SeasonPassId);
+        await this.invalidate(payload.userId, result.id);
 
         return result;
     }
 
     async update(id: SeasonPassId, payload: UpdateSeasonPassInput): Promise<SeasonPass> {
-        const result = await this.prisma.seasonPasses.update({
+        const result = (await this.prisma.seasonPasses.update({
             where: { id },
             data: payload,
-        });
+        })) as SeasonPass;
 
-        await this.invalidate(result.userId as UserId, id);
+        await this.invalidate(result.userId, id);
 
         return result;
     }

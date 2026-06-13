@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { omit } from 'radash';
 
-import type { MatchId, OpponentId, SaleId, UserId } from '@psg/shared';
+import type { MatchId, SaleId, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
@@ -71,7 +71,7 @@ export class SalesService implements ISalesService {
         return {
             ...omit(sale, ['Match', 'userId', 'matchId']),
             opponent: {
-                id: sale.Match.Opponent.id as OpponentId,
+                id: sale.Match.Opponent.id,
                 name: sale.Match.Opponent.name,
             },
             matchDate: sale.Match.date,
@@ -107,11 +107,7 @@ export class SalesService implements ISalesService {
         }
 
         if (payload.allocations != null) {
-            await this.validateAllocations(
-                userId,
-                existing.matchId as MatchId,
-                payload.allocations,
-            );
+            await this.validateAllocations(userId, existing.matchId, payload.allocations);
         }
 
         await this.salesDbService.updateSale({
