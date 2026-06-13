@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { UserId } from '@psg/shared';
+import type { SoldCount, UserId } from '@psg/shared';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
@@ -305,7 +305,7 @@ function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
         sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 
     return {
-        soldCount: rows.length,
+        soldCount: rows.length as SoldCount,
         avgLeadDays: Math.round((sum / rows.length) * 10) / 10,
         medianLeadDays: Math.round(median * 10) / 10,
         minLeadDays: sorted[0],

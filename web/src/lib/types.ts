@@ -1,4 +1,14 @@
-import type { MatchId, OpponentId, SaleId, SeasonPassId, UserId } from '@psg/shared';
+import type {
+    MatchId,
+    OpponentId,
+    SaleCount,
+    SaleId,
+    SeasonPassId,
+    SeasonYear,
+    SoldCount,
+    TicketCount,
+    UserId,
+} from '@psg/shared';
 
 export type Role = 'ADMIN' | 'USER';
 
@@ -36,7 +46,7 @@ export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
 export type SaleAllocation = {
     id?: SeasonPassId;
     seasonPassId: SeasonPassId;
-    nbTickets: number;
+    nbTickets: TicketCount;
 };
 
 export type SaleListItem = {
@@ -44,7 +54,7 @@ export type SaleListItem = {
     listedPrice: number;
     profit: number;
     invest: number;
-    nbTickets: number;
+    nbTickets: TicketCount;
     status: SaleStatus;
     opponent: { id: OpponentId; name: string };
     matchDate?: string;
@@ -61,7 +71,7 @@ export type SaleDetail = {
     listedPrice: number;
     profit: number;
     invest: number;
-    nbTickets: number;
+    nbTickets: TicketCount;
     status: SaleStatus;
     createdAt?: string;
     soldAt?: string | null;
@@ -87,10 +97,10 @@ type MaxMinData = {
 };
 
 export type Accounting = {
-    totalSales: number;
+    totalSales: SaleCount;
     totalProfit: number;
     totalInvest: number;
-    totalNbTickets: number;
+    totalNbTickets: TicketCount;
     averageTicketPrice: number;
     averageProfit: number;
     highest: MaxMinData;
@@ -100,7 +110,7 @@ export type Accounting = {
 export type SeasonInvestment = {
     id: SeasonPassId;
     price: number;
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
     label: string;
     category: string;
     row: string;
@@ -108,7 +118,7 @@ export type SeasonInvestment = {
 };
 
 export type LeadTime = {
-    soldCount: number;
+    soldCount: SoldCount;
     avgLeadDays: number;
     medianLeadDays: number;
     minLeadDays: number;
@@ -149,7 +159,7 @@ export type AmortizationPass = {
 };
 
 export type Amortization = {
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
     passPrice: number;
     hasPass: boolean;
     totalRealized: number;
@@ -164,7 +174,7 @@ export type Amortization = {
 export type SeasonPass = {
     id: SeasonPassId;
     userId: UserId;
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
     price: number;
     label: string;
     category: string;
@@ -175,7 +185,7 @@ export type SeasonPass = {
 };
 
 export type CreateSeasonPassPayload = {
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
     price: number;
     label: string;
     category: string;

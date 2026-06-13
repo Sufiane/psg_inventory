@@ -1,7 +1,9 @@
+import type { TicketCount } from '@psg/shared';
+
 export type AccountingAggregate = {
     _sum: {
         profit: number;
-        nbTickets: number;
+        nbTickets: TicketCount;
         invest: number;
         listedPrice: number;
     };
@@ -13,13 +15,13 @@ export type AccountingAggregate = {
     };
     _min: {
         profit: number;
-        nbTickets: number;
+        nbTickets: TicketCount;
         invest: number;
         listedPrice: number;
     };
     _max: {
         profit: number;
-        nbTickets: number;
+        nbTickets: TicketCount;
         invest: number;
         listedPrice: number;
     };

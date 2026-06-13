@@ -1,8 +1,10 @@
+import type { SaleCount, TicketCount } from '@psg/shared';
+
 export type Accounting = {
-    totalSales: number;
+    totalSales: SaleCount;
     totalProfit: number;
     totalInvest: number;
-    totalNbTickets: number;
+    totalNbTickets: TicketCount;
     averageTicketPrice: number;
     averageProfit: number;
     highest: MaxMinData;

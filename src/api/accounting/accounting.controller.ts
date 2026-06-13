@@ -1,4 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import type { SeasonYear } from '@psg/shared';
 import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { User } from '../../shared/decorators/user.decorator';
@@ -39,7 +40,7 @@ export class AccountingController {
         try {
             return await this.accountingService.getGivenSeason(
                 user.id,
-                parseInt(seasonStartYear, 10),
+                parseInt(seasonStartYear, 10) as SeasonYear,
             );
         } catch (e) {
             throw toHttpException(e);
@@ -54,7 +55,7 @@ export class AccountingController {
         try {
             return await this.accountingService.getAmortization(
                 user.id,
-                parseInt(seasonStartYear, 10),
+                parseInt(seasonStartYear, 10) as SeasonYear,
             );
         } catch (e) {
             throw toHttpException(e);

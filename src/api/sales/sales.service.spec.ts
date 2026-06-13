@@ -17,7 +17,7 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
-import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared';
+import type { MatchId, SaleId, SeasonPassId, TicketCount, UserId } from '@psg/shared';
 
 describe('SalesService', () => {
     let service: SalesService;
@@ -149,7 +149,7 @@ describe('SalesService', () => {
     describe('addSale allocations', () => {
         const validPayload: AddSaleDto = {
             matchId,
-            allocations: [{ seasonPassId: passId, nbTickets: 2 }],
+            allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
             listedPrice: 100,
             invest: 0,
         };
@@ -208,8 +208,8 @@ describe('SalesService', () => {
                 service.addSale(userId, {
                     ...validPayload,
                     allocations: [
-                        { seasonPassId: passId, nbTickets: 1 },
-                        { seasonPassId: passId, nbTickets: 1 },
+                        { seasonPassId: passId, nbTickets: 1 as TicketCount },
+                        { seasonPassId: passId, nbTickets: 1 as TicketCount },
                     ],
                 }),
             ).rejects.toMatchObject({

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import type { SeasonPassId, UserId } from '@psg/shared';
+import type { SeasonPassId, SeasonYear, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
@@ -9,8 +9,10 @@ import { CreateSeasonPassDto } from './dto/create-season-pass.dto';
 import { UpdateSeasonPassDto } from './dto/update-season-pass.dto';
 import { ISeasonPassesService } from './interfaces/season-passes.service.interface';
 
-function seasonStartYearFromDate(date: Date): number {
-    return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
+function seasonStartYearFromDate(date: Date): SeasonYear {
+    return (
+        date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear()
+    ) as SeasonYear;
 }
 
 @Injectable()
@@ -23,7 +25,7 @@ export class SeasonPassesService implements ISeasonPassesService {
         return this.db.findBySeason(userId, year);
     }
 
-    findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]> {
+    findBySeason(userId: UserId, seasonStartYear: SeasonYear): Promise<SeasonPass[]> {
         return this.db.findBySeason(userId, seasonStartYear);
     }
 

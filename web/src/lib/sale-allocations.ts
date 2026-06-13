@@ -1,4 +1,4 @@
-import type { SeasonPassId } from '@psg/shared';
+import type { SeasonPassId, TicketCount } from '@psg/shared';
 import type { SaleAllocation } from './types';
 
 const ALLOC_PREFIX = 'alloc_';
@@ -23,7 +23,7 @@ export function parseAllocationsFromForm(form: FormData): SaleAllocation[] {
             continue;
         }
 
-        allocations.push({ seasonPassId, nbTickets });
+        allocations.push({ seasonPassId, nbTickets: nbTickets as TicketCount });
     }
 
     return allocations;

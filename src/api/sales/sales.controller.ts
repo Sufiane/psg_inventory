@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import type { SeasonYear } from '@psg/shared';
 import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { User } from '../../shared/decorators/user.decorator';
 import { GetSaleDto } from './dto/get-sale.dto';
@@ -30,7 +31,7 @@ export class SalesController {
         try {
             return await this.salesService.getSeasonSales(
                 user.id,
-                Number.parseInt(seasonStartYear, 10),
+                Number.parseInt(seasonStartYear, 10) as SeasonYear,
             );
         } catch (e) {
             throw toHttpException(e);

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { omit } from 'radash';
 
-import type { MatchId, SaleId, UserId } from '@psg/shared';
+import type { MatchId, SaleId, SeasonYear, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
@@ -58,7 +58,7 @@ export class SalesService implements ISalesService {
 
     async getSeasonSales(
         userId: UserId,
-        seasonStartYear: number,
+        seasonStartYear: SeasonYear,
     ): Promise<FormattedSale[]> {
         const from = new Date(seasonStartYear, 7, 1);
         const to = new Date(seasonStartYear + 1, 7, 1);

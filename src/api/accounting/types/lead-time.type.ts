@@ -1,5 +1,7 @@
+import type { SoldCount } from '@psg/shared';
+
 export type LeadTime = {
-    soldCount: number;
+    soldCount: SoldCount;
     avgLeadDays: number;
     medianLeadDays: number;
     minLeadDays: number;

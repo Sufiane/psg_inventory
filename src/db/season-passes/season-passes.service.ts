@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import type { SeasonPassId, UserId } from '@psg/shared';
+import type { SeasonPassId, SeasonYear, UserId } from '@psg/shared';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
@@ -36,7 +36,10 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         return result as SeasonPass | null;
     }
 
-    async findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]> {
+    async findBySeason(
+        userId: UserId,
+        seasonStartYear: SeasonYear,
+    ): Promise<SeasonPass[]> {
         const cacheKey = CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear);
         const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
 

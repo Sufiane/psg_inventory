@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
-import type { MatchId, SaleId, UserId } from '@psg/shared';
+import type { MatchId, SaleId, TicketCount, UserId } from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
@@ -14,8 +14,11 @@ import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 import { ISalesDbService, SaleAllocationInput } from './sales.db.interface';
 
-function sumTickets(allocations: SaleAllocationInput[]): number {
-    return allocations.reduce((total, allocation) => total + allocation.nbTickets, 0);
+function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
+    return allocations.reduce(
+        (total, allocation) => total + allocation.nbTickets,
+        0,
+    ) as TicketCount;
 }
 
 @Injectable()
@@ -297,7 +300,7 @@ export class SalesService implements ISalesDbService {
         profit?: number;
         listedPrice?: number;
         invest?: number;
-        nbTickets?: number;
+        nbTickets?: TicketCount;
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch> {
         return this.prisma.sales.findFirstOrThrow({

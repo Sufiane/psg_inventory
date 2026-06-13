@@ -1,14 +1,16 @@
+import type { SaleCount, TicketCount } from '@psg/shared';
+
 export type FormattedAggregate = {
-    totalSales: number;
+    totalSales: SaleCount;
     totalProfit: number;
     totalInvest: number;
-    totalNbTickets: number;
+    totalNbTickets: TicketCount;
     averageTicketPrice: number;
     averageProfit: number;
     lowest: {
         profit: number;
         price: number;
-        nbTickets: number;
+        nbTickets: TicketCount;
         match: {
             opponent: string;
             date: Date;
@@ -19,7 +21,7 @@ export type FormattedAggregate = {
     highest: {
         profit: number;
         price: number;
-        nbTickets: number;
+        nbTickets: TicketCount;
         match: {
             opponent: string;
             date: Date;

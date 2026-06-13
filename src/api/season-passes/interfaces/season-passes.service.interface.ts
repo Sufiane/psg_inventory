@@ -1,11 +1,14 @@
-import type { SeasonPassId, UserId } from '@psg/shared';
+import type { SeasonPassId, SeasonYear, UserId } from '@psg/shared';
 import { SeasonPass } from '../../../db/season-passes/type/season-pass.type';
 import { CreateSeasonPassDto } from '../dto/create-season-pass.dto';
 import { UpdateSeasonPassDto } from '../dto/update-season-pass.dto';
 
 export abstract class ISeasonPassesService {
     abstract findCurrentSeason(userId: UserId): Promise<SeasonPass[]>;
-    abstract findBySeason(userId: UserId, seasonStartYear: number): Promise<SeasonPass[]>;
+    abstract findBySeason(
+        userId: UserId,
+        seasonStartYear: SeasonYear,
+    ): Promise<SeasonPass[]>;
     abstract findAll(userId: UserId): Promise<SeasonPass[]>;
     abstract findOne(userId: UserId, passId: SeasonPassId): Promise<SeasonPass>;
     abstract create(userId: UserId, payload: CreateSeasonPassDto): Promise<SeasonPass>;

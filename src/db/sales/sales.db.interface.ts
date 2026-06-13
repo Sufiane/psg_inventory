@@ -1,12 +1,12 @@
 import { SaleStatus } from '@prisma/client';
-import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared';
+import type { MatchId, SaleId, SeasonPassId, TicketCount, UserId } from '@psg/shared';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 
 export type SaleAllocationInput = {
     seasonPassId: SeasonPassId;
-    nbTickets: number;
+    nbTickets: TicketCount;
 };
 
 export abstract class ISalesDbService {
@@ -39,7 +39,7 @@ export abstract class ISalesDbService {
         profit?: number;
         listedPrice?: number;
         invest?: number;
-        nbTickets?: number;
+        nbTickets?: TicketCount;
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch>;
     abstract cancelMany(): Promise<void>;
