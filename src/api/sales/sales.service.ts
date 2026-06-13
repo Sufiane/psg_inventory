@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { omit } from 'radash';
 
-import type { MatchId, SaleId, SeasonYear, UserId } from '@psg/shared';
+import type {
+    ListedPrice,
+    MatchId,
+    Profit,
+    SaleId,
+    SeasonYear,
+    UserId,
+} from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
@@ -125,8 +132,8 @@ export class SalesService implements ISalesService {
         );
     }
 
-    getProfit(price: number): number {
-        return (price * (100 - PSG_COMMISSION)) / 100;
+    getProfit(price: ListedPrice): Profit {
+        return ((price * (100 - PSG_COMMISSION)) / 100) as Profit;
     }
 
     async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {

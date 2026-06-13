@@ -1,5 +1,14 @@
 import { SaleStatus } from '@prisma/client';
-import type { MatchId, SaleId, SeasonPassId, TicketCount, UserId } from '@psg/shared';
+import type {
+    Invest,
+    ListedPrice,
+    MatchId,
+    Profit,
+    SaleId,
+    SeasonPassId,
+    TicketCount,
+    UserId,
+} from '@psg/shared';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
@@ -18,27 +27,27 @@ export abstract class ISalesDbService {
     ): Promise<Sale[]>;
     abstract addSale(payload: {
         userId: UserId;
-        profit: number;
-        invest: number;
+        profit: Profit;
+        invest: Invest;
         matchId: MatchId;
-        listedPrice: number;
+        listedPrice: ListedPrice;
         allocations: SaleAllocationInput[];
     }): Promise<{ id: SaleId }>;
     abstract updateSale(payload: {
         saleId: SaleId;
         userId: UserId;
-        profit: number | undefined;
-        invest?: number;
-        listedPrice?: number;
+        profit: Profit | undefined;
+        invest?: Invest;
+        listedPrice?: ListedPrice;
         sold?: boolean;
         status?: SaleStatus;
         allocations?: SaleAllocationInput[];
     }): Promise<void>;
     abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;
     abstract getOneByWithFullMatch(query: {
-        profit?: number;
-        listedPrice?: number;
-        invest?: number;
+        profit?: Profit;
+        listedPrice?: ListedPrice;
+        invest?: Invest;
         nbTickets?: TicketCount;
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch>;

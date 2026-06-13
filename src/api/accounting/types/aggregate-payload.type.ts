@@ -1,4 +1,11 @@
-import type { TicketCount } from '@psg/shared';
+import type {
+    AvgProfit,
+    AvgTicketPrice,
+    Invest,
+    ListedPrice,
+    Profit,
+    TicketCount,
+} from '@psg/shared';
 
 type MatchInfo = {
     opponent: string;
@@ -8,22 +15,22 @@ type MatchInfo = {
 };
 
 type ExtremeSaleInfo = {
-    profit: number;
-    listedPrice: number;
+    profit: Profit;
+    listedPrice: ListedPrice;
     nbTickets: TicketCount;
     match: MatchInfo;
 };
 
 export type AggregatePayload = {
     sum: {
-        listedPrice: number;
-        profit: number;
-        invest: number;
+        listedPrice: ListedPrice;
+        profit: Profit;
+        invest: Invest;
         nbTickets: TicketCount;
     };
     avg: {
-        listedPrice: number;
-        profit: number;
+        listedPrice: AvgTicketPrice;
+        profit: AvgProfit;
     };
     min: ExtremeSaleInfo;
     max: ExtremeSaleInfo;

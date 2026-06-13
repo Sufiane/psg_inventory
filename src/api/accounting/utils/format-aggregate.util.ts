@@ -4,7 +4,7 @@ import { FormattedAggregate } from '../types/formatted-aggregate.type';
 
 export function formatAggregate(payload: AggregatePayload): FormattedAggregate {
     return {
-        totalSales: (payload.sum.listedPrice ?? 0) as SaleCount,
+        totalSales: (payload.sum.listedPrice ?? 0) as unknown as SaleCount,
         totalProfit: payload.sum.profit ?? 0,
         totalInvest: payload.sum.invest ?? 0,
         totalNbTickets: payload.sum.nbTickets ?? 0,

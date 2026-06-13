@@ -1,28 +1,35 @@
-import type { TicketCount } from '@psg/shared';
+import type {
+    AvgProfit,
+    AvgTicketPrice,
+    Invest,
+    ListedPrice,
+    Profit,
+    TicketCount,
+} from '@psg/shared';
 
 export type AccountingAggregate = {
     _sum: {
-        profit: number;
+        profit: Profit;
         nbTickets: TicketCount;
-        invest: number;
-        listedPrice: number;
+        invest: Invest;
+        listedPrice: ListedPrice;
     };
     _avg: {
-        profit: number;
+        profit: AvgProfit;
         nbTickets: number;
         invest: number;
-        listedPrice: number;
+        listedPrice: AvgTicketPrice;
     };
     _min: {
-        profit: number;
+        profit: Profit;
         nbTickets: TicketCount;
-        invest: number;
-        listedPrice: number;
+        invest: Invest;
+        listedPrice: ListedPrice;
     };
     _max: {
-        profit: number;
+        profit: Profit;
         nbTickets: TicketCount;
-        invest: number;
-        listedPrice: number;
+        invest: Invest;
+        listedPrice: ListedPrice;
     };
 };

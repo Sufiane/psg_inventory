@@ -17,7 +17,15 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
-import type { MatchId, SaleId, SeasonPassId, TicketCount, UserId } from '@psg/shared';
+import type {
+    Invest,
+    ListedPrice,
+    MatchId,
+    SaleId,
+    SeasonPassId,
+    TicketCount,
+    UserId,
+} from '@psg/shared';
 
 describe('SalesService', () => {
     let service: SalesService;
@@ -150,8 +158,8 @@ describe('SalesService', () => {
         const validPayload: AddSaleDto = {
             matchId,
             allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
-            listedPrice: 100,
-            invest: 0,
+            listedPrice: 100 as ListedPrice,
+            invest: 0 as Invest,
         };
 
         it('creates the sale when allocations match the user and season', async () => {

@@ -1,9 +1,12 @@
 import { Prisma } from '@prisma/client';
 import type { Override } from '@psg/shared';
 import type {
+    Invest,
+    ListedPrice,
     MatchId,
     OpponentId,
     OpponentName,
+    Profit,
     SaleId,
     SalePassAllocationId,
     SeasonPassId,
@@ -19,6 +22,9 @@ export type Sale = Override<
         id: SaleId;
         userId: UserId;
         matchId: MatchId;
+        invest: Invest;
+        profit: Profit;
+        listedPrice: ListedPrice;
         Match: Override<
             SaleRow['Match'],
             {

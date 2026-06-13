@@ -1,16 +1,22 @@
 import type {
+    AvgProfit,
+    AvgTicketPrice,
     CategoryLabel,
     Email,
+    Invest,
     JwtToken,
+    ListedPrice,
     MatchId,
     MatchScore,
     OpponentId,
     OpponentName,
     PassLabel,
+    Profit,
     RowLabel,
     SaleCount,
     SaleId,
     SeasonPassId,
+    SeasonPassPrice,
     SeasonYear,
     SeatLabel,
     SoldCount,
@@ -59,9 +65,9 @@ export type SaleAllocation = {
 
 export type SaleListItem = {
     id: SaleId;
-    listedPrice: number;
-    profit: number;
-    invest: number;
+    listedPrice: ListedPrice;
+    profit: Profit;
+    invest: Invest;
     nbTickets: TicketCount;
     status: SaleStatus;
     opponent: { id: OpponentId; name: OpponentName };
@@ -76,9 +82,9 @@ export type SaleDetail = {
     id: SaleId;
     userId: UserId;
     matchId: MatchId;
-    listedPrice: number;
-    profit: number;
-    invest: number;
+    listedPrice: ListedPrice;
+    profit: Profit;
+    invest: Invest;
     nbTickets: TicketCount;
     status: SaleStatus;
     createdAt?: string;
@@ -99,25 +105,25 @@ type MatchInfo = {
 };
 
 type MaxMinData = {
-    price: number;
-    profit: number;
+    price: ListedPrice;
+    profit: Profit;
     match: MatchInfo;
 };
 
 export type Accounting = {
     totalSales: SaleCount;
-    totalProfit: number;
-    totalInvest: number;
+    totalProfit: Profit;
+    totalInvest: Invest;
     totalNbTickets: TicketCount;
-    averageTicketPrice: number;
-    averageProfit: number;
+    averageTicketPrice: AvgTicketPrice;
+    averageProfit: AvgProfit;
     highest: MaxMinData;
     lowest: MaxMinData;
 };
 
 export type SeasonInvestment = {
     id: SeasonPassId;
-    price: number;
+    price: SeasonPassPrice;
     seasonStartYear: SeasonYear;
     label: PassLabel;
     category: CategoryLabel;
@@ -138,7 +144,7 @@ export type TimePeriodAccounting = {
     unrealized: Accounting | null;
     pending: Accounting | null;
     seasonInvestments: SeasonInvestment[];
-    totalSeasonInvestment: number;
+    totalSeasonInvestment: SeasonPassPrice;
     leadTime: LeadTime | null;
 };
 
@@ -163,14 +169,14 @@ export type AmortizationBreakEven = {
 export type AmortizationPass = {
     id: SeasonPassId;
     label: PassLabel;
-    price: number;
+    price: SeasonPassPrice;
 };
 
 export type Amortization = {
     seasonStartYear: SeasonYear;
-    passPrice: number;
+    passPrice: SeasonPassPrice;
     hasPass: boolean;
-    totalRealized: number;
+    totalRealized: Profit;
     progress: number;
     remaining: number;
     surplus: number;
@@ -183,7 +189,7 @@ export type SeasonPass = {
     id: SeasonPassId;
     userId: UserId;
     seasonStartYear: SeasonYear;
-    price: number;
+    price: SeasonPassPrice;
     label: PassLabel;
     category: CategoryLabel;
     row: RowLabel;
@@ -194,7 +200,7 @@ export type SeasonPass = {
 
 export type CreateSeasonPassPayload = {
     seasonStartYear: SeasonYear;
-    price: number;
+    price: SeasonPassPrice;
     label: PassLabel;
     category: CategoryLabel;
     row: RowLabel;
@@ -202,7 +208,7 @@ export type CreateSeasonPassPayload = {
 };
 
 export type UpdateSeasonPassPayload = {
-    price: number;
+    price: SeasonPassPrice;
     label: PassLabel;
     category: CategoryLabel;
     row: RowLabel;
@@ -212,15 +218,15 @@ export type UpdateSeasonPassPayload = {
 export type AddSalePayload = {
     matchId: MatchId;
     allocations: SaleAllocation[];
-    invest?: number;
-    listedPrice: number;
+    invest?: Invest;
+    listedPrice: ListedPrice;
 };
 
 export type UpdateSalePayload = {
     saleId: SaleId;
     sold: boolean;
-    invest?: number;
-    listedPrice?: number;
+    invest?: Invest;
+    listedPrice?: ListedPrice;
     allocations?: SaleAllocation[];
 };
 

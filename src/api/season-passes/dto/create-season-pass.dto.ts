@@ -3,6 +3,7 @@ import type {
     CategoryLabel,
     PassLabel,
     RowLabel,
+    SeasonPassPrice,
     SeasonYear,
     SeatLabel,
 } from '@psg/shared';
@@ -14,7 +15,7 @@ export class CreateSeasonPassDto {
 
     @IsInt()
     @Min(0)
-    price: number;
+    price: SeasonPassPrice;
 
     @IsString()
     @MaxLength(64)

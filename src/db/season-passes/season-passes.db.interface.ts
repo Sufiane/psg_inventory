@@ -3,6 +3,7 @@ import type {
     PassLabel,
     RowLabel,
     SeasonPassId,
+    SeasonPassPrice,
     SeasonYear,
     SeatLabel,
     UserId,
@@ -12,7 +13,7 @@ import { SeasonPass } from './type/season-pass.type';
 export type CreateSeasonPassInput = {
     userId: UserId;
     seasonStartYear: SeasonYear;
-    price: number;
+    price: SeasonPassPrice;
     label: PassLabel;
     category: CategoryLabel;
     row: RowLabel;
@@ -20,7 +21,7 @@ export type CreateSeasonPassInput = {
 };
 
 export type UpdateSeasonPassInput = {
-    price: number;
+    price: SeasonPassPrice;
     label: PassLabel;
     category: CategoryLabel;
     row: RowLabel;

@@ -2,7 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
-import type { MatchId, SaleId, TicketCount, UserId } from '@psg/shared';
+import type {
+    Invest,
+    ListedPrice,
+    MatchId,
+    Profit,
+    SaleId,
+    TicketCount,
+    UserId,
+} from '@psg/shared';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
@@ -131,10 +139,10 @@ export class SalesService implements ISalesDbService {
 
     async addSale(payload: {
         userId: UserId;
-        profit: number;
-        invest: number;
+        profit: Profit;
+        invest: Invest;
         matchId: MatchId;
-        listedPrice: number;
+        listedPrice: ListedPrice;
         allocations: SaleAllocationInput[];
     }): Promise<{ id: SaleId }> {
         const nbTickets = sumTickets(payload.allocations);
@@ -172,9 +180,9 @@ export class SalesService implements ISalesDbService {
     async updateSale(payload: {
         saleId: SaleId;
         userId: UserId;
-        profit: number | undefined;
-        invest?: number;
-        listedPrice?: number;
+        profit: Profit | undefined;
+        invest?: Invest;
+        listedPrice?: ListedPrice;
         sold?: boolean;
         status?: SaleStatus;
         allocations?: SaleAllocationInput[];
@@ -297,9 +305,9 @@ export class SalesService implements ISalesDbService {
     }
 
     getOneByWithFullMatch(query: {
-        profit?: number;
-        listedPrice?: number;
-        invest?: number;
+        profit?: Profit;
+        listedPrice?: ListedPrice;
+        invest?: Invest;
         nbTickets?: TicketCount;
         status?: SaleStatus;
     }): Promise<SaleWithFullMatch> {

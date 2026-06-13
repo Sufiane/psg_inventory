@@ -1,4 +1,11 @@
-import type { TicketCount } from '@psg/shared';
+import type {
+    AvgProfit,
+    AvgTicketPrice,
+    Invest,
+    ListedPrice,
+    Profit,
+    TicketCount,
+} from '@psg/shared';
 import { AggregatePayload } from '../types/aggregate-payload.type';
 import { formatAggregate } from './format-aggregate.util';
 
@@ -6,18 +13,18 @@ describe('formatAggregate', () => {
     it('return a formatted aggregate', () => {
         const payload: AggregatePayload = {
             sum: {
-                listedPrice: 1,
-                profit: 1,
-                invest: 1,
+                listedPrice: 1 as ListedPrice,
+                profit: 1 as Profit,
+                invest: 1 as Invest,
                 nbTickets: 1 as TicketCount,
             },
             avg: {
-                listedPrice: 1,
-                profit: 1,
+                listedPrice: 1 as AvgTicketPrice,
+                profit: 1 as AvgProfit,
             },
             min: {
-                profit: 1,
-                listedPrice: 1,
+                profit: 1 as Profit,
+                listedPrice: 1 as ListedPrice,
                 nbTickets: 1 as TicketCount,
                 match: {
                     opponent: 'opponent',
@@ -27,8 +34,8 @@ describe('formatAggregate', () => {
                 },
             },
             max: {
-                profit: 1,
-                listedPrice: 1,
+                profit: 1 as Profit,
+                listedPrice: 1 as ListedPrice,
                 nbTickets: 1 as TicketCount,
                 match: {
                     opponent: 'opponent',
