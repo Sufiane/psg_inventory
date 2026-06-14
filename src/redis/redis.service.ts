@@ -11,8 +11,8 @@ export class RedisService extends BaseRedis {
         super(configService.get('REDIS_URL'));
     }
 
-    async set<T>(key: CacheKey<T>, value: T | null, ttl?: number): Promise<void> {
-        await this.redis.set(key, JSON.stringify(value), ttl ? { EX: ttl } : {});
+    async set<T>(key: CacheKey<T>, value: T | null, ttl: number): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), { EX: ttl });
     }
 
     async get<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
