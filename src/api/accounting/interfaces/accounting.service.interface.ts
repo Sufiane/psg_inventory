@@ -1,4 +1,5 @@
-import type { SeasonYear, UserId } from '@psg/shared';
+import type { UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { Accounting } from '../types/accounting.type';
 import { Amortization } from '../types/amortization.type';
 import { TimePeriodAccounting } from '../types/time-period-accounting.type';

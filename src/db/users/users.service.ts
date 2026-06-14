@@ -1,4 +1,4 @@
-import type { Email, HashedPassword } from '@psg/shared';
+import type { Email, HashedPassword } from '@psg/shared/strings';
 import { PrismaService } from '../prisma.service';
 import { Users } from '@prisma/client';
 import { RedisService } from '../../redis/redis.service';

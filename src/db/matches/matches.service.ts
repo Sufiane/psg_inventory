@@ -6,7 +6,7 @@ import { Prisma } from '.prisma/client';
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-import type { MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IMatchesDbService } from './matches.db.interface';

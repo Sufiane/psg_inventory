@@ -1,4 +1,4 @@
-import type { Percentage } from '@psg/shared';
+import type { Percentage } from '@psg/shared/percentage';
 
 // App
 export const DEFAULT_PORT = 7777;

@@ -1,17 +1,15 @@
 import { Prisma } from '@prisma/client';
-import type { Override } from '@psg/shared';
+import type { Override } from '@psg/shared/brand';
 import type {
-    Invest,
-    ListedPrice,
     MatchId,
     OpponentId,
-    OpponentName,
-    Profit,
     SaleId,
     SalePassAllocationId,
     SeasonPassId,
     UserId,
-} from '@psg/shared';
+} from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
+import type { OpponentName } from '@psg/shared/strings';
 import { SalesService } from '../sales.service';
 
 type SaleRow = Prisma.SalesGetPayload<typeof SalesService.saleQuery>;

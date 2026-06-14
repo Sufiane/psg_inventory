@@ -1,4 +1,5 @@
-import type { LeadDays, SoldCount } from '@psg/shared';
+import type { SoldCount } from '@psg/shared/counts';
+import type { LeadDays } from '@psg/shared/time';
 
 export type LeadTime = {
     soldCount: SoldCount;

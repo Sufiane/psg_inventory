@@ -7,7 +7,6 @@ const config = {
   kit: {
     adapter: adapter(),
     alias: {
-      '@psg/shared': '../shared/src/index.d.ts',
       '@psg/shared/*': '../shared/src/*',
     },
   },

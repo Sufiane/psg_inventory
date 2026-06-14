@@ -17,15 +17,9 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
-import type {
-    Invest,
-    ListedPrice,
-    MatchId,
-    SaleId,
-    SeasonPassId,
-    TicketCount,
-    UserId,
-} from '@psg/shared';
+import type { TicketCount } from '@psg/shared/counts';
+import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice } from '@psg/shared/money';
 
 describe('SalesService', () => {
     let service: SalesService;

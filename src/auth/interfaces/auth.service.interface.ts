@@ -1,4 +1,4 @@
-import type { Email, HashedPassword, JwtToken } from '@psg/shared';
+import type { Email, HashedPassword, JwtToken } from '@psg/shared/strings';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 export abstract class IAuthService {

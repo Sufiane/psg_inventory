@@ -1,5 +1,6 @@
 import { IsInt, IsUUID, Min } from 'class-validator';
-import type { SeasonPassId, TicketCount } from '@psg/shared';
+import type { TicketCount } from '@psg/shared/counts';
+import type { SeasonPassId } from '@psg/shared/ids';
 
 export class SaleAllocationDto {
     @IsUUID()

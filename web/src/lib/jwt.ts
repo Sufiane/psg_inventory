@@ -1,4 +1,5 @@
-import type { Email, UserId } from '@psg/shared';
+import type { UserId } from '@psg/shared/ids';
+import type { Email } from '@psg/shared/strings';
 import type { SessionUser } from './types';
 
 export function decodeJwt(token: string): SessionUser | null {

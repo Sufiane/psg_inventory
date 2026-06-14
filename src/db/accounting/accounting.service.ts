@@ -1,4 +1,4 @@
-import type { MatchId, UserId } from '@psg/shared';
+import type { MatchId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../prisma.service';
 import { AccountingAggregate } from './types/get-accounting.type';
 import { omit } from 'radash';

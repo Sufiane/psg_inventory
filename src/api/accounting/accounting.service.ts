@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { LeadDays, SeasonYear, SoldCount, UserId } from '@psg/shared';
+import type { SoldCount } from '@psg/shared/counts';
+import type { UserId } from '@psg/shared/ids';
+import type { LeadDays, SeasonYear } from '@psg/shared/time';
 import { Accounting } from './types/accounting.type';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';

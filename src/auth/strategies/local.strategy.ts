@@ -1,7 +1,7 @@
 import { Strategy } from 'passport-local';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import type { Email } from '@psg/shared';
+import type { Email } from '@psg/shared/strings';
 import { IAuthService } from '../interfaces/auth.service.interface';
 
 @Injectable()

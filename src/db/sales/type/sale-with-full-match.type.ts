@@ -1,17 +1,8 @@
 import { Matches, Opponents, Sales } from '@prisma/client';
-import type { Override } from '@psg/shared';
-import type {
-    Invest,
-    ListedPrice,
-    MatchId,
-    MatchResultId,
-    MatchScore,
-    OpponentId,
-    OpponentName,
-    Profit,
-    SaleId,
-    UserId,
-} from '@psg/shared';
+import type { Override } from '@psg/shared/brand';
+import type { MatchId, MatchResultId, OpponentId, SaleId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
+import type { MatchScore, OpponentName } from '@psg/shared/strings';
 
 type Row = Sales & { Match: Matches & { Opponent: Opponents } };
 

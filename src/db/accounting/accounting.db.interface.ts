@@ -1,5 +1,5 @@
 import { SaleStatus } from '@prisma/client';
-import type { UserId } from '@psg/shared';
+import type { UserId } from '@psg/shared/ids';
 import { AccountingAggregate } from './types/get-accounting.type';
 import { MatchRealizedProfit } from './types/match-realized-profit.type';
 import { SoldLeadTime } from './types/sold-lead-time.type';

@@ -1,11 +1,11 @@
+import type { TicketCount } from '@psg/shared/counts';
 import type {
     AvgProfit,
     AvgTicketPrice,
     Invest,
     ListedPrice,
     Profit,
-    TicketCount,
-} from '@psg/shared';
+} from '@psg/shared/money';
 
 type MatchInfo = {
     opponent: string;

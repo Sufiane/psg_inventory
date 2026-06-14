@@ -1,4 +1,4 @@
-import type { MatchId, SeasonPassId } from '@psg/shared';
+import type { MatchId, SeasonPassId } from '@psg/shared/ids';
 
 export type AmortizationMatchRow = {
     matchId: MatchId;

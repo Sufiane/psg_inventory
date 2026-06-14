@@ -1,13 +1,7 @@
-import type {
-    CategoryLabel,
-    PassLabel,
-    RowLabel,
-    SeasonPassId,
-    SeasonPassPrice,
-    SeasonYear,
-    SeatLabel,
-    UserId,
-} from '@psg/shared';
+import type { SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonPassPrice } from '@psg/shared/money';
+import type { CategoryLabel, PassLabel, RowLabel, SeatLabel } from '@psg/shared/strings';
+import type { SeasonYear } from '@psg/shared/time';
 import { SeasonPass } from './type/season-pass.type';
 
 export type CreateSeasonPassInput = {

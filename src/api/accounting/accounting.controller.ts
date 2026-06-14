@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import type { SeasonYear } from '@psg/shared';
+import type { SeasonYear } from '@psg/shared/time';
 import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { User } from '../../shared/decorators/user.decorator';

@@ -9,7 +9,8 @@ import {
     ValidateNested,
 } from 'class-validator';
 
-import type { Invest, ListedPrice, MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
+import type { Invest, ListedPrice } from '@psg/shared/money';
 import { SaleAllocationDto } from './sale-allocation.dto';
 
 export class AddSaleDto {

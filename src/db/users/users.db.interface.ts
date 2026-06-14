@@ -1,5 +1,5 @@
 import { Users } from '@prisma/client';
-import type { Email, HashedPassword } from '@psg/shared';
+import type { Email, HashedPassword } from '@psg/shared/strings';
 
 export abstract class IUsersDbService {
     abstract create(payload: {

@@ -1,14 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { omit } from 'radash';
 
-import type {
-    ListedPrice,
-    MatchId,
-    Profit,
-    SaleId,
-    SeasonYear,
-    UserId,
-} from '@psg/shared';
+import type { MatchId, SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice, Profit } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';

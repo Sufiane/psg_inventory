@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import type { SeasonPassId, SeasonYear, UserId } from '@psg/shared';
+import type { SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';

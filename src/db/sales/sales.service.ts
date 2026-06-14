@@ -2,15 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
-import type {
-    Invest,
-    ListedPrice,
-    MatchId,
-    Profit,
-    SaleId,
-    TicketCount,
-    UserId,
-} from '@psg/shared';
+import type { TicketCount } from '@psg/shared/counts';
+import type { MatchId, SaleId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';

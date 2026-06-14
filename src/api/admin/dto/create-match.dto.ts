@@ -8,7 +8,7 @@ import {
     Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { MatchScore, OpponentName } from '@psg/shared';
+import type { MatchScore, OpponentName } from '@psg/shared/strings';
 import { Competitions } from '../types/competitions.type';
 
 export class ResultDto {

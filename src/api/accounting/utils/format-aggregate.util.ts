@@ -1,4 +1,4 @@
-import type { SaleCount } from '@psg/shared';
+import type { SaleCount } from '@psg/shared/counts';
 import { AggregatePayload } from '../types/aggregate-payload.type';
 import { FormattedAggregate } from '../types/formatted-aggregate.type';
 

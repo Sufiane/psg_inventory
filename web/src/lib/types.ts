@@ -1,29 +1,24 @@
+import type { SaleCount, SoldCount, TicketCount } from '@psg/shared/counts';
+import type { MatchId, OpponentId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type {
     AvgProfit,
     AvgTicketPrice,
+    Invest,
+    ListedPrice,
+    Profit,
+    SeasonPassPrice,
+} from '@psg/shared/money';
+import type {
     CategoryLabel,
     Email,
-    Invest,
     JwtToken,
-    LeadDays,
-    ListedPrice,
-    MatchId,
     MatchScore,
-    OpponentId,
     OpponentName,
     PassLabel,
-    Profit,
     RowLabel,
-    SaleCount,
-    SaleId,
-    SeasonPassId,
-    SeasonPassPrice,
-    SeasonYear,
     SeatLabel,
-    SoldCount,
-    TicketCount,
-    UserId,
-} from '@psg/shared';
+} from '@psg/shared/strings';
+import type { LeadDays, SeasonYear } from '@psg/shared/time';
 
 export type Role = 'ADMIN' | 'USER';
 

@@ -1,4 +1,4 @@
-import type { MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
 
 export type MatchRealizedProfit = {
     matchId: MatchId;

@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import type { SeasonYear } from '@psg/shared';
+import type { SeasonYear } from '@psg/shared/time';
 
 export class ListSeasonPassesDto {
     @IsOptional()

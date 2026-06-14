@@ -1,12 +1,7 @@
 import { IsInt, IsString, MaxLength, Min } from 'class-validator';
-import type {
-    CategoryLabel,
-    PassLabel,
-    RowLabel,
-    SeasonPassPrice,
-    SeasonYear,
-    SeatLabel,
-} from '@psg/shared';
+import type { SeasonPassPrice } from '@psg/shared/money';
+import type { CategoryLabel, PassLabel, RowLabel, SeatLabel } from '@psg/shared/strings';
+import type { SeasonYear } from '@psg/shared/time';
 
 export class CreateSeasonPassDto {
     @IsInt()

@@ -20,7 +20,8 @@ import { Accounting } from './types/accounting.type';
 import { OldestMatchSale } from '../../db/sales/type/oldest-match-sale.type';
 import { MatchRealizedProfit } from '../../db/accounting/types/match-realized-profit.type';
 import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
-import type { MatchId, SeasonPassId, SeasonYear, UserId } from '@psg/shared';
+import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 
 jest.mock('../../shared/utils/season.utils');
 const getCurrentSeasonDateMocked = jest.mocked(getCurrentSeasonDate);

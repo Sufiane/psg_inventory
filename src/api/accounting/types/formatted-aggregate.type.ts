@@ -1,12 +1,11 @@
+import type { SaleCount, TicketCount } from '@psg/shared/counts';
 import type {
     AvgProfit,
     AvgTicketPrice,
     Invest,
     ListedPrice,
     Profit,
-    SaleCount,
-    TicketCount,
-} from '@psg/shared';
+} from '@psg/shared/money';
 
 export type FormattedAggregate = {
     totalSales: SaleCount;

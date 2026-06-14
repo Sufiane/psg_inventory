@@ -1,5 +1,5 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
-import type { Email } from '@psg/shared';
+import type { Email } from '@psg/shared/strings';
 
 export class CreateUserDto {
     @IsEmail()

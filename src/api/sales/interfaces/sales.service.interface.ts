@@ -1,11 +1,6 @@
-import type {
-    ListedPrice,
-    OpponentId,
-    Profit,
-    SaleId,
-    SeasonYear,
-    UserId,
-} from '@psg/shared';
+import type { OpponentId, SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice, Profit } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
 import { Sale } from '../../../db/sales/type/sale.type';
 import { AddSaleDto } from '../dto/add-sale.dto';
 import { UpdateSaleDto } from '../dto/update-sale.dto';

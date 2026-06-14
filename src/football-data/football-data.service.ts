@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { MatchScore, OpponentName } from '@psg/shared';
+import type { MatchScore, OpponentName } from '@psg/shared/strings';
 
 import { DomainException } from '../common/exceptions/domain.exception';
 import { ErrorCode } from '../common/exceptions/error-codes.enum';

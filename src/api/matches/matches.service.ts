@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import type { MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';

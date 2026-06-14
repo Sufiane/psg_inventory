@@ -1,14 +1,7 @@
 import { SaleStatus } from '@prisma/client';
-import type {
-    Invest,
-    ListedPrice,
-    MatchId,
-    Profit,
-    SaleId,
-    SeasonPassId,
-    TicketCount,
-    UserId,
-} from '@psg/shared';
+import type { TicketCount } from '@psg/shared/counts';
+import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';

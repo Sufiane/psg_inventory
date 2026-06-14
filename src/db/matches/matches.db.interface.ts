@@ -1,5 +1,5 @@
 import { Competition } from '@prisma/client';
-import type { MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { Match } from './types/match.type';
 

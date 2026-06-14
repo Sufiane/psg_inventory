@@ -1,4 +1,5 @@
-import type { SeasonPassId, TicketCount } from '@psg/shared';
+import type { TicketCount } from '@psg/shared/counts';
+import type { SeasonPassId } from '@psg/shared/ids';
 import type { SaleAllocation } from './types';
 
 const ALLOC_PREFIX = 'alloc_';

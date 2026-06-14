@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
-import type { SeasonPassId, SeasonYear, UserId } from '@psg/shared';
+import type { SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';

@@ -1,4 +1,4 @@
-import type { MatchId } from '@psg/shared';
+import type { MatchId } from '@psg/shared/ids';
 import { Match } from '../../../db/matches/types/match.type';
 import { FormattedMatch } from '../types/formatted-match.type';
 
