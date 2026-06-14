@@ -42,7 +42,7 @@ export class MatchesService implements IMatchesDbService {
         }
 
         const cacheKey = CACHE_KEYS.matches(dates.from, dates.to, withResult);
-        const cached = await this.redisService.get<Match[]>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             // if by mistake there is a null value in cache
@@ -61,7 +61,7 @@ export class MatchesService implements IMatchesDbService {
 
     async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {
         const cacheKey = CACHE_KEYS.match(id);
-        const cached = await this.redisService.get<Match>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value;

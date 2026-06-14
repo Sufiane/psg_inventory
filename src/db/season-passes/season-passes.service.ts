@@ -22,7 +22,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
     async findById(id: SeasonPassId): Promise<SeasonPass | null> {
         const cacheKey = CACHE_KEYS.seasonPass(id);
-        const cached = await this.redisService.get<SeasonPass>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value;
@@ -42,7 +42,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
         seasonStartYear: SeasonYear,
     ): Promise<SeasonPass[]> {
         const cacheKey = CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear);
-        const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value ?? [];
@@ -60,7 +60,7 @@ export class SeasonPassesService implements ISeasonPassesDbService {
 
     async findAll(userId: UserId): Promise<SeasonPass[]> {
         const cacheKey = CACHE_KEYS.seasonPasses(userId);
-        const cached = await this.redisService.get<SeasonPass[]>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value ?? [];

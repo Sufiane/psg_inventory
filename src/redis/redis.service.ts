@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { CacheKey, CacheKeyPattern } from '@psg/shared/cache';
 import { BaseRedis } from './base.service';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
@@ -10,11 +11,11 @@ export class RedisService extends BaseRedis {
         super(configService.get('REDIS_URL'));
     }
 
-    async set<T>(key: string, value: T, ttl?: number) {
+    async set<T>(key: CacheKey<T>, value: T | null, ttl?: number): Promise<void> {
         await this.redis.set(key, JSON.stringify(value), ttl ? { EX: ttl } : {});
     }
 
-    async get<T>(key: string): Promise<{ value: T | null } | null> {
+    async get<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
         const cachedValue = await this.redis.get(key);
 
         if (cachedValue === null) {
@@ -32,11 +33,11 @@ export class RedisService extends BaseRedis {
         };
     }
 
-    async invalidate(key: string) {
+    async invalidate<T>(key: CacheKey<T>): Promise<void> {
         await this.redis.del(key);
     }
 
-    async invalidatePattern(pattern: string) {
+    async invalidatePattern(pattern: CacheKeyPattern): Promise<void> {
         const keys: string[] = [];
 
         for await (const key of this.redis.scanIterator({ MATCH: pattern })) {

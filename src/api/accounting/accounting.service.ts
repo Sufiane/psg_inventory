@@ -126,7 +126,7 @@ export class AccountingService implements IAccountingService {
         seasonStartYear: SeasonYear | null,
     ): Promise<TimePeriodAccounting> {
         const cacheKey = CACHE_KEYS.accounting(userId, dates.start, dates.end);
-        const cached = await this.redisService.get<TimePeriodAccounting>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return (
@@ -201,7 +201,7 @@ export class AccountingService implements IAccountingService {
         seasonStartYear: SeasonYear,
     ): Promise<Amortization> {
         const cacheKey = CACHE_KEYS.amortization(userId, seasonStartYear);
-        const cached = await this.redisService.get<Amortization>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value ?? emptyAmortization(seasonStartYear);

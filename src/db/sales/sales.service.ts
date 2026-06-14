@@ -50,7 +50,7 @@ export class SalesService implements ISalesDbService {
 
     async getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
         const cacheKey = CACHE_KEYS.sale(saleId);
-        const cached = await this.redisService.get<Sale>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value;
@@ -71,7 +71,7 @@ export class SalesService implements ISalesDbService {
 
     async getSales(userId: UserId): Promise<Sale[]> {
         const cacheKey = CACHE_KEYS.sales(userId);
-        const cached = await this.redisService.get<Sale[]>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             // in case we have a valid null value
@@ -100,7 +100,7 @@ export class SalesService implements ISalesDbService {
         range: { from: Date; to: Date },
     ): Promise<Sale[]> {
         const cacheKey = CACHE_KEYS.salesByRange(userId, range.from, range.to);
-        const cached = await this.redisService.get<Sale[]>(cacheKey);
+        const cached = await this.redisService.get(cacheKey);
 
         if (cached !== null) {
             return cached.value ?? [];

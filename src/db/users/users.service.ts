@@ -34,7 +34,7 @@ export class UsersService implements IUsersDbService {
     }
 
     async findOneByEmail(email: Email): Promise<Users | null> {
-        const cached = await this.redisService.get<Users>(CACHE_KEYS.userByEmail(email));
+        const cached = await this.redisService.get(CACHE_KEYS.userByEmail(email));
 
         if (cached !== null) {
             return cached.value;
