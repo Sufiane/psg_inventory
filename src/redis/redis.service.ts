@@ -22,6 +22,9 @@ export class RedisService extends BaseRedis {
         await this.redis.set(key, JSON.stringify(value), { EX: jitterTtl(ttl) });
     }
 
+    // Wraps the cached value in `{ value }` so callers can distinguish a
+    // cache miss (`null` returned) from a cached `null` (`{ value: null }`).
+    // Check `result === null` for miss, not `!result.value`.
     async get<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
         const cachedValue = await this.redis.get(key);
 
