@@ -4,6 +4,13 @@ import type { CacheKey, CacheKeyPattern } from '@psg/shared/cache';
 import { BaseRedis } from './base.service';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
+const TTL_JITTER_RATIO = 0.1;
+
+function jitterTtl(ttl: number): number {
+    const jitter = Math.floor(Math.random() * ttl * TTL_JITTER_RATIO);
+
+    return ttl + jitter;
+}
 
 @Injectable()
 export class RedisService extends BaseRedis {
@@ -12,7 +19,7 @@ export class RedisService extends BaseRedis {
     }
 
     async set<T>(key: CacheKey<T>, value: T | null, ttl: number): Promise<void> {
-        await this.redis.set(key, JSON.stringify(value), { EX: ttl });
+        await this.redis.set(key, JSON.stringify(value), { EX: jitterTtl(ttl) });
     }
 
     async get<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
