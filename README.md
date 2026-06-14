@@ -69,6 +69,15 @@ npm run start:prod
 
 The server starts on port **7777** by default.
 
+## Demo Accounts
+
+Seeded by `npx ts-node scripts/seed-demo.ts` (re-running wipes & re-seeds these two users only).
+
+| Email | Password | Setup |
+|---|---|---|
+| `demo1@psg.fr` | `demo1234` | 1 season pass current season (2025), 1 season pass previous season (2024), sales on each |
+| `demo2@psg.fr` | `demo1234` | 2 season passes same current season (2025), each sale allocated across both passes |
+
 ## Tests
 
 ```bash
