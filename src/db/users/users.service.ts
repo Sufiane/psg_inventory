@@ -1,3 +1,4 @@
+import type { UserId } from '@psg/shared/ids';
 import type { Email, HashedPassword } from '@psg/shared/strings';
 import { PrismaService } from '../prisma.service';
 import { Users } from '@prisma/client';
@@ -41,5 +42,9 @@ export class UsersService implements IUsersDbService {
                 },
             }),
         );
+    }
+
+    async findById(id: UserId): Promise<Users | null> {
+        return this.prisma.users.findUnique({ where: { id } });
     }
 }

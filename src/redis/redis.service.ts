@@ -99,10 +99,11 @@ export class RedisService extends BaseRedis {
         return loader();
     }
 
-    // Raw cache read used internally by `get` for the initial hit check and
-    // by `waitForCacheFill` while polling. Returns `{ value }` for a hit
-    // (incl. cached `null`) or `null` for a miss.
-    private async peek<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
+    // Raw cache read. Returns `{ value }` for a hit (incl. cached `null`)
+    // or `null` for a miss. Used by `get` internally; also exposed for
+    // callers that need a presence check without a loader (e.g. auth
+    // looking up a refresh token).
+    async peek<T>(key: CacheKey<T>): Promise<{ value: T | null } | null> {
         const cachedValue = await this.redis.get(key);
 
         if (cachedValue === null) {

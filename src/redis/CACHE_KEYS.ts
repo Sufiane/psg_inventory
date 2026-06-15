@@ -35,6 +35,10 @@ export default {
         `user:id:${userId}:sales*` as CacheKeyPattern,
     userByEmail: (email: string): CacheKey<Users> =>
         `user:email:${email}` as CacheKey<Users>,
+    refreshToken: (familyId: string, secret: string): CacheKey<string> =>
+        `auth:refresh:${familyId}:${secret}` as CacheKey<string>,
+    invalidateRefreshFamily: (familyId: string): CacheKeyPattern =>
+        `auth:refresh:${familyId}:*` as CacheKeyPattern,
     seasonPass: (id: string): CacheKey<SeasonPass> =>
         `season-pass:id:${id}` as CacheKey<SeasonPass>,
     seasonPassesBySeason: (

@@ -14,6 +14,11 @@ class EnvironmentVariables {
     @IsString()
     REDIS_URL!: string;
 
+    // seconds; refresh tokens live this long. Defaults to 7 days when unset.
+    @IsOptional()
+    @IsString()
+    REFRESH_TOKEN_EXPIRES_SEC?: string;
+
     @IsOptional()
     @IsString()
     FRONTEND_ORIGIN?: string;

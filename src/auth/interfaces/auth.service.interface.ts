@@ -1,5 +1,10 @@
-import type { Email, HashedPassword, JwtToken } from '@psg/shared/strings';
+import type { Email, HashedPassword, JwtToken, RefreshToken } from '@psg/shared/strings';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
+
+export type TokenPair = {
+    accessToken: JwtToken;
+    refreshToken: RefreshToken;
+};
 
 export abstract class IAuthService {
     abstract hashPassword(passwordToHash: string): Promise<HashedPassword>;
@@ -7,5 +12,7 @@ export abstract class IAuthService {
         email: Email,
         password: string,
     ): Promise<AuthenticatedUser | null>;
-    abstract login(user: AuthenticatedUser): Promise<{ token: JwtToken }>;
+    abstract login(user: AuthenticatedUser): Promise<TokenPair>;
+    abstract refreshTokens(refreshToken: RefreshToken): Promise<TokenPair>;
+    abstract logout(refreshToken: RefreshToken): Promise<void>;
 }

@@ -3,6 +3,7 @@ import type { Brand } from '../brand';
 export type Email = Brand<string, 'Email'>;
 export type HashedPassword = Brand<string, 'HashedPassword'>;
 export type JwtToken = Brand<string, 'JwtToken'>;
+export type RefreshToken = Brand<string, 'RefreshToken'>;
 export type OpponentName = Brand<string, 'OpponentName'>;
 export type MatchScore = Brand<string, 'MatchScore'>;
 export type PassLabel = Brand<string, 'PassLabel'>;

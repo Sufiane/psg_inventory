@@ -4,7 +4,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { Public } from '../../shared/decorators/public.decorator';
 import { IUsersService } from './interfaces/users.service.interface';
 import { LocalAuthGuard } from '../../shared/guards/local.guard';
-import { IAuthService } from '../../auth/interfaces/auth.service.interface';
+import { IAuthService, TokenPair } from '../../auth/interfaces/auth.service.interface';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('users')
@@ -28,9 +28,7 @@ export class UsersController {
     @Public()
     @UseGuards(LocalAuthGuard)
     @Post('login')
-    login(
-        @Req() { user }: Request & { user: AuthenticatedUser },
-    ): Promise<{ token: string }> {
+    login(@Req() { user }: Request & { user: AuthenticatedUser }): Promise<TokenPair> {
         return this.authService.login(user);
     }
 }
