@@ -26,6 +26,13 @@ export class AccountingService implements IAccountingDbService {
             listedPrice: true,
         };
 
+        const matchDateFilter = Object.assign(
+            {
+                gte: from,
+            },
+            to ? { lte: to } : {},
+        );
+
         const dbResult = await this.prisma.sales.aggregate({
             _sum: fields,
             _avg: fields,
@@ -35,10 +42,7 @@ export class AccountingService implements IAccountingDbService {
                 userId,
                 status,
                 Match: {
-                    date: {
-                        gte: from,
-                        lte: to,
-                    },
+                    date: matchDateFilter,
                 },
             },
         });
@@ -109,12 +113,14 @@ export class AccountingService implements IAccountingDbService {
         from: Date,
         to?: Date,
     ): Promise<SoldLeadTime[]> {
+        const matchDateFilter = Object.assign({ gte: from }, to ? { lte: to } : {});
+
         const rows = await this.prisma.sales.findMany({
             where: {
                 userId,
                 status: SaleStatus.SOLD,
                 soldAt: { not: null },
-                Match: { date: { gte: from, lte: to } },
+                Match: { date: matchDateFilter },
             },
             select: {
                 soldAt: true,

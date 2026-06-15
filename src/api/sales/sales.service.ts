@@ -119,7 +119,7 @@ export class SalesService implements ISalesService {
             listedPrice: payload.listedPrice,
             sold: payload.sold,
             profit: payload.listedPrice ? this.getProfit(payload.listedPrice) : undefined,
-            allocations: payload.allocations,
+            ...(payload.allocations ? { allocations: payload.allocations } : {}),
         });
 
         await this.redisService.invalidatePattern(

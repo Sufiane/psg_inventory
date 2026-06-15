@@ -184,9 +184,8 @@ describe('AccountingService', () => {
 
                 const userId = 'userId' as UserId;
                 const status = 'realized';
-                const date = {
+                const date: { start: Date; end?: Date } = {
                     start: new Date('2022-02-02'),
-                    end: undefined,
                 };
 
                 await expect(
@@ -212,9 +211,8 @@ describe('AccountingService', () => {
 
                 const userId = 'userId' as UserId;
                 const status = 'realized';
-                const date = {
+                const date: { start: Date; end?: Date } = {
                     start: new Date('2022-02-02'),
-                    end: undefined,
                 };
 
                 const highestMatch = {
@@ -279,9 +277,8 @@ describe('AccountingService', () => {
                 redisService.get.mockResolvedValueOnce(expectedResult);
 
                 const userId = 'userId' as UserId;
-                const dates = {
+                const dates: { start: Date; end?: Date } = {
                     start: new Date('2022-02-02'),
-                    end: undefined,
                 };
 
                 await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
@@ -302,9 +299,8 @@ describe('AccountingService', () => {
                 accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
 
                 const userId = 'userId' as UserId;
-                const dates = {
+                const dates: { start: Date; end?: Date } = {
                     start: new Date('2022-02-02'),
-                    end: undefined,
                 };
 
                 const getAccountingSpy = jest.spyOn(service, 'getAccounting');

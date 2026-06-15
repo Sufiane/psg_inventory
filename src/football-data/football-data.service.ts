@@ -62,14 +62,16 @@ export class FootballDataService {
                 opponent: (isAtHome
                     ? match.awayTeam.name
                     : match.homeTeam.name) as OpponentName,
-                result: hasScore
+                ...(hasScore
                     ? {
-                          isWin: isAtHome
-                              ? match.score.winner === 'HOME_TEAM'
-                              : match.score.winner === 'AWAY_TEAM',
-                          score: `${match.score.fullTime.home} - ${match.score.fullTime.away}` as MatchScore,
+                          result: {
+                              isWin: isAtHome
+                                  ? match.score.winner === 'HOME_TEAM'
+                                  : match.score.winner === 'AWAY_TEAM',
+                              score: `${match.score.fullTime.home} - ${match.score.fullTime.away}` as MatchScore,
+                          },
                       }
-                    : undefined,
+                    : {}),
             };
         });
     }

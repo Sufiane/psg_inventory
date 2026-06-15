@@ -184,12 +184,16 @@ export class MatchesService implements IMatchesDbService {
                             },
                         },
                     },
-                    MatchResults: payload.result && {
-                        create: {
-                            isWin: payload.result.isWin,
-                            score: payload.result.score,
-                        },
-                    },
+                    ...(payload.result
+                        ? {
+                              MatchResults: {
+                                  create: {
+                                      isWin: payload.result.isWin,
+                                      score: payload.result.score,
+                                  },
+                              },
+                          }
+                        : {}),
                 },
             });
         } catch (e) {
