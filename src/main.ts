@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DEFAULT_PORT } from './shared/constants';
 
 async function bootstrap(): Promise<void> {
     const app = await NestFactory.create(AppModule);
+    app.use(helmet());
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
     const frontendOrigin = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173';
