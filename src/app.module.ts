@@ -3,7 +3,8 @@ import { UsersModule } from './api/users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { validate } from './env.schema';
 import { JwtAuthGuard } from './shared/guards/jwt.guard';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { MatchesModule } from './api/matches/matches.module';
 import { SalesModule } from './api/sales/sales.module';
 import { AccountingModule } from './api/accounting/accounting.module';
@@ -30,6 +31,10 @@ import { HealthModule } from './api/health/health.module';
         {
             provide: APP_GUARD,
             useClass: JwtAuthGuard,
+        },
+        {
+            provide: APP_FILTER,
+            useClass: AllExceptionsFilter,
         },
     ],
 })
