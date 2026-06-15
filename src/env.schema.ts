@@ -1,4 +1,4 @@
-import { IsString, validateSync } from 'class-validator';
+import { IsOptional, IsString, validateSync } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 
 class EnvironmentVariables {
@@ -10,6 +10,17 @@ class EnvironmentVariables {
 
     @IsString()
     FOOTBALL_DATA_API_KEY!: string;
+
+    @IsString()
+    REDIS_URL!: string;
+
+    @IsOptional()
+    @IsString()
+    FRONTEND_ORIGIN?: string;
+
+    @IsOptional()
+    @IsString()
+    PORT?: string;
 }
 
 export function validate(env: Record<string, unknown>): EnvironmentVariables {
