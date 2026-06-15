@@ -66,6 +66,14 @@ describe('AccountingService', () => {
         redisService = module.get(RedisService);
 
         module.useLogger(false);
+
+        // RedisService.get now follows a cache-aside contract: it runs the
+        // loader on a miss and returns its value. Default to "always miss"
+        // so tests exercise the underlying logic unless they opt into a hit.
+        redisService.get.mockImplementation(
+            async <T>(_key: unknown, _ttl: number, loader: () => Promise<T | null>) =>
+                loader(),
+        );
     });
 
     describe('getCurrentSeason', () => {
@@ -268,7 +276,7 @@ describe('AccountingService', () => {
         describe('when there is cache', () => {
             it('should return the cache data', async () => {
                 const expectedResult = {} as TimePeriodAccounting;
-                redisService.get.mockResolvedValueOnce({ value: expectedResult });
+                redisService.get.mockResolvedValueOnce(expectedResult);
 
                 const userId = 'userId' as UserId;
                 const dates = {
@@ -282,13 +290,14 @@ describe('AccountingService', () => {
                 expect(redisService.get).toHaveBeenCalledTimes(1);
                 expect(redisService.get).toHaveBeenCalledWith(
                     CACHE_KEYS.accounting(userId, dates.start, dates.end),
+                    24 * 60 * 60,
+                    expect.any(Function),
                 );
             });
         });
 
         describe('when there is no cache', () => {
             it('should return the accounting and set the cache', async () => {
-                redisService.get.mockResolvedValueOnce(null);
                 seasonPassesDbService.findAll.mockResolvedValueOnce([]);
                 accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
 
@@ -322,12 +331,8 @@ describe('AccountingService', () => {
                 expect(redisService.get).toHaveBeenCalledTimes(1);
                 expect(redisService.get).toHaveBeenCalledWith(
                     CACHE_KEYS.accounting(userId, dates.start, dates.end),
-                );
-                expect(redisService.set).toHaveBeenCalledTimes(1);
-                expect(redisService.set).toHaveBeenCalledWith(
-                    CACHE_KEYS.accounting(userId, dates.start, dates.end),
-                    expectedResult,
                     24 * 60 * 60,
+                    expect.any(Function),
                 );
             });
         });
@@ -366,10 +371,6 @@ describe('AccountingService', () => {
                 updatedAt: new Date(),
             };
         }
-
-        beforeEach(() => {
-            redisService.get.mockResolvedValue(null);
-        });
 
         it('returns zeroed result when no sales and no pass', async () => {
             seasonPassesDbService.findBySeason.mockResolvedValueOnce([]);
@@ -498,7 +499,7 @@ describe('AccountingService', () => {
                 perMatch: [],
             };
             redisService.get.mockReset();
-            redisService.get.mockResolvedValueOnce({ value: cachedValue });
+            redisService.get.mockResolvedValueOnce(cachedValue);
 
             const result = await service.getAmortization(userId, seasonStartYear);
 
@@ -507,7 +508,7 @@ describe('AccountingService', () => {
             expect(seasonPassesDbService.findBySeason).not.toHaveBeenCalled();
         });
 
-        it('writes the computed result to cache', async () => {
+        it('delegates caching to redis with the right key and ttl', async () => {
             seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(100)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({
@@ -517,13 +518,15 @@ describe('AccountingService', () => {
                 }),
             ]);
 
-            await service.getAmortization(userId, seasonStartYear);
+            const result = await service.getAmortization(userId, seasonStartYear);
 
-            expect(redisService.set).toHaveBeenCalledTimes(1);
-            const [key, value, ttl] = redisService.set.mock.calls[0];
-            expect(key).toBe(CACHE_KEYS.amortization(userId, seasonStartYear));
-            expect(ttl).toBe(24 * 60 * 60);
-            expect((value as { progress: number }).progress).toBe(1);
+            expect(redisService.get).toHaveBeenCalledTimes(1);
+            expect(redisService.get).toHaveBeenCalledWith(
+                CACHE_KEYS.amortization(userId, seasonStartYear),
+                24 * 60 * 60,
+                expect.any(Function),
+            );
+            expect(result.progress).toBe(1);
         });
     });
 
@@ -532,7 +535,6 @@ describe('AccountingService', () => {
         const dates = { start: new Date('2024-08-01'), end: new Date('2025-07-31') };
 
         beforeEach(() => {
-            redisService.get.mockResolvedValue(null);
             seasonPassesDbService.findBySeason.mockResolvedValue([]);
             seasonPassesDbService.findAll.mockResolvedValue([]);
             jest.spyOn(service, 'getAccounting').mockResolvedValue(null);
