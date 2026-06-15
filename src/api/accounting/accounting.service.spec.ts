@@ -412,7 +412,7 @@ describe('AccountingService', () => {
             expect(result.remaining).toBe(500);
             expect(result.surplus).toBe(0);
             expect(result.breakEven).toBeNull();
-            expect(result.perMatch[1].cumulative).toBe(500);
+            expect(result.perMatch[1]?.cumulative).toBe(500);
         });
 
         it('flags the first match whose cumulative crosses pass price', async () => {
