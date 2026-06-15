@@ -15,13 +15,13 @@ import { SaleAllocationDto } from './sale-allocation.dto';
 
 export class AddSaleDto {
     @IsString()
-    matchId: MatchId;
+    matchId!: MatchId;
 
     @IsArray()
     @ArrayMinSize(1)
     @ValidateNested({ each: true })
     @Type(() => SaleAllocationDto)
-    allocations: SaleAllocationDto[];
+    allocations!: SaleAllocationDto[];
 
     @IsOptional()
     @IsNumber()
@@ -30,5 +30,5 @@ export class AddSaleDto {
 
     @IsNumber()
     @Min(1)
-    listedPrice: ListedPrice;
+    listedPrice!: ListedPrice;
 }

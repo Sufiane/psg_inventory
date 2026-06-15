@@ -5,8 +5,8 @@ import type { SaleId } from '@psg/shared/ids';
 
 export class UpdateSaleDto extends PartialType(AddSaleDto) {
     @IsString()
-    saleId: SaleId;
+    saleId!: SaleId;
 
     @IsBoolean()
-    sold: boolean;
+    sold!: boolean;
 }

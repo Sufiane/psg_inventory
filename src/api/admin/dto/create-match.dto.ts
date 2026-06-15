@@ -13,24 +13,24 @@ import { Competitions } from '../types/competitions.type';
 
 export class ResultDto {
     @IsBoolean()
-    isWin: boolean;
+    isWin!: boolean;
 
     @Matches(/^\d{1,2} - \d{1,2}$/)
-    score: MatchScore;
+    score!: MatchScore;
 }
 
 export class CreateMatchDto {
     @IsString()
-    opponent: OpponentName;
+    opponent!: OpponentName;
 
     @IsDateString({ strict: true })
-    date: string;
+    date!: string;
 
     @IsBoolean()
-    atHome: boolean;
+    atHome!: boolean;
 
     @IsEnum(Competitions)
-    competition: Competitions;
+    competition!: Competitions;
 
     @IsOptional()
     @IsObject()

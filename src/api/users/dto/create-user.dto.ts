@@ -3,17 +3,17 @@ import type { Email } from '@psg/shared/strings';
 
 export class CreateUserDto {
     @IsEmail()
-    email: Email;
+    email!: Email;
 
     @IsString()
     @MinLength(1)
-    firstName: string;
+    firstName!: string;
 
     @IsString()
     @MinLength(1)
-    lastName: string;
+    lastName!: string;
 
     @IsString()
     @MinLength(7)
-    password: string;
+    password!: string;
 }

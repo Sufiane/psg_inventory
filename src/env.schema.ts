@@ -3,13 +3,13 @@ import { plainToInstance } from 'class-transformer';
 
 class EnvironmentVariables {
     @IsString()
-    JWT_SECRET: string;
+    JWT_SECRET!: string;
 
     @IsString()
-    JWT_EXPIRES: string;
+    JWT_EXPIRES!: string;
 
     @IsString()
-    FOOTBALL_DATA_API_KEY: string;
+    FOOTBALL_DATA_API_KEY!: string;
 }
 
 export function validate(env: Record<string, unknown>): EnvironmentVariables {
