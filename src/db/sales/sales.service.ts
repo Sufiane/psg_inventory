@@ -49,86 +49,72 @@ export class SalesService implements ISalesDbService {
     };
 
     async getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
-        const cacheKey = CACHE_KEYS.sale(saleId);
-        const cached = await this.redisService.get(cacheKey);
-
-        if (cached !== null) {
-            return cached.value;
-        }
-
-        const dbResult = await this.prisma.sales.findUnique({
-            ...SalesService.saleQuery,
-            where: {
-                id: saleId,
-                userId,
-            },
-        });
-
-        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
-
-        return dbResult as Sale | null;
+        return this.redisService.get(
+            CACHE_KEYS.sale(saleId),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.sales.findUnique({
+                    ...SalesService.saleQuery,
+                    where: {
+                        id: saleId,
+                        userId,
+                    },
+                }) as Promise<Sale | null>,
+        );
     }
 
     async getSales(userId: UserId): Promise<Sale[]> {
-        const cacheKey = CACHE_KEYS.sales(userId);
-        const cached = await this.redisService.get(cacheKey);
+        const result = await this.redisService.get(
+            CACHE_KEYS.sales(userId),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.sales.findMany({
+                    ...SalesService.saleQuery,
+                    where: {
+                        userId,
+                    },
+                    orderBy: {
+                        Match: {
+                            date: 'asc',
+                        },
+                    },
+                }) as Promise<Sale[]>,
+        );
 
-        if (cached !== null) {
-            // in case we have a valid null value
-            return cached.value ?? [];
-        }
-
-        const dbResult = await this.prisma.sales.findMany({
-            ...SalesService.saleQuery,
-            where: {
-                userId,
-            },
-            orderBy: {
-                Match: {
-                    date: 'asc',
-                },
-            },
-        });
-
-        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
-
-        return dbResult as Sale[];
+        // in case we have a valid null value
+        return result ?? [];
     }
 
     async getSalesByRange(
         userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<Sale[]> {
-        const cacheKey = CACHE_KEYS.salesByRange(userId, range.from, range.to);
-        const cached = await this.redisService.get(cacheKey);
-
-        if (cached !== null) {
-            return cached.value ?? [];
-        }
-
-        const dbResult = await this.prisma.sales.findMany({
-            ...SalesService.saleQuery,
-            where: {
-                userId,
-                Match: {
-                    is: {
-                        date: {
-                            gte: range.from,
-                            lt: range.to,
+        const result = await this.redisService.get(
+            CACHE_KEYS.salesByRange(userId, range.from, range.to),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.sales.findMany({
+                    ...SalesService.saleQuery,
+                    where: {
+                        userId,
+                        Match: {
+                            is: {
+                                date: {
+                                    gte: range.from,
+                                    lt: range.to,
+                                },
+                            },
                         },
                     },
-                },
-            },
-            orderBy: {
-                Match: {
-                    date: 'asc',
-                },
-            },
-        });
+                    orderBy: {
+                        Match: {
+                            date: 'asc',
+                        },
+                    },
+                }) as Promise<Sale[]>,
+        );
 
-        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
-
-        return dbResult as Sale[];
+        return result ?? [];
     }
 
     async addSale(payload: {

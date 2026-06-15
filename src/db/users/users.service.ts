@@ -34,24 +34,12 @@ export class UsersService implements IUsersDbService {
     }
 
     async findOneByEmail(email: Email): Promise<Users | null> {
-        const cached = await this.redisService.get(CACHE_KEYS.userByEmail(email));
-
-        if (cached !== null) {
-            return cached.value;
-        }
-
-        const dbResult = await this.prisma.users.findUnique({
-            where: {
-                email,
-            },
-        });
-
-        await this.redisService.set(
-            CACHE_KEYS.userByEmail(email),
-            dbResult,
-            ONE_HOUR_TTL,
+        return this.redisService.get(CACHE_KEYS.userByEmail(email), ONE_HOUR_TTL, () =>
+            this.prisma.users.findUnique({
+                where: {
+                    email,
+                },
+            }),
         );
-
-        return dbResult;
     }
 }

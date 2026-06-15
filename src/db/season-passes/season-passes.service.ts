@@ -21,59 +21,45 @@ export class SeasonPassesService implements ISeasonPassesDbService {
     ) {}
 
     async findById(id: SeasonPassId): Promise<SeasonPass | null> {
-        const cacheKey = CACHE_KEYS.seasonPass(id);
-        const cached = await this.redisService.get(cacheKey);
-
-        if (cached !== null) {
-            return cached.value;
-        }
-
-        const result = await this.prisma.seasonPasses.findUnique({
-            where: { id },
-        });
-
-        await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
-
-        return result as SeasonPass | null;
+        return this.redisService.get(
+            CACHE_KEYS.seasonPass(id),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.seasonPasses.findUnique({
+                    where: { id },
+                }) as Promise<SeasonPass | null>,
+        );
     }
 
     async findBySeason(
         userId: UserId,
         seasonStartYear: SeasonYear,
     ): Promise<SeasonPass[]> {
-        const cacheKey = CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear);
-        const cached = await this.redisService.get(cacheKey);
+        const result = await this.redisService.get(
+            CACHE_KEYS.seasonPassesBySeason(userId, seasonStartYear),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.seasonPasses.findMany({
+                    where: { userId, seasonStartYear },
+                    orderBy: [{ category: 'asc' }, { row: 'asc' }, { seat: 'asc' }],
+                }) as Promise<SeasonPass[]>,
+        );
 
-        if (cached !== null) {
-            return cached.value ?? [];
-        }
-
-        const result = await this.prisma.seasonPasses.findMany({
-            where: { userId, seasonStartYear },
-            orderBy: [{ category: 'asc' }, { row: 'asc' }, { seat: 'asc' }],
-        });
-
-        await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
-
-        return result as SeasonPass[];
+        return result ?? [];
     }
 
     async findAll(userId: UserId): Promise<SeasonPass[]> {
-        const cacheKey = CACHE_KEYS.seasonPasses(userId);
-        const cached = await this.redisService.get(cacheKey);
+        const result = await this.redisService.get(
+            CACHE_KEYS.seasonPasses(userId),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.seasonPasses.findMany({
+                    where: { userId },
+                    orderBy: [{ seasonStartYear: 'desc' }, { label: 'asc' }],
+                }) as Promise<SeasonPass[]>,
+        );
 
-        if (cached !== null) {
-            return cached.value ?? [];
-        }
-
-        const result = await this.prisma.seasonPasses.findMany({
-            where: { userId },
-            orderBy: [{ seasonStartYear: 'desc' }, { label: 'asc' }],
-        });
-
-        await this.redisService.set(cacheKey, result, ONE_HOUR_TTL);
-
-        return result as SeasonPass[];
+        return result ?? [];
     }
 
     async create(payload: CreateSeasonPassInput): Promise<SeasonPass> {

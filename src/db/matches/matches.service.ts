@@ -41,42 +41,32 @@ export class MatchesService implements IMatchesDbService {
             where.date.lte = dates.to;
         }
 
-        const cacheKey = CACHE_KEYS.matches(dates.from, dates.to, withResult);
-        const cached = await this.redisService.get(cacheKey);
+        const result = await this.redisService.get(
+            CACHE_KEYS.matches(dates.from, dates.to, withResult),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.matches.findMany({
+                    ...MatchesService.matchQuery(withResult),
+                    where: where,
+                }) as Promise<Match[]>,
+        );
 
-        if (cached !== null) {
-            // if by mistake there is a null value in cache
-            return cached.value ?? [];
-        }
-
-        const dbResult = await this.prisma.matches.findMany({
-            ...MatchesService.matchQuery(withResult),
-            where: where,
-        });
-
-        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
-
-        return dbResult as Match[];
+        // if by mistake there is a null value in cache
+        return result ?? [];
     }
 
     async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {
-        const cacheKey = CACHE_KEYS.match(id);
-        const cached = await this.redisService.get(cacheKey);
-
-        if (cached !== null) {
-            return cached.value;
-        }
-
-        const dbResult = await this.prisma.matches.findUnique({
-            ...MatchesService.matchQuery(withResult),
-            where: {
-                id,
-            },
-        });
-
-        await this.redisService.set(cacheKey, dbResult, ONE_HOUR_TTL);
-
-        return dbResult as Match | null;
+        return this.redisService.get(
+            CACHE_KEYS.match(id),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.matches.findUnique({
+                    ...MatchesService.matchQuery(withResult),
+                    where: {
+                        id,
+                    },
+                }) as Promise<Match | null>,
+        );
     }
 
     async loadMatches(matches: FormattedMatch[]): Promise<void> {

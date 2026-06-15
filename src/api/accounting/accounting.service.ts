@@ -125,166 +125,181 @@ export class AccountingService implements IAccountingService {
         },
         seasonStartYear: SeasonYear | null,
     ): Promise<TimePeriodAccounting> {
-        const cacheKey = CACHE_KEYS.accounting(userId, dates.start, dates.end);
-        const cached = await this.redisService.get(cacheKey);
+        const accounting = await this.redisService.get(
+            CACHE_KEYS.accounting(userId, dates.start, dates.end),
+            ONE_DAY_TTL,
+            async () => {
+                const [
+                    realizedAccounting,
+                    unrealizedAccounting,
+                    pendingAccounting,
+                    seasonPasses,
+                    allPasses,
+                    leadTimes,
+                ] = await Promise.all([
+                    this.getAccounting(userId, 'realized', dates),
+                    this.getAccounting(userId, 'unrealized', dates),
+                    this.getAccounting(userId, 'pending', dates),
+                    seasonStartYear !== null
+                        ? this.seasonPassesDbService.findBySeason(userId, seasonStartYear)
+                        : Promise.resolve([]),
+                    seasonStartYear === null
+                        ? this.seasonPassesDbService.findAll(userId)
+                        : Promise.resolve([]),
+                    this.accountingDbService.getSoldLeadTimes(
+                        userId,
+                        dates.start,
+                        dates.end,
+                    ),
+                ]);
 
-        if (cached !== null) {
-            return (
-                cached.value ?? {
-                    realized: null,
-                    pending: null,
-                    unrealized: null,
-                    seasonInvestments: [],
-                    totalSeasonInvestment: 0,
-                    leadTime: null,
-                }
-            );
-        }
+                const seasonInvestments: SeasonInvestment[] = seasonPasses.map(
+                    (pass) => ({
+                        id: pass.id,
+                        price: pass.price,
+                        seasonStartYear: pass.seasonStartYear,
+                        label: pass.label,
+                        category: pass.category,
+                        row: pass.row,
+                        seat: pass.seat,
+                    }),
+                );
 
-        const [
-            realizedAccounting,
-            unrealizedAccounting,
-            pendingAccounting,
-            seasonPasses,
-            allPasses,
-            leadTimes,
-        ] = await Promise.all([
-            this.getAccounting(userId, 'realized', dates),
-            this.getAccounting(userId, 'unrealized', dates),
-            this.getAccounting(userId, 'pending', dates),
-            seasonStartYear !== null
-                ? this.seasonPassesDbService.findBySeason(userId, seasonStartYear)
-                : Promise.resolve([]),
-            seasonStartYear === null
-                ? this.seasonPassesDbService.findAll(userId)
-                : Promise.resolve([]),
-            this.accountingDbService.getSoldLeadTimes(userId, dates.start, dates.end),
-        ]);
+                // For the all-time view, only count passes for seasons that
+                // have already started — a future season's pass is paid but
+                // not yet "in use", so including it would understate the
+                // historical net.
+                const currentSeasonStartYear = seasonStartYearFromDate(new Date());
+                const totalSeasonInvestment =
+                    seasonStartYear === null
+                        ? allPasses
+                              .filter(
+                                  (pass) =>
+                                      pass.seasonStartYear <= currentSeasonStartYear,
+                              )
+                              .reduce((sum, pass) => sum + pass.price, 0)
+                        : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0);
 
-        const seasonInvestments: SeasonInvestment[] = seasonPasses.map((pass) => ({
-            id: pass.id,
-            price: pass.price,
-            seasonStartYear: pass.seasonStartYear,
-            label: pass.label,
-            category: pass.category,
-            row: pass.row,
-            seat: pass.seat,
-        }));
+                const result: TimePeriodAccounting = {
+                    realized: realizedAccounting,
+                    unrealized: unrealizedAccounting,
+                    pending: pendingAccounting,
+                    seasonInvestments,
+                    totalSeasonInvestment,
+                    leadTime: computeLeadTime(leadTimes),
+                };
 
-        // For the all-time view, only count passes for seasons that have already
-        // started — a future season's pass is paid but not yet "in use", so
-        // including it would understate the historical net.
-        const currentSeasonStartYear = seasonStartYearFromDate(new Date());
-        const totalSeasonInvestment =
-            seasonStartYear === null
-                ? allPasses
-                      .filter((pass) => pass.seasonStartYear <= currentSeasonStartYear)
-                      .reduce((sum, pass) => sum + pass.price, 0)
-                : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0);
+                return result;
+            },
+        );
 
-        const accounting: TimePeriodAccounting = {
-            realized: realizedAccounting,
-            unrealized: unrealizedAccounting,
-            pending: pendingAccounting,
-            seasonInvestments,
-            totalSeasonInvestment,
-            leadTime: computeLeadTime(leadTimes),
-        };
-
-        await this.redisService.set(cacheKey, accounting, ONE_DAY_TTL);
-
-        return accounting;
+        return (
+            accounting ?? {
+                realized: null,
+                pending: null,
+                unrealized: null,
+                seasonInvestments: [],
+                totalSeasonInvestment: 0,
+                leadTime: null,
+            }
+        );
     }
 
     async getAmortization(
         userId: UserId,
         seasonStartYear: SeasonYear,
     ): Promise<Amortization> {
-        const cacheKey = CACHE_KEYS.amortization(userId, seasonStartYear);
-        const cached = await this.redisService.get(cacheKey);
+        const result = await this.redisService.get(
+            CACHE_KEYS.amortization(userId, seasonStartYear),
+            ONE_DAY_TTL,
+            async () => {
+                const dates = {
+                    start: new Date(seasonStartYear, 7, 1),
+                    end: new Date(seasonStartYear + 1, 6, 31),
+                };
 
-        if (cached !== null) {
-            return cached.value ?? emptyAmortization(seasonStartYear);
-        }
+                const [passes, matchRows] = await Promise.all([
+                    this.seasonPassesDbService.findBySeason(userId, seasonStartYear),
+                    this.accountingDbService.getRealizedProfitPerMatch(
+                        userId,
+                        dates.start,
+                        dates.end,
+                    ),
+                ]);
 
-        const dates = {
-            start: new Date(seasonStartYear, 7, 1),
-            end: new Date(seasonStartYear + 1, 6, 31),
-        };
+                const hasPass = passes.length > 0;
+                const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
+                const passSummaries = passes.map((pass) => ({
+                    id: pass.id,
+                    label: pass.label,
+                    price: pass.price,
+                }));
 
-        const [passes, matchRows] = await Promise.all([
-            this.seasonPassesDbService.findBySeason(userId, seasonStartYear),
-            this.accountingDbService.getRealizedProfitPerMatch(
-                userId,
-                dates.start,
-                dates.end,
-            ),
-        ]);
+                let cumulative = 0;
+                let breakEvenAssigned = false;
 
-        const hasPass = passes.length > 0;
-        const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
-        const passSummaries = passes.map((pass) => ({
-            id: pass.id,
-            label: pass.label,
-            price: pass.price,
-        }));
+                const perMatch: AmortizationMatchRow[] = matchRows.map((row) => {
+                    cumulative += row.matchProfit;
 
-        let cumulative = 0;
-        let breakEvenAssigned = false;
+                    const isBreakEven =
+                        !breakEvenAssigned &&
+                        hasPass &&
+                        passPrice > 0 &&
+                        cumulative >= passPrice;
 
-        const perMatch: AmortizationMatchRow[] = matchRows.map((row) => {
-            cumulative += row.matchProfit;
+                    if (isBreakEven) {
+                        breakEvenAssigned = true;
+                    }
 
-            const isBreakEven =
-                !breakEvenAssigned && hasPass && passPrice > 0 && cumulative >= passPrice;
+                    return {
+                        matchId: row.matchId,
+                        date: row.date,
+                        opponent: row.opponent,
+                        competition: row.competition,
+                        atHome: row.atHome,
+                        matchProfit: row.matchProfit,
+                        cumulative,
+                        isBreakEven,
+                    };
+                });
 
-            if (isBreakEven) {
-                breakEvenAssigned = true;
-            }
+                const totalRealized = cumulative;
+                const breakEvenRow = perMatch.find((row) => row.isBreakEven) ?? null;
 
-            return {
-                matchId: row.matchId,
-                date: row.date,
-                opponent: row.opponent,
-                competition: row.competition,
-                atHome: row.atHome,
-                matchProfit: row.matchProfit,
-                cumulative,
-                isBreakEven,
-            };
-        });
+                const amortization: Amortization = {
+                    seasonStartYear,
+                    passPrice,
+                    hasPass,
+                    totalRealized,
+                    progress:
+                        hasPass && passPrice > 0
+                            ? Math.min(1, totalRealized / passPrice)
+                            : 0,
+                    remaining:
+                        hasPass && passPrice > 0
+                            ? Math.max(0, passPrice - totalRealized)
+                            : 0,
+                    surplus:
+                        hasPass && passPrice > 0
+                            ? Math.max(0, totalRealized - passPrice)
+                            : Math.max(0, totalRealized),
+                    breakEven: breakEvenRow
+                        ? {
+                              matchId: breakEvenRow.matchId,
+                              date: breakEvenRow.date,
+                              opponent: breakEvenRow.opponent,
+                              cumulative: breakEvenRow.cumulative,
+                          }
+                        : null,
+                    perMatch,
+                    passes: passSummaries,
+                };
 
-        const totalRealized = cumulative;
-        const breakEvenRow = perMatch.find((row) => row.isBreakEven) ?? null;
+                return amortization;
+            },
+        );
 
-        const result: Amortization = {
-            seasonStartYear,
-            passPrice,
-            hasPass,
-            totalRealized,
-            progress:
-                hasPass && passPrice > 0 ? Math.min(1, totalRealized / passPrice) : 0,
-            remaining:
-                hasPass && passPrice > 0 ? Math.max(0, passPrice - totalRealized) : 0,
-            surplus:
-                hasPass && passPrice > 0
-                    ? Math.max(0, totalRealized - passPrice)
-                    : Math.max(0, totalRealized),
-            breakEven: breakEvenRow
-                ? {
-                      matchId: breakEvenRow.matchId,
-                      date: breakEvenRow.date,
-                      opponent: breakEvenRow.opponent,
-                      cumulative: breakEvenRow.cumulative,
-                  }
-                : null,
-            perMatch,
-            passes: passSummaries,
-        };
-
-        await this.redisService.set(cacheKey, result, ONE_DAY_TTL);
-
-        return result;
+        return result ?? emptyAmortization(seasonStartYear);
     }
 }
 
