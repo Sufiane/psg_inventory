@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 
 import { Public } from '../shared/decorators/public.decorator';
+import { User } from '../shared/decorators/user.decorator';
+import { AuthenticatedUser } from '../shared/types/authenticated-user.type';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { IAuthService, TokenPair } from './interfaces/auth.service.interface';
 
@@ -14,10 +16,12 @@ export class AuthController {
         return this.authService.refreshTokens(payload.refreshToken);
     }
 
-    @Public()
     @Post('logout')
     @HttpCode(HttpStatus.NO_CONTENT)
-    logout(@Body() payload: RefreshTokenDto): Promise<void> {
-        return this.authService.logout(payload.refreshToken);
+    logout(
+        @User() user: AuthenticatedUser,
+        @Body() payload: RefreshTokenDto,
+    ): Promise<void> {
+        return this.authService.logout(user.id, payload.refreshToken);
     }
 }

@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+    ForbiddenException,
+    Injectable,
+    Logger,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -108,11 +113,27 @@ export class AuthService implements IAuthService {
         );
     }
 
-    async logout(refreshToken: RefreshToken): Promise<void> {
+    async logout(userId: UserId, refreshToken: RefreshToken): Promise<void> {
         const parsed = parseRefreshToken(refreshToken);
 
         if (!parsed) {
             return;
+        }
+
+        const stored = await this.redisService.peek<string>(
+            CACHE_KEYS.refreshToken(parsed.familyId, parsed.secret),
+        );
+
+        // Idempotent: a missing refresh means the family is already gone or
+        // never existed under this user. Either way there's nothing to do.
+        if (stored === null || stored.value === null) {
+            return;
+        }
+
+        // Refuse to revoke another user's session even if the caller holds
+        // a valid access token of their own.
+        if (stored.value !== userId) {
+            throw new ForbiddenException('refresh token does not belong to caller');
         }
 
         await this.redisService.invalidatePattern(

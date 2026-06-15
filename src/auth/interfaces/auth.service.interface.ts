@@ -1,3 +1,4 @@
+import type { UserId } from '@psg/shared/ids';
 import type { Email, HashedPassword, JwtToken, RefreshToken } from '@psg/shared/strings';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
@@ -14,5 +15,5 @@ export abstract class IAuthService {
     ): Promise<AuthenticatedUser | null>;
     abstract login(user: AuthenticatedUser): Promise<TokenPair>;
     abstract refreshTokens(refreshToken: RefreshToken): Promise<TokenPair>;
-    abstract logout(refreshToken: RefreshToken): Promise<void>;
+    abstract logout(userId: UserId, refreshToken: RefreshToken): Promise<void>;
 }
