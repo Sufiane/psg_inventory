@@ -1,14 +1,18 @@
-import { SaleStatus } from '@prisma/client';
+import type { AccountingStatus } from '../types/accounting-status.type';
 
+// Maps the api-side accounting bucket to the db SaleStatus enum value.
+// Returns the literal strings so the api layer never imports Prisma; the
+// db layer accepts them because Prisma's SaleStatus is itself a string
+// enum with these exact values.
 export function statusConverter(
-    status: 'realized' | 'pending' | 'unrealized',
-): SaleStatus {
+    status: AccountingStatus,
+): 'SOLD' | 'PENDING' | 'CANCELLED' {
     switch (status) {
         case 'pending':
-            return SaleStatus.PENDING;
+            return 'PENDING';
         case 'realized':
-            return SaleStatus.SOLD;
+            return 'SOLD';
         case 'unrealized':
-            return SaleStatus.CANCELLED;
+            return 'CANCELLED';
     }
 }

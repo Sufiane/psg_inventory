@@ -13,6 +13,7 @@ import {
 } from './types/time-period-accounting.type';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { statusConverter } from './utils/status-converter.util';
+import type { AccountingStatus } from './types/accounting-status.type';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { ONE_DAY_TTL } from '../../shared/constants';
@@ -69,7 +70,7 @@ export class AccountingService implements IAccountingService {
 
     async getAccounting(
         userId: UserId,
-        status: 'realized' | 'pending' | 'unrealized',
+        status: AccountingStatus,
         date: {
             start: Date;
             end?: Date;
