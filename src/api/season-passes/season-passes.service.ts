@@ -5,7 +5,7 @@ import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
+import { SeasonPass } from './types/season-pass.type';
 import { CreateSeasonPassDto } from './dto/create-season-pass.dto';
 import { UpdateSeasonPassDto } from './dto/update-season-pass.dto';
 import { ISeasonPassesService } from './interfaces/season-passes.service.interface';

@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 
 import { toHttpException } from '../../common/exceptions/http-exception.mapper';
-import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
+import { SeasonPass } from './types/season-pass.type';
 import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { CreateSeasonPassDto } from './dto/create-season-pass.dto';
