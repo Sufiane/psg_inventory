@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { LoggerModule } from 'nestjs-pino';
+import { randomUUID } from 'node:crypto';
 import { UsersModule } from './api/users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { validate } from './env.schema';
@@ -17,6 +19,29 @@ import { HealthModule } from './api/health/health.module';
 @Module({
     imports: [
         ConfigModule.forRoot({ validate, isGlobal: true, cache: true }),
+        LoggerModule.forRoot({
+            pinoHttp: {
+                genReqId: (req) =>
+                    (req.headers['x-request-id'] as string) ?? randomUUID(),
+                redact: {
+                    paths: [
+                        'req.headers.authorization',
+                        'req.headers.cookie',
+                        'req.body.password',
+                        'req.body.refreshToken',
+                    ],
+                    remove: true,
+                },
+                ...(process.env.NODE_ENV === 'production'
+                    ? {}
+                    : {
+                          transport: {
+                              target: 'pino-pretty',
+                              options: { singleLine: true },
+                          },
+                      }),
+            },
+        }),
         UsersModule,
         MatchesModule,
         SalesModule,

@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DEFAULT_PORT } from './shared/constants';
 
 async function bootstrap(): Promise<void> {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    app.useLogger(app.get(Logger));
     app.use(helmet());
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     app.enableShutdownHooks();
