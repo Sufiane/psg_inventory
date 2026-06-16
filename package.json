@@ -11,6 +11,7 @@
   "scripts": {
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\" --fix",
+    "lint:deps": "depcruise src --config",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "npm run build && nest start --watch",
@@ -62,6 +63,7 @@
     "@types/node": "22.9.0",
     "@types/passport-jwt": "4.0.1",
     "@types/passport-local": "1.0.38",
+    "dependency-cruiser": "17.4.3",
     "eslint": "9.17.0",
     "globals": "15.13.0",
     "husky": "9.1.7",

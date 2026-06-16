@@ -1,10 +1,10 @@
 import type { CacheKey, CacheKeyPattern } from '@psg/shared/cache';
-import { Users } from '@prisma/client';
-import { Amortization } from '../api/accounting/types/amortization.type';
-import { TimePeriodAccounting } from '../api/accounting/types/time-period-accounting.type';
-import { Match } from '../db/matches/types/match.type';
-import { Sale } from '../db/sales/type/sale.type';
-import { SeasonPass } from '../db/season-passes/type/season-pass.type';
+import type { Users } from '@prisma/client';
+import type { Amortization } from '../api/accounting/types/amortization.type';
+import type { TimePeriodAccounting } from '../api/accounting/types/time-period-accounting.type';
+import type { Match } from '../db/matches/types/match.type';
+import type { Sale } from '../db/sales/type/sale.type';
+import type { SeasonPass } from '../db/season-passes/type/season-pass.type';
 
 export default {
     accounting: (
