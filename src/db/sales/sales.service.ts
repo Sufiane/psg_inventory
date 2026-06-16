@@ -11,6 +11,7 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../prisma.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
+import { saleQuery } from './sales.query';
 import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
@@ -30,31 +31,13 @@ export class SalesService implements ISalesDbService {
         private readonly redisService: RedisService,
     ) {}
 
-    static saleQuery = {
-        include: {
-            Match: {
-                select: {
-                    date: true,
-                    Opponent: true,
-                },
-            },
-            Allocations: {
-                select: {
-                    id: true,
-                    seasonPassId: true,
-                    nbTickets: true,
-                },
-            },
-        },
-    };
-
     async getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
         return this.redisService.get(
             CACHE_KEYS.sale(saleId),
             ONE_HOUR_TTL,
             () =>
                 this.prisma.sales.findUnique({
-                    ...SalesService.saleQuery,
+                    ...saleQuery,
                     where: {
                         id: saleId,
                         userId,
@@ -69,7 +52,7 @@ export class SalesService implements ISalesDbService {
             ONE_HOUR_TTL,
             () =>
                 this.prisma.sales.findMany({
-                    ...SalesService.saleQuery,
+                    ...saleQuery,
                     where: {
                         userId,
                     },
@@ -94,7 +77,7 @@ export class SalesService implements ISalesDbService {
             ONE_HOUR_TTL,
             () =>
                 this.prisma.sales.findMany({
-                    ...SalesService.saleQuery,
+                    ...saleQuery,
                     where: {
                         userId,
                         Match: {

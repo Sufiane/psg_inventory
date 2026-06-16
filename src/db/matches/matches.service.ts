@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import type { MatchId } from '@psg/shared/ids';
+import { matchQuery } from './matches.query';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IMatchesDbService } from './matches.db.interface';
@@ -17,15 +18,6 @@ export class MatchesService implements IMatchesDbService {
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
     ) {}
-
-    static matchQuery(withResult: boolean = false) {
-        return {
-            include: {
-                Opponent: true,
-                MatchResults: withResult,
-            },
-        };
-    }
 
     async getMatches(
         dates: { from: Date; to?: Date },
@@ -46,7 +38,7 @@ export class MatchesService implements IMatchesDbService {
             ONE_HOUR_TTL,
             () =>
                 this.prisma.matches.findMany({
-                    ...MatchesService.matchQuery(withResult),
+                    ...matchQuery(withResult),
                     where: where,
                 }) as Promise<Match[]>,
         );
@@ -61,7 +53,7 @@ export class MatchesService implements IMatchesDbService {
             ONE_HOUR_TTL,
             () =>
                 this.prisma.matches.findUnique({
-                    ...MatchesService.matchQuery(withResult),
+                    ...matchQuery(withResult),
                     where: {
                         id,
                     },

@@ -10,9 +10,9 @@ import type {
 } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import type { OpponentName } from '@psg/shared/strings';
-import { SalesService } from '../sales.service';
+import { saleQuery } from '../sales.query';
 
-type SaleRow = Prisma.SalesGetPayload<typeof SalesService.saleQuery>;
+type SaleRow = Prisma.SalesGetPayload<typeof saleQuery>;
 
 export type Sale = Override<
     SaleRow,
