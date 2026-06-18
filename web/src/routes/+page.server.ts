@@ -6,30 +6,29 @@ import { decodeJwt } from '$lib/jwt';
 import { Logger } from '$lib/logger';
 import type { LoginResponse } from '$lib/types';
 
-const logger = new Logger('LoginAction');
+const logger = new Logger('HomeDemoAction');
 
-export const load: PageServerLoad = ({ locals, url }) => {
+const DEMO_ACCOUNTS = {
+    demo1: { email: 'demo1@psg.fr', password: 'demo1234' },
+    demo2: { email: 'demo2@psg.fr', password: 'demo1234' },
+} as const;
+
+type DemoKey = keyof typeof DEMO_ACCOUNTS;
+
+export const load: PageServerLoad = ({ locals }) => {
     if (locals.user) {
-        const next = url.searchParams.get('next') ?? '/dashboard';
-
-        throw redirect(303, next);
+        throw redirect(303, '/dashboard');
     }
 
-    return {};
+    return { demoAccounts: DEMO_ACCOUNTS };
 };
 
 export const actions: Actions = {
-    default: async (event) => {
+    demo: async (event) => {
         const form = await event.request.formData();
-        const email = form.get('email');
-        const password = form.get('password');
-
-        if (typeof email !== 'string' || typeof password !== 'string') {
-            return fail(400, {
-                email: typeof email === 'string' ? email : '',
-                message: 'Email and password are required.',
-            });
-        }
+        const account = form.get('account');
+        const key: DemoKey = account === 'demo2' ? 'demo2' : 'demo1';
+        const credentials = DEMO_ACCOUNTS[key];
 
         const target = `${backendUrl(event)}/users/login`;
         let response: Response;
@@ -38,31 +37,29 @@ export const actions: Actions = {
             response = await event.fetch(target, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify(credentials),
             });
         } catch (err) {
-            logger.error('login fetch failed', {
+            logger.error('demo login fetch failed', {
                 target,
                 error: err instanceof Error ? err.message : String(err),
             });
 
             return fail(502, {
-                email,
                 message: `Backend unreachable at ${target}.`,
             });
         }
 
         if (!response.ok) {
             const bodyText = await response.text();
-            logger.error('login non-ok', {
+            logger.error('demo login non-ok', {
                 target,
                 status: response.status,
                 body: bodyText,
             });
 
             return fail(response.status, {
-                email,
-                message: `Login failed (${response.status}): ${bodyText.slice(0, 200) || 'no body'}`,
+                message: `Demo sign-in failed (${response.status}). The demo account may not be seeded.`,
             });
         }
 
@@ -80,8 +77,6 @@ export const actions: Actions = {
             maxAge,
         });
 
-        const next = event.url.searchParams.get('next') ?? '/dashboard';
-
-        throw redirect(303, next);
+        throw redirect(303, '/dashboard');
     },
 };

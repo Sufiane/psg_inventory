@@ -11,7 +11,7 @@
     type NavItem = { href: string; label: string; match: (p: string) => boolean };
 
     const baseNav: NavItem[] = [
-        { href: '/', label: 'Dashboard', match: (p) => p === '/' },
+        { href: '/dashboard', label: 'Dashboard', match: (p) => p === '/dashboard' },
         { href: '/matches', label: 'Matches', match: (p) => p.startsWith('/matches') },
         { href: '/sales', label: 'Sales', match: (p) => p.startsWith('/sales') },
         { href: '/season', label: 'Season', match: (p) => p.startsWith('/season') },
@@ -37,7 +37,7 @@
             class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2"
         >
             <a
-                href="/"
+                href="/dashboard"
                 class="font-semibold tracking-tight text-ink shrink-0 mr-auto sm:mr-0"
             >
                 PSG Inventory
