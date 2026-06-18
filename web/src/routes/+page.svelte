@@ -6,85 +6,71 @@
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submittingKey = $state<string | null>(null);
 
-    const principles = [
-        {
-            n: '01',
-            title: 'Data is the product.',
-            body: 'No marketing chrome. Sales, matches, season passes — every number sourced and reproducible.',
+    const demoMeta: Record<string, { label: string; summary: string }> = {
+        demo1: {
+            label: 'Two seasons',
+            summary:
+                '1 pass on the current season (2025), 1 pass on the previous (2024), sales on each.',
         },
-        {
-            n: '02',
-            title: 'Precision earns trust.',
-            body: 'Net = proceeds − ticket invest − season pass. Shown line by line, not collapsed into a single hero stat.',
+        demo2: {
+            label: 'Split passes',
+            summary:
+                '2 passes on the current season (2025). Each sale is split across both.',
         },
-        {
-            n: '03',
-            title: 'Honest about state.',
-            body: 'Pending, unrealized, future seasons, missing data — named, not papered over with zeros.',
-        },
-    ];
+    };
 
     const tourStops = [
-        {
-            label: 'Dashboard',
-            body: 'Net realized profit for the current season, plus pending and unrealized cash, in three glances.',
-        },
-        {
-            label: 'Matches',
-            body: 'Fixtures grouped by season. Drill into a match to see sales allocated to that night.',
-        },
-        {
-            label: 'Sales',
-            body: 'Log a sale in seconds. Mark sold, cancelled, or pending — status changes flow through accounting.',
-        },
-        {
-            label: 'Season',
-            body: 'Record the lump-sum season pass cost. Amortized across the season so per-match math stays honest.',
-        },
-        {
-            label: 'Accounting',
-            body: 'Per-season totals across realized, pending, and unrealized. The defensible end-of-season number.',
-        },
-    ];
+        ['Dashboard', 'Net realized profit, plus pending and unrealized cash.'],
+        ['Matches', 'Fixtures grouped by season. Sales attach to a match.'],
+        ['Sales', 'Log a sale. Mark sold, cancelled, or pending.'],
+        ['Season', 'Record the lump-sum season pass cost. Amortized per match.'],
+        ['Accounting', 'Per-season totals: realized, pending, unrealized.'],
+    ] as const;
 </script>
 
 <svelte:head>
     <title>PSG Inventory — Ledger for season-ticket resellers</title>
     <meta
         name="description"
-        content="A precise personal-finance ledger for ticket resellers. Sales tied to matches, matches grouped by seasons, season pass amortized — so 'am I making money?' has one trustworthy answer."
+        content="A precise personal-finance ledger for ticket resellers. Sales tied to matches, matches grouped by seasons, season pass amortized."
+    />
+    <meta property="og:title" content="PSG Inventory" />
+    <meta
+        property="og:description"
+        content="Personal ledger for season-ticket resellers. One trustworthy answer to 'am I making money?'"
     />
 </svelte:head>
 
-<div class="max-w-3xl mx-auto">
-    <header class="flex items-center justify-between pt-2 pb-10">
+<div class="max-w-2xl mx-auto">
+    <header class="flex items-center justify-between pt-2 pb-12">
         <span class="font-semibold tracking-tight text-ink">PSG Inventory</span>
-        <a
-            href="/login"
-            class="text-sm text-primary font-medium hover:text-primary-hover hover:underline px-1 py-2"
-        >
-            Sign in
-        </a>
+        <nav class="flex items-center gap-5 text-sm" aria-label="Account">
+            <a
+                href="/login"
+                class="text-ink-muted hover:text-ink px-1 py-2 transition-colors"
+            >
+                Sign in
+            </a>
+            <a
+                href="/register"
+                class="rounded bg-primary text-surface px-3 py-2 font-medium hover:bg-primary-hover transition-colors"
+            >
+                Create account
+            </a>
+        </nav>
     </header>
 
-    <section class="mb-14">
-        <p
-            class="text-xs uppercase tracking-[0.18em] text-ink-faint mb-4"
-            aria-hidden="true"
-        >
-            Ledger · v1
-        </p>
+    <section class="mb-10">
         <h1
             class="text-3xl sm:text-4xl font-semibold tracking-tight text-ink leading-[1.15] text-balance"
         >
             A precise personal-finance ledger
             <span class="text-ink-muted">for season-ticket resellers.</span>
         </h1>
-        <p class="mt-5 text-ink-muted text-base leading-relaxed max-w-2xl">
-            Sales tied to matches. Matches grouped by seasons. The season pass treated
-            as a lump-sum cost, amortized across the schedule. One trustworthy answer
-            to <em class="not-italic text-ink">am I actually making money?</em> — no
-            export to Excel.
+        <p class="mt-5 text-ink-muted text-lg leading-relaxed">
+            Sales attach to matches. Matches group by season. The season pass is a
+            lump-sum cost, amortized across the schedule. One trustworthy answer to
+            <span class="text-ink">am I actually making money?</span>
         </p>
     </section>
 
@@ -92,17 +78,16 @@
         class="bg-surface rounded-lg border border-line p-5 sm:p-6 mb-12"
         aria-labelledby="demo-heading"
     >
-        <div class="flex items-baseline justify-between gap-4 mb-4">
+        <div class="flex items-baseline justify-between gap-4 mb-1">
             <h2 id="demo-heading" class="text-base font-semibold tracking-tight text-ink">
                 Tour with a seeded account
             </h2>
-            <span class="text-xs text-ink-faint">read-write · ephemeral</span>
+            <span class="text-xs text-ink-faint">no signup required</span>
         </div>
-
         <p class="text-sm text-ink-muted mb-5 leading-relaxed">
             Two demo accounts are pre-loaded with seasons, matches, sales, and season
-            passes. Sign in as either — you'll land on the dashboard with a populated
-            ledger. Re-seeding wipes and rebuilds these two users only.
+            passes. Pick one to land on a populated dashboard. Changes you make stay on
+            the demo account.
         </p>
 
         {#if form?.message}
@@ -116,25 +101,23 @@
 
         <ul class="divide-y divide-line">
             {#each Object.entries(data.demoAccounts) as [key, account] (key)}
-                {@const summary =
-                    key === 'demo1'
-                        ? '1 pass current season (2025), 1 pass previous (2024), sales on each.'
-                        : '2 passes same current season (2025), each sale split across both.'}
+                {@const meta = demoMeta[key] ?? { label: key, summary: '' }}
                 <li class="py-4 first:pt-0 last:pb-0">
                     <div
-                        class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
+                        class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5"
                     >
                         <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-ink">{meta.label}</p>
                             <p
-                                class="font-mono text-sm text-ink"
+                                class="mt-0.5 font-mono text-xs text-ink-muted"
                                 data-numeric
                             >
                                 {account.email}
                                 <span class="text-ink-faint"> · </span>
-                                <span class="text-ink-muted">{account.password}</span>
+                                {account.password}
                             </p>
-                            <p class="mt-1 text-xs text-ink-muted leading-snug">
-                                {summary}
+                            <p class="mt-1 text-xs text-ink-faint leading-snug">
+                                {meta.summary}
                             </p>
                         </div>
 
@@ -160,73 +143,46 @@
                                 {#if submittingKey === key}
                                     <Spinner size="1em" />
                                 {/if}
-                                Sign in as {key}
+                                Tour {meta.label.toLowerCase()}
                             </button>
                         </form>
                     </div>
                 </li>
             {/each}
         </ul>
-
-        <p class="mt-5 text-xs text-ink-faint">
-            The session is a normal signed-in session — nothing is sandboxed. Sign out
-            from the header when you're done.
-        </p>
     </section>
 
     <section class="mb-12" aria-labelledby="tour-heading">
         <h2
             id="tour-heading"
-            class="text-base font-semibold tracking-tight text-ink mb-4"
+            class="text-sm font-medium text-ink-muted mb-3"
         >
             What you'll see inside
         </h2>
-        <dl class="divide-y divide-line border-y border-line">
-            {#each tourStops as stop (stop.label)}
-                <div class="py-3 grid grid-cols-[8rem_1fr] gap-4 items-baseline">
-                    <dt class="text-sm font-medium text-ink">{stop.label}</dt>
-                    <dd class="text-sm text-ink-muted leading-relaxed">{stop.body}</dd>
+        <dl class="text-sm">
+            {#each tourStops as [label, body] (label)}
+                <div
+                    class="py-1.5 grid grid-cols-[auto_1fr] gap-x-4 items-baseline"
+                >
+                    <dt class="text-ink font-medium">{label}</dt>
+                    <dd class="text-ink-muted">{body}</dd>
                 </div>
             {/each}
         </dl>
     </section>
 
-    <section class="mb-16" aria-labelledby="principles-heading">
-        <h2
-            id="principles-heading"
-            class="text-base font-semibold tracking-tight text-ink mb-4"
-        >
-            Design principles
-        </h2>
-        <ol class="grid sm:grid-cols-3 gap-4">
-            {#each principles as principle (principle.n)}
-                <li class="bg-surface rounded-lg border border-line p-4">
-                    <p
-                        class="font-mono text-xs text-ink-faint mb-2"
-                        data-numeric
-                    >
-                        {principle.n}
-                    </p>
-                    <p class="text-sm font-medium text-ink mb-1">
-                        {principle.title}
-                    </p>
-                    <p class="text-xs text-ink-muted leading-relaxed">
-                        {principle.body}
-                    </p>
-                </li>
-            {/each}
-        </ol>
-    </section>
-
     <footer
         class="border-t border-line py-6 flex flex-wrap items-center justify-between gap-3 text-xs text-ink-faint"
     >
-        <span>PSG Inventory · personal ledger, not affiliated with the club.</span>
-        <a
-            href="/login"
-            class="text-primary font-medium hover:text-primary-hover hover:underline"
-        >
-            Sign in →
-        </a>
+        <span>Personal ledger. Not affiliated with the club.</span>
+        <span class="flex items-center gap-4">
+            <a href="/login" class="hover:text-ink transition-colors">Sign in</a>
+            <a
+                href="/register"
+                class="text-primary font-medium hover:text-primary-hover hover:underline"
+            >
+                Create account
+            </a>
+        </span>
     </footer>
 </div>

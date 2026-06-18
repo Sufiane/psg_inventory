@@ -10,7 +10,17 @@
 <div
     class="max-w-sm mx-auto mt-16 bg-surface rounded-lg shadow-sm border border-line p-6"
 >
-    <h1 class="text-xl font-semibold tracking-tight text-ink mb-4">Sign in</h1>
+    <h1 class="text-xl font-semibold tracking-tight text-ink mb-1">Sign in</h1>
+    <p class="text-sm text-ink-muted mb-4">
+        Or
+        <a
+            href="/register"
+            class="text-primary font-medium hover:text-primary-hover hover:underline"
+        >
+            create an account
+        </a>
+        if you're new here.
+    </p>
 
     <form
         method="POST"
