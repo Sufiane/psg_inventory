@@ -58,3 +58,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # Claude
 .claude/worktrees/
 .claude/skills/
+
+# Impeccable critique snapshots (auto-generated backlog, regenerated per-run)
+.impeccable/
