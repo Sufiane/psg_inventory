@@ -36,6 +36,31 @@
     }
 </script>
 
+<style>
+    .dashboard-glossary > summary {
+        list-style: none;
+    }
+
+    .dashboard-glossary > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .dashboard-glossary .glossary-marker {
+        display: inline-block;
+        transition: transform 150ms ease-out;
+    }
+
+    .dashboard-glossary[open] .glossary-marker {
+        transform: rotate(90deg);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dashboard-glossary .glossary-marker {
+            transition: none;
+        }
+    }
+</style>
+
 <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Current season</h1>
 
@@ -102,6 +127,29 @@
                 >
             </p>
         {/if}
+
+        <details class="dashboard-glossary mt-4 text-xs text-ink-muted">
+            <summary
+                class="cursor-pointer select-none inline-flex items-center gap-1.5 text-ink-faint hover:text-ink transition-colors"
+            >
+                <span aria-hidden="true" class="glossary-marker">›</span>
+                What these mean
+            </summary>
+            <dl
+                class="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-3 border-l border-line"
+            >
+                <dt class="font-medium text-ink">Realized</dt>
+                <dd>Sales that settled, with the cash collected.</dd>
+                <dt class="font-medium text-ink">Ticket invest</dt>
+                <dd>Per-ticket cost on the match day for the realized sales above.</dd>
+                <dt class="font-medium text-ink">Season investment</dt>
+                <dd>Season pass cost, amortized across the season.</dd>
+                <dt class="font-medium text-ink">Pending</dt>
+                <dd>Listed but not yet sold. Not in the realized net.</dd>
+                <dt class="font-medium text-ink">Unrealized</dt>
+                <dd>Cancelled and won't settle, tracked separately from the net.</dd>
+            </dl>
+        </details>
     </section>
 {/await}
 
