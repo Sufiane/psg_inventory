@@ -42,18 +42,20 @@
 </svelte:head>
 
 <div class="max-w-2xl mx-auto">
-    <header class="flex items-center justify-between pt-2 pb-12">
+    <header
+        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2 pb-12"
+    >
         <span class="font-semibold tracking-tight text-ink">PSG Inventory</span>
-        <nav class="flex items-center gap-5 text-sm" aria-label="Account">
+        <nav class="flex items-center gap-3 sm:gap-5 text-sm" aria-label="Account">
             <a
                 href="/login"
-                class="text-ink-muted hover:text-ink px-1 py-2 transition-colors"
+                class="inline-flex items-center min-h-11 text-ink-muted hover:text-ink px-2 transition-colors"
             >
                 Sign in
             </a>
             <a
                 href="/register"
-                class="rounded bg-primary text-surface px-3 py-2 font-medium hover:bg-primary-hover transition-colors"
+                class="inline-flex items-center min-h-11 rounded bg-primary text-surface px-3.5 py-2.5 font-medium hover:bg-primary-hover transition-colors"
             >
                 Create account
             </a>
@@ -138,7 +140,7 @@
                             <button
                                 type="submit"
                                 disabled={submittingKey !== null}
-                                class="w-full sm:w-auto rounded bg-primary text-surface px-3 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
+                                class="w-full sm:w-auto min-h-11 rounded bg-primary text-surface px-3.5 py-2.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
                             >
                                 {#if submittingKey === key}
                                     <Spinner size="1em" />
