@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-    <title>PSG Inventory — Ledger for season-ticket resellers</title>
+    <title>PSG Inventory: ledger for season-ticket resellers</title>
     <meta
         name="description"
         content="A precise personal-finance ledger for ticket resellers. Sales tied to matches, matches grouped by seasons, season pass amortized."
@@ -45,7 +45,12 @@
     <header
         class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-2 pb-12"
     >
-        <span class="font-semibold tracking-tight text-ink">PSG Inventory</span>
+        <a
+            href="/"
+            class="font-semibold tracking-tight text-ink hover:text-primary transition-colors"
+        >
+            PSG Inventory
+        </a>
         <nav class="flex items-center gap-3 sm:gap-5 text-sm" aria-label="Account">
             <a
                 href="/login"
@@ -75,12 +80,12 @@
         class="bg-surface rounded-lg border border-line p-5 sm:p-6 mb-12"
         aria-labelledby="demo-heading"
     >
-        <div class="flex items-baseline justify-between gap-4 mb-1">
-            <h2 id="demo-heading" class="text-base font-semibold tracking-tight text-ink">
-                Tour with a seeded account
-            </h2>
-            <span class="text-xs text-ink-faint">no signup required</span>
-        </div>
+        <h2
+            id="demo-heading"
+            class="text-base font-semibold tracking-tight text-ink mb-1"
+        >
+            Tour with a seeded account
+        </h2>
         <p class="text-sm text-ink-muted mb-5 leading-relaxed text-pretty">
             Two demo accounts are pre-loaded with seasons, matches, sales, and season
             passes. Pick one to land on a populated dashboard. Changes you make stay on
