@@ -6,6 +6,18 @@
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submittingKey = $state<string | null>(null);
 
+    const demoOutage = $derived.by(() => {
+        if (data.demoStatus.kind === 'backend-down') {
+            return 'Backend is unreachable, so the demo accounts can\'t sign in right now. Try again shortly or create an account.';
+        }
+
+        if (data.demoStatus.kind === 'db-down') {
+            return 'The database is offline, so the demo accounts can\'t sign in right now. Try again shortly or create an account.';
+        }
+
+        return null;
+    });
+
     const demoMeta: Record<string, { label: string; summary: string }> = {
         demo1: {
             label: 'Two seasons',
@@ -92,7 +104,14 @@
             the demo account.
         </p>
 
-        {#if form?.message}
+        {#if demoOutage}
+            <p
+                role="status"
+                class="mb-4 rounded border border-warning bg-warning/5 text-warning-strong text-sm px-3 py-2"
+            >
+                {demoOutage}
+            </p>
+        {:else if form?.message}
             <p
                 role="alert"
                 class="mb-4 rounded border border-negative bg-negative/5 text-negative-strong text-sm px-3 py-2"
@@ -139,7 +158,8 @@
                             <input type="hidden" name="account" value={key} />
                             <Button
                                 type="submit"
-                                disabled={submittingKey !== null && submittingKey !== key}
+                                disabled={demoOutage !== null ||
+                                    (submittingKey !== null && submittingKey !== key)}
                                 loading={submittingKey === key}
                                 fullWidth
                                 class="sm:w-auto"

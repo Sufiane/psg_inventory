@@ -15,12 +15,52 @@ const DEMO_ACCOUNTS = {
 
 type DemoKey = keyof typeof DEMO_ACCOUNTS;
 
-export const load: PageServerLoad = ({ locals }) => {
-    if (locals.user) {
+export type DemoStatus =
+    | { kind: 'ok' }
+    | { kind: 'backend-down'; reason: string }
+    | { kind: 'db-down' };
+
+const HEALTH_PROBE_TIMEOUT_MS = 1500;
+
+async function probeDemoStatus(
+    event: Parameters<PageServerLoad>[0],
+): Promise<DemoStatus> {
+    const target = `${backendUrl(event)}/health?db=true`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HEALTH_PROBE_TIMEOUT_MS);
+
+    try {
+        const response = await event.fetch(target, { signal: controller.signal });
+
+        if (!response.ok) {
+            return { kind: 'backend-down', reason: `health ${response.status}` };
+        }
+
+        const body = (await response.json()) as { status?: string; db?: string };
+
+        if (body.db && body.db !== 'ok') {
+            return { kind: 'db-down' };
+        }
+
+        return { kind: 'ok' };
+    } catch (err) {
+        return {
+            kind: 'backend-down',
+            reason: err instanceof Error ? err.message : String(err),
+        };
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+export const load: PageServerLoad = async (event) => {
+    if (event.locals.user) {
         throw redirect(303, '/dashboard');
     }
 
-    return { demoAccounts: DEMO_ACCOUNTS };
+    const demoStatus = await probeDemoStatus(event);
+
+    return { demoAccounts: DEMO_ACCOUNTS, demoStatus };
 };
 
 export const actions: Actions = {
