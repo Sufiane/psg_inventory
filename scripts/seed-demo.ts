@@ -148,27 +148,40 @@ async function seedDemo1(): Promise<void> {
     // Listed prices sized so realized proceeds (1 - PSG_COMMISSION) clear the
     // 1800 season pass with margin. invest = 0: the ticket cost is already
     // captured by the season pass, not a separate per-match buy.
-    const currentPlans = [
-        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 60 },
-        { listedPrice: 220, status: SaleStatus.SOLD as const, soldAgo: 50 },
-        { listedPrice: 340, status: SaleStatus.SOLD as const, soldAgo: 45 },
-        { listedPrice: 280, status: SaleStatus.SOLD as const, soldAgo: 35 },
-        { listedPrice: 240, status: SaleStatus.SOLD as const, soldAgo: 30 },
-        { listedPrice: 380, status: SaleStatus.SOLD as const, soldAgo: 22 },
-        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 18 },
-        { listedPrice: 220, status: SaleStatus.SOLD as const, soldAgo: 12 },
-        { listedPrice: 300, status: SaleStatus.SOLD as const, soldAgo: 7 },
-        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 3 },
-        { listedPrice: 280, status: SaleStatus.PENDING as const, soldAgo: null },
-        { listedPrice: 220, status: SaleStatus.CANCELLED as const, soldAgo: null },
+    type CurrentPlan = {
+        listedPrice: number;
+        status: SaleStatus;
+        soldAgo: number | null;
+    };
+
+    const currentPlans: CurrentPlan[] = [
+        { listedPrice: 260, status: SaleStatus.SOLD, soldAgo: 60 },
+        { listedPrice: 220, status: SaleStatus.SOLD, soldAgo: 50 },
+        { listedPrice: 340, status: SaleStatus.SOLD, soldAgo: 45 },
+        { listedPrice: 280, status: SaleStatus.SOLD, soldAgo: 35 },
+        { listedPrice: 240, status: SaleStatus.SOLD, soldAgo: 30 },
+        { listedPrice: 380, status: SaleStatus.SOLD, soldAgo: 22 },
+        { listedPrice: 260, status: SaleStatus.SOLD, soldAgo: 18 },
+        { listedPrice: 220, status: SaleStatus.SOLD, soldAgo: 12 },
+        { listedPrice: 300, status: SaleStatus.SOLD, soldAgo: 7 },
+        { listedPrice: 260, status: SaleStatus.SOLD, soldAgo: 3 },
+        { listedPrice: 280, status: SaleStatus.PENDING, soldAgo: null },
+        { listedPrice: 220, status: SaleStatus.CANCELLED, soldAgo: null },
     ];
 
-    for (let i = 0; i < currentMatches.length && i < currentPlans.length; i++) {
+    const currentLimit = Math.min(currentMatches.length, currentPlans.length);
+
+    for (let i = 0; i < currentLimit; i++) {
         const plan = currentPlans[i];
+        const match = currentMatches[i];
+
+        if (!plan || !match) {
+            continue;
+        }
 
         await addSale({
             userId,
-            matchId: currentMatches[i].id,
+            matchId: match.id,
             listedPrice: plan.listedPrice,
             invest: 0,
             status: plan.status,
@@ -192,12 +205,19 @@ async function seedDemo1(): Promise<void> {
         { listedPrice: 320 },
     ];
 
-    for (let i = 0; i < previousMatches.length && i < previousPlans.length; i++) {
+    const previousLimit = Math.min(previousMatches.length, previousPlans.length);
+
+    for (let i = 0; i < previousLimit; i++) {
         const plan = previousPlans[i];
+        const match = previousMatches[i];
+
+        if (!plan || !match) {
+            continue;
+        }
 
         await addSale({
             userId,
-            matchId: previousMatches[i].id,
+            matchId: match.id,
             listedPrice: plan.listedPrice,
             invest: 0,
             status: SaleStatus.SOLD,
@@ -255,24 +275,37 @@ async function seedDemo2(): Promise<void> {
 
     // Two seats per sale at double the per-ticket price band; total needs to
     // clear the 2 * 1800 = 3600 invest with margin. invest = 0 (season pass).
-    const plans = [
-        { listedPrice: 480, status: SaleStatus.SOLD as const, soldAgo: 55 },
-        { listedPrice: 560, status: SaleStatus.SOLD as const, soldAgo: 48 },
-        { listedPrice: 680, status: SaleStatus.SOLD as const, soldAgo: 38 },
-        { listedPrice: 520, status: SaleStatus.SOLD as const, soldAgo: 28 },
-        { listedPrice: 600, status: SaleStatus.SOLD as const, soldAgo: 22 },
-        { listedPrice: 720, status: SaleStatus.SOLD as const, soldAgo: 15 },
-        { listedPrice: 540, status: SaleStatus.SOLD as const, soldAgo: 8 },
-        { listedPrice: 580, status: SaleStatus.SOLD as const, soldAgo: 3 },
-        { listedPrice: 620, status: SaleStatus.PENDING as const, soldAgo: null },
+    type Demo2Plan = {
+        listedPrice: number;
+        status: SaleStatus;
+        soldAgo: number | null;
+    };
+
+    const plans: Demo2Plan[] = [
+        { listedPrice: 480, status: SaleStatus.SOLD, soldAgo: 55 },
+        { listedPrice: 560, status: SaleStatus.SOLD, soldAgo: 48 },
+        { listedPrice: 680, status: SaleStatus.SOLD, soldAgo: 38 },
+        { listedPrice: 520, status: SaleStatus.SOLD, soldAgo: 28 },
+        { listedPrice: 600, status: SaleStatus.SOLD, soldAgo: 22 },
+        { listedPrice: 720, status: SaleStatus.SOLD, soldAgo: 15 },
+        { listedPrice: 540, status: SaleStatus.SOLD, soldAgo: 8 },
+        { listedPrice: 580, status: SaleStatus.SOLD, soldAgo: 3 },
+        { listedPrice: 620, status: SaleStatus.PENDING, soldAgo: null },
     ];
 
-    for (let i = 0; i < matches.length && i < plans.length; i++) {
+    const limit = Math.min(matches.length, plans.length);
+
+    for (let i = 0; i < limit; i++) {
         const plan = plans[i];
+        const match = matches[i];
+
+        if (!plan || !match) {
+            continue;
+        }
 
         await addSale({
             userId,
-            matchId: matches[i].id,
+            matchId: match.id,
             listedPrice: plan.listedPrice,
             invest: 0,
             status: plan.status,
