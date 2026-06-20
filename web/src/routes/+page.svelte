@@ -215,7 +215,7 @@
                                 class="text-xs text-ink-faint font-mono"
                                 data-numeric
                             >
-                                {showcase.soldCount} sold
+                                {showcase.soldCount} tickets
                             </span>
                         </div>
 

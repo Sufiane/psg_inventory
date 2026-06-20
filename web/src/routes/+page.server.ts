@@ -111,7 +111,10 @@ async function fetchShowcase(
         const realizedInvest = accounting.realized?.totalInvest ?? 0;
         const seasonInvest = accounting.totalSeasonInvestment;
         const netProfit = realizedProceeds - realizedInvest - seasonInvest;
-        const soldCount = accounting.realized?.totalSales ?? 0;
+        // realized.totalSales is misnamed in the backend: it's actually
+        // SUM(listedPrice) on sold rows, not a row count. The honest "tickets
+        // sold" signal lives in totalNbTickets (sum of nbTickets per sale).
+        const soldCount = accounting.realized?.totalNbTickets ?? 0;
         const seasonStartYear = accounting.seasonInvestments[0]?.seasonStartYear ?? null;
 
         return cacheShowcase(
