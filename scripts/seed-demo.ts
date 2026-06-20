@@ -1,10 +1,12 @@
+/* eslint-disable no-console -- CLI script, console output is the UI */
 import { PrismaClient, SaleStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 const PSG_COMMISSION = 0.12;
-const profitOf = (listed: number): number => Math.round(listed * (1 - PSG_COMMISSION) * 100) / 100;
+const profitOf = (listed: number): number =>
+    Math.round(listed * (1 - PSG_COMMISSION) * 100) / 100;
 
 const SALT_ROUNDS = 10;
 
@@ -30,7 +32,11 @@ async function upsertUser(seed: DemoSeed): Promise<string> {
         await prisma.seasonPasses.deleteMany({ where: { userId: existing.id } });
         await prisma.users.update({
             where: { id: existing.id },
-            data: { password: hashed, firstName: seed.firstName, lastName: seed.lastName },
+            data: {
+                password: hashed,
+                firstName: seed.firstName,
+                lastName: seed.lastName,
+            },
         });
 
         return existing.id;
@@ -48,7 +54,10 @@ async function upsertUser(seed: DemoSeed): Promise<string> {
     return created.id;
 }
 
-async function matchesInSeason(seasonStartYear: number, limit: number): Promise<{ id: string }[]> {
+async function matchesInSeason(
+    seasonStartYear: number,
+    limit: number,
+): Promise<{ id: string }[]> {
     const from = new Date(seasonStartYear, 7, 1);
     const to = new Date(seasonStartYear + 1, 7, 1);
 
@@ -69,7 +78,10 @@ async function addSale(params: {
     soldAt: Date | null;
     allocations: { seasonPassId: string; nbTickets: number }[];
 }): Promise<void> {
-    const nbTickets = params.allocations.reduce((sum, allocation) => sum + allocation.nbTickets, 0);
+    const nbTickets = params.allocations.reduce(
+        (sum, allocation) => sum + allocation.nbTickets,
+        0,
+    );
 
     await prisma.sales.create({
         data: {
@@ -123,8 +135,8 @@ async function seedDemo1(): Promise<void> {
         },
     });
 
-    const currentMatches = await matchesInSeason(2025, 4);
-    const previousMatches = await matchesInSeason(2024, 4);
+    const currentMatches = await matchesInSeason(2025, 12);
+    const previousMatches = await matchesInSeason(2024, 10);
 
     if (currentMatches.length === 0 || previousMatches.length === 0) {
         console.warn('demo1: missing matches for one of the seasons', {
@@ -133,11 +145,22 @@ async function seedDemo1(): Promise<void> {
         });
     }
 
+    // Listed prices sized so realized proceeds (1 - PSG_COMMISSION) clear the
+    // 1800 season pass with margin. invest = 0: the ticket cost is already
+    // captured by the season pass, not a separate per-match buy.
     const currentPlans = [
-        { listedPrice: 220, invest: 150, status: SaleStatus.SOLD as const, soldAgo: 20 },
-        { listedPrice: 260, invest: 150, status: SaleStatus.SOLD as const, soldAgo: 8 },
-        { listedPrice: 300, invest: 150, status: SaleStatus.PENDING as const, soldAgo: null },
-        { listedPrice: 180, invest: 150, status: SaleStatus.CANCELLED as const, soldAgo: null },
+        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 60 },
+        { listedPrice: 220, status: SaleStatus.SOLD as const, soldAgo: 50 },
+        { listedPrice: 340, status: SaleStatus.SOLD as const, soldAgo: 45 },
+        { listedPrice: 280, status: SaleStatus.SOLD as const, soldAgo: 35 },
+        { listedPrice: 240, status: SaleStatus.SOLD as const, soldAgo: 30 },
+        { listedPrice: 380, status: SaleStatus.SOLD as const, soldAgo: 22 },
+        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 18 },
+        { listedPrice: 220, status: SaleStatus.SOLD as const, soldAgo: 12 },
+        { listedPrice: 300, status: SaleStatus.SOLD as const, soldAgo: 7 },
+        { listedPrice: 260, status: SaleStatus.SOLD as const, soldAgo: 3 },
+        { listedPrice: 280, status: SaleStatus.PENDING as const, soldAgo: null },
+        { listedPrice: 220, status: SaleStatus.CANCELLED as const, soldAgo: null },
     ];
 
     for (let i = 0; i < currentMatches.length && i < currentPlans.length; i++) {
@@ -147,17 +170,26 @@ async function seedDemo1(): Promise<void> {
             userId,
             matchId: currentMatches[i].id,
             listedPrice: plan.listedPrice,
-            invest: plan.invest,
+            invest: 0,
             status: plan.status,
-            soldAt: plan.soldAgo == null ? null : new Date(Date.now() - plan.soldAgo * 86_400_000),
+            soldAt:
+                plan.soldAgo == null
+                    ? null
+                    : new Date(Date.now() - plan.soldAgo * 86_400_000),
             allocations: [{ seasonPassId: currentPass.id, nbTickets: 1 }],
         });
     }
 
     const previousPlans = [
-        { listedPrice: 200, invest: 140 },
-        { listedPrice: 240, invest: 140 },
-        { listedPrice: 280, invest: 140 },
+        { listedPrice: 240 },
+        { listedPrice: 300 },
+        { listedPrice: 260 },
+        { listedPrice: 220 },
+        { listedPrice: 360 },
+        { listedPrice: 280 },
+        { listedPrice: 260 },
+        { listedPrice: 240 },
+        { listedPrice: 320 },
     ];
 
     for (let i = 0; i < previousMatches.length && i < previousPlans.length; i++) {
@@ -167,14 +199,18 @@ async function seedDemo1(): Promise<void> {
             userId,
             matchId: previousMatches[i].id,
             listedPrice: plan.listedPrice,
-            invest: plan.invest,
+            invest: 0,
             status: SaleStatus.SOLD,
             soldAt: new Date(2025, 1, 10 + i),
             allocations: [{ seasonPassId: previousPass.id, nbTickets: 1 }],
         });
     }
 
-    console.log('demo1 seeded:', { userId, currentPass: currentPass.id, previousPass: previousPass.id });
+    console.log('demo1 seeded:', {
+        userId,
+        currentPass: currentPass.id,
+        previousPass: previousPass.id,
+    });
 }
 
 async function seedDemo2(): Promise<void> {
@@ -209,7 +245,7 @@ async function seedDemo2(): Promise<void> {
         },
     });
 
-    const matches = await matchesInSeason(2025, 5);
+    const matches = await matchesInSeason(2025, 9);
 
     if (matches.length === 0) {
         console.warn('demo2: no matches for season 2025');
@@ -217,11 +253,18 @@ async function seedDemo2(): Promise<void> {
         return;
     }
 
+    // Two seats per sale at double the per-ticket price band; total needs to
+    // clear the 2 * 1800 = 3600 invest with margin. invest = 0 (season pass).
     const plans = [
-        { listedPrice: 480, invest: 300, status: SaleStatus.SOLD as const, soldAgo: 15 },
-        { listedPrice: 520, invest: 300, status: SaleStatus.SOLD as const, soldAgo: 5 },
-        { listedPrice: 600, invest: 300, status: SaleStatus.PENDING as const, soldAgo: null },
-        { listedPrice: 440, invest: 300, status: SaleStatus.SOLD as const, soldAgo: 30 },
+        { listedPrice: 480, status: SaleStatus.SOLD as const, soldAgo: 55 },
+        { listedPrice: 560, status: SaleStatus.SOLD as const, soldAgo: 48 },
+        { listedPrice: 680, status: SaleStatus.SOLD as const, soldAgo: 38 },
+        { listedPrice: 520, status: SaleStatus.SOLD as const, soldAgo: 28 },
+        { listedPrice: 600, status: SaleStatus.SOLD as const, soldAgo: 22 },
+        { listedPrice: 720, status: SaleStatus.SOLD as const, soldAgo: 15 },
+        { listedPrice: 540, status: SaleStatus.SOLD as const, soldAgo: 8 },
+        { listedPrice: 580, status: SaleStatus.SOLD as const, soldAgo: 3 },
+        { listedPrice: 620, status: SaleStatus.PENDING as const, soldAgo: null },
     ];
 
     for (let i = 0; i < matches.length && i < plans.length; i++) {
@@ -231,9 +274,12 @@ async function seedDemo2(): Promise<void> {
             userId,
             matchId: matches[i].id,
             listedPrice: plan.listedPrice,
-            invest: plan.invest,
+            invest: 0,
             status: plan.status,
-            soldAt: plan.soldAgo == null ? null : new Date(Date.now() - plan.soldAgo * 86_400_000),
+            soldAt:
+                plan.soldAgo == null
+                    ? null
+                    : new Date(Date.now() - plan.soldAgo * 86_400_000),
             allocations: [
                 { seasonPassId: passA.id, nbTickets: 1 },
                 { seasonPassId: passB.id, nbTickets: 1 },
