@@ -8,7 +8,9 @@
 @theme {
     --color-ink: oklch(0.22 0.05 270);
     --color-ink-muted: oklch(0.48 0.04 270);
-    --color-ink-faint: oklch(0.62 0.03 270);
+    /* Held at L 0.55 so 12-13px helper text clears WCAG AA 4.5:1 against
+       --color-surface (measured ~4.80:1). Lighter slips below AA. */
+    --color-ink-faint: oklch(0.55 0.03 270);
 
     --color-surface: oklch(0.995 0.003 270);
     --color-surface-subtle: oklch(0.975 0.005 270);
@@ -44,7 +46,9 @@
     :root {
         --color-ink: oklch(0.94 0.02 270);
         --color-ink-muted: oklch(0.72 0.03 270);
-        --color-ink-faint: oklch(0.55 0.03 270);
+        /* Bumped from L 0.55 to L 0.60 so helper text clears WCAG AA 4.5:1
+           against --color-surface in dark mode (measured ~4.76:1). */
+        --color-ink-faint: oklch(0.60 0.03 270);
 
         --color-surface: oklch(0.18 0.01 270);
         --color-surface-subtle: oklch(0.13 0.01 270);
