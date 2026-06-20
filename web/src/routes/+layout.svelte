@@ -82,6 +82,12 @@
     </header>
 {/if}
 
-<main class="max-w-6xl mx-auto px-4 py-6">
-    {@render children()}
-</main>
+{#if user}
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        {@render children()}
+    </main>
+{:else}
+    <main>
+        {@render children()}
+    </main>
+{/if}

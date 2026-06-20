@@ -37,6 +37,16 @@
 
     --color-sunk: oklch(0.45 0.07 320);
     --color-sunk-strong: oklch(0.38 0.08 320);
+
+    /* Drenched brand surface for the marketing hero. Held in both modes
+       (brand identity wins over dark-mode auto-flip) so the violet stays
+       the brand's voice rather than a lavender lift when the OS is dark.
+       Contrast against --color-hero-ink (~17:1) and --color-hero-ink-muted
+       (~9.4:1) both clear AAA. */
+    --color-hero-bg: oklch(0.30 0.16 270);
+    --color-hero-bg-deep: oklch(0.22 0.14 270);
+    --color-hero-ink: oklch(0.995 0.003 270);
+    --color-hero-ink-muted: oklch(0.86 0.04 270);
 }
 
 /* Dark-mode token overrides. Tailwind v4 generates utilities like

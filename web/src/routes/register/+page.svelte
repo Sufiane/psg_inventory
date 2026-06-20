@@ -9,6 +9,7 @@
     let fieldErrors = $derived(form?.fieldErrors ?? {});
 </script>
 
+<div class="px-4">
 <div
     class="max-w-sm mx-auto mt-16 bg-surface rounded-lg shadow-sm border border-line p-6"
 >
@@ -137,4 +138,5 @@
 
         <Button type="submit" loading={submitting} fullWidth>Create account</Button>
     </form>
+</div>
 </div>

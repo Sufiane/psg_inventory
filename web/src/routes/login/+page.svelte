@@ -7,6 +7,7 @@
     let submitting = $state(false);
 </script>
 
+<div class="px-4">
 <div
     class="max-w-sm mx-auto mt-16 bg-surface rounded-lg shadow-sm border border-line p-6"
 >
@@ -65,4 +66,5 @@
 
         <Button type="submit" loading={submitting} fullWidth>Sign in</Button>
     </form>
+</div>
 </div>
