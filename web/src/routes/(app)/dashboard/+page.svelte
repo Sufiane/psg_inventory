@@ -3,6 +3,7 @@
     import { fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
+    import Button from '$lib/ui/Button.svelte';
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
@@ -38,12 +39,7 @@
 <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Current season</h1>
 
-    <a
-        href="/sales/new"
-        class="rounded bg-primary text-surface px-3 py-2 text-sm font-medium hover:bg-primary-hover transition-colors"
-    >
-        New sale
-    </a>
+    <Button href="/sales/new">New sale</Button>
 </div>
 
 {#await data.accounting}

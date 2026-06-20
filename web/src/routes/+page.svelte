@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
-    import Spinner from '$lib/ui/Spinner.svelte';
+    import Button from '$lib/ui/Button.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submittingKey = $state<string | null>(null);
@@ -53,12 +53,7 @@
             >
                 Sign in
             </a>
-            <a
-                href="/register"
-                class="inline-flex items-center min-h-11 rounded bg-primary text-surface px-3.5 py-2.5 font-medium hover:bg-primary-hover transition-colors"
-            >
-                Create account
-            </a>
+            <Button href="/register">Create account</Button>
         </nav>
     </header>
 
@@ -137,16 +132,15 @@
                             }}
                         >
                             <input type="hidden" name="account" value={key} />
-                            <button
+                            <Button
                                 type="submit"
-                                disabled={submittingKey !== null}
-                                class="w-full sm:w-auto min-h-11 rounded bg-primary text-surface px-3.5 py-2.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
+                                disabled={submittingKey !== null && submittingKey !== key}
+                                loading={submittingKey === key}
+                                fullWidth
+                                class="sm:w-auto"
                             >
-                                {#if submittingKey === key}
-                                    <Spinner size="1em" />
-                                {/if}
                                 Tour {meta.label.toLowerCase()}
-                            </button>
+                            </Button>
                         </form>
                     </div>
                 </li>

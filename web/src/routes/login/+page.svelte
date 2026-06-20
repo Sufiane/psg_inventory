@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ActionData } from './$types';
     import { enhance } from '$app/forms';
-    import Spinner from '$lib/ui/Spinner.svelte';
+    import Button from '$lib/ui/Button.svelte';
 
     let { form }: { form: ActionData } = $props();
     let submitting = $state(false);
@@ -63,15 +63,6 @@
             <p role="alert" class="text-sm text-negative-strong">{form.message}</p>
         {/if}
 
-        <button
-            type="submit"
-            disabled={submitting}
-            class="w-full rounded bg-primary text-surface py-2 font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
-        >
-            {#if submitting}
-                <Spinner size="1em" />
-            {/if}
-            Sign in
-        </button>
+        <Button type="submit" loading={submitting} fullWidth>Sign in</Button>
     </form>
 </div>
