@@ -64,7 +64,7 @@
             A precise personal-finance ledger
             <span class="text-ink-muted">for season-ticket resellers.</span>
         </h1>
-        <p class="mt-5 text-ink-muted text-lg leading-relaxed">
+        <p class="mt-5 text-ink-muted text-lg leading-relaxed text-pretty">
             Sales attach to matches. Matches group by season. The season pass is a
             lump-sum cost, amortized across the schedule. One trustworthy answer to
             <span class="text-ink">am I actually making money?</span>
@@ -81,7 +81,7 @@
             </h2>
             <span class="text-xs text-ink-faint">no signup required</span>
         </div>
-        <p class="text-sm text-ink-muted mb-5 leading-relaxed">
+        <p class="text-sm text-ink-muted mb-5 leading-relaxed text-pretty">
             Two demo accounts are pre-loaded with seasons, matches, sales, and season
             passes. Pick one to land on a populated dashboard. Changes you make stay on
             the demo account.

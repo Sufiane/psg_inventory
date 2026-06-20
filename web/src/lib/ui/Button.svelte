@@ -42,6 +42,7 @@
         {type}
         class={className}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         aria-label={ariaLabel}
     >
         {#if loading}<Spinner size="1em" />{/if}
