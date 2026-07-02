@@ -38,6 +38,12 @@ const map: Record<ErrorCode, () => HttpException> = {
         new BadRequestException(ErrorCode.SALE_INVALID_ALLOCATIONS),
     [ErrorCode.SALE_ALLOCATION_PASS_MISMATCH]: () =>
         new BadRequestException(ErrorCode.SALE_ALLOCATION_PASS_MISMATCH),
+    [ErrorCode.IMPORT_CSV_INVALID]: () =>
+        new BadRequestException(ErrorCode.IMPORT_CSV_INVALID),
+    [ErrorCode.IMPORT_ROWS_INVALID]: () =>
+        new BadRequestException(ErrorCode.IMPORT_ROWS_INVALID),
+    [ErrorCode.IMPORT_PASSES_MIXED_SEASONS]: () =>
+        new BadRequestException(ErrorCode.IMPORT_PASSES_MIXED_SEASONS),
 };
 
 export function toHttpException(e: unknown): HttpException {

@@ -12,4 +12,7 @@ export enum ErrorCode {
     SEASON_PASS_HAS_ALLOCATIONS = 'season_pass_has_allocations',
     SALE_INVALID_ALLOCATIONS = 'sale_invalid_allocations',
     SALE_ALLOCATION_PASS_MISMATCH = 'sale_allocation_pass_mismatch',
+    IMPORT_CSV_INVALID = 'import_csv_invalid',
+    IMPORT_ROWS_INVALID = 'import_rows_invalid',
+    IMPORT_PASSES_MIXED_SEASONS = 'import_passes_mixed_seasons',
 }

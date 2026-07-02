@@ -128,6 +128,85 @@ function buildAllocations(
     return { allocations: [], status: 'error:unallocated' };
 }
 
+export type ValidateInput = {
+    rows: DraftRowDto[];
+    homeMatches: Match[];
+    selectedPassIds: string[];
+};
+
+export type ValidateOutput = {
+    rows: DraftRowDto[];
+    summary: { total: number; errors: number; warnings: number };
+};
+
+export function validateCommitRows(input: ValidateInput): ValidateOutput {
+    const byDate = matchesByDate(input.homeMatches);
+    const selected = new Set(input.selectedPassIds);
+    const rows: DraftRowDto[] = [];
+    let errors = 0;
+    let warnings = 0;
+
+    for (const row of input.rows) {
+        const raw = {
+            rowIndex: row.rowIndex,
+            date: row.date,
+            opponent: row.opponent,
+            listedPrice: row.listedPrice,
+            nbTickets: row.nbTickets,
+            invest: row.invest,
+            status: row.status,
+        };
+        let rowStatus: DraftRowStatus = 'ok';
+        let matchId: string | undefined;
+
+        if (isInvalidRow(raw)) {
+            rowStatus = 'error:invalid-cell';
+        } else {
+            const { match, status: matchStatus } = resolveMatch(raw, byDate);
+
+            if (match != null) {
+                matchId = match.id;
+            }
+
+            if (matchStatus?.startsWith('error:')) {
+                rowStatus = matchStatus;
+            } else {
+                const allocationsSum = row.allocations.reduce(
+                    (total, allocation) => total + allocation.nbTickets,
+                    0,
+                );
+                const allValid = row.allocations.every((allocation) =>
+                    selected.has(allocation.seasonPassId),
+                );
+
+                if (
+                    row.allocations.length === 0 ||
+                    allocationsSum !== row.nbTickets ||
+                    !allValid
+                ) {
+                    rowStatus = 'error:unallocated';
+                } else if (matchStatus != null) {
+                    rowStatus = matchStatus;
+                }
+            }
+        }
+
+        if (rowStatus.startsWith('error:')) {
+            errors++;
+        } else if (rowStatus.startsWith('warn:')) {
+            warnings++;
+        }
+
+        rows.push({
+            ...row,
+            ...(matchId != null ? { matchId } : {}),
+            rowStatus,
+        });
+    }
+
+    return { rows, summary: { total: input.rows.length, errors, warnings } };
+}
+
 export function resolveDraftRows(input: ResolveInput): ResolveOutput {
     const byDate = matchesByDate(input.homeMatches);
     const rows: DraftRowDto[] = [];
