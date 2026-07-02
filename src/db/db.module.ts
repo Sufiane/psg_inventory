@@ -12,6 +12,8 @@ import { ISalesDbService } from './sales/sales.db.interface';
 import { IUsersDbService } from './users/users.db.interface';
 import { ISeasonPassesDbService } from './season-passes/season-passes.db.interface';
 import { IHealthDbService } from './health/health.db.interface';
+import { ISalesImportDbService } from './sales-import/sales-import.db.interface';
+import { SalesImportService } from './sales-import/sales-import.service';
 
 @Module({
     providers: [
@@ -22,6 +24,7 @@ import { IHealthDbService } from './health/health.db.interface';
         { provide: IAccountingDbService, useClass: AccountingService },
         { provide: ISeasonPassesDbService, useClass: SeasonPassesService },
         { provide: IHealthDbService, useClass: HealthService },
+        { provide: ISalesImportDbService, useClass: SalesImportService },
     ],
     exports: [
         IUsersDbService,
@@ -30,6 +33,7 @@ import { IHealthDbService } from './health/health.db.interface';
         IAccountingDbService,
         ISeasonPassesDbService,
         IHealthDbService,
+        ISalesImportDbService,
     ],
 })
 export class DbModule {}
