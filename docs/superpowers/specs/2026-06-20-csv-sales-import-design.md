@@ -95,7 +95,7 @@ New module: `src/api/sales/import/`, following the project's hex split.
 | `sales-import.db.ts` | Only file in the module that imports Prisma. Bulk-creates `Sales` + `SalePassAllocations` in a single `prisma.$transaction`. Bulk-deletes by `importBatchId` for revert. Returns raw results; no domain throws. |
 | `dto/` | `PreviewRequestDto`, `CommitRequestDto`, `DraftRowDto`, `PreviewResponseDto`. |
 
-CSV parser dependency: pick one, pin exact (per project policy). Default candidate: `papaparse` (mature, handles BOM/quoting/streaming).
+CSV parser dependency: `papaparse` (pinned exact, per project policy). Mature, handles BOM/quoting/streaming.
 
 ## Endpoints
 
@@ -136,9 +136,9 @@ Response (201): `{ batchId: string, salesCreated: number }`.
 
 ### `DELETE /sales/import/:batchId`
 
-Authorization: only the user who owns the batch (`userId` match). Runs `prisma.sales.deleteMany({ where: { importBatchId, userId } })`. Cascade removes allocations via existing `onDelete: Cascade` on `SalePassAllocations`.
+Authorization: user-scoped. Runs `prisma.sales.deleteMany({ where: { importBatchId, userId } })`. Cascade removes allocations via existing `onDelete: Cascade` on `SalePassAllocations`.
 
-Response (200): `{ deleted: number }`. Returns 404 if the user does not own a batch with that id.
+**Idempotent.** Always returns `200 { deleted: number }`. If the batch does not exist, or belongs to another user, or has already been deleted, `deleted` is `0` and the response is still `200`. Reason: the caller's intent (`ensure this batch is gone`) is satisfied either way; a 404 would only surface a race condition the user cannot act on.
 
 ## Schema change
 
@@ -165,13 +165,17 @@ Nullable: existing sales (created via the UI) have `null`. No new tables.
 | Opponent mismatch on a uniquely-dated match | preview, row-level | Row marked `warn:opponent-mismatch`; resolved but flagged. |
 | Multi-ticket sale with multiple passes selected | preview, row-level | Row marked `error:unallocated`; allocation popover required before validate. |
 | Commit hits an error after edits | commit, 400 | Re-render draft with server's re-annotated rows. |
-| Revert by non-owner | revert, 404 | Generic not-found. |
+| Revert of non-existent / other-user batch | revert, 200 `{ deleted: 0 }` | Idempotent; user's intent is satisfied. |
 
 ## Testing
 
-- **Unit** (`sales-import.service.spec.ts`, Jest): CSV parse edge cases (BOM, quoted commas, CRLF, unknown headers, blank rows), DTO validation, allocation rules across all three branches, match resolution across all four branches (0/1/many/opponent mismatch).
-- **Integration** (`sales-import.controller.spec.ts`, real Prisma against test DB): full preview → commit → revert cycle, importBatchId stamping, cascade delete of allocations, user-scoping (user A cannot revert user B's batch).
-- **Web**: component test for the modal's three steps (no e2e infra assumed).
+**Scope for this iteration: unit only.** The project does not yet have a test database, so integration tests (real Prisma) are deferred until test-DB infra lands.
+
+- **Unit** (`sales-import.service.spec.ts`, Jest): CSV parse edge cases (BOM, quoted commas, CRLF, unknown headers, blank rows), DTO validation, allocation rules across all three branches, match resolution across all four branches (0/1/many/opponent mismatch). `MatchesDb` and `SalesImportDb` mocked.
+
+Future work (blocked on test-DB infra):
+- Integration tests for full preview → commit → revert cycle, `importBatchId` stamping, cascade delete of allocations, user-scoping of the delete endpoint.
+- Web component tests for the modal's three steps.
 
 ## Out-of-scope / future
 
