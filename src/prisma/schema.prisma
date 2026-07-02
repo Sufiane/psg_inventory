@@ -122,11 +122,13 @@ model Sales {
   updatedAt   DateTime        @updatedAt @map("updated_at")
   soldAt      DateTime?       @map("sold_at")
   cancelledAt DateTime?       @map("cancelled_at")
+  importBatchId String?       @map("import_batch_id")
   SaleHistory SaleHistories[]
   Allocations SalePassAllocations[]
   Match       Matches         @relation(fields: [matchId], references: [id])
   User        Users           @relation(fields: [userId], references: [id])
 
+  @@index([userId, importBatchId])
   @@map("sales")
 }
 
