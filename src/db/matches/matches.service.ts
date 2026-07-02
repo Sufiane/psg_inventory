@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import type { MatchId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { matchQuery } from './matches.query';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
@@ -45,6 +46,20 @@ export class MatchesService implements IMatchesDbService {
 
         // if by mistake there is a null value in cache
         return result ?? [];
+    }
+
+    async getHomeMatchesForSeason(seasonStartYear: SeasonYear): Promise<Match[]> {
+        const from = new Date(seasonStartYear, 7, 1);
+        const to = new Date(seasonStartYear + 1, 7, 1);
+
+        return this.prisma.matches.findMany({
+            ...matchQuery(false),
+            where: {
+                atHome: true,
+                date: { gte: from, lt: to },
+            },
+            orderBy: { date: 'asc' },
+        }) as Promise<Match[]>;
     }
 
     async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {

@@ -1,5 +1,6 @@
 import { Competition } from '@prisma/client';
 import type { MatchId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { Match } from './types/match.type';
 
@@ -9,6 +10,7 @@ export abstract class IMatchesDbService {
         withResult?: boolean,
     ): Promise<Match[]>;
     abstract getOneMatch(id: MatchId, withResult?: boolean): Promise<Match | null>;
+    abstract getHomeMatchesForSeason(seasonStartYear: SeasonYear): Promise<Match[]>;
 
     abstract loadMatches(matches: FormattedMatch[]): Promise<void>;
     abstract createMatch(payload: {
