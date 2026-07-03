@@ -1,5 +1,6 @@
 <script lang="ts">
     import Button from './Button.svelte';
+    import ImportSalesDraft from './ImportSalesDraft.svelte';
     import { previewImport } from '$lib/api/sales-import';
     import type { SeasonPass } from '$lib/types';
     import type { PreviewResponse } from '$lib/types/sales-import';
@@ -8,12 +9,13 @@
         open: boolean;
         passes: SeasonPass[];
         onClose: () => void;
-        onPreview: (preview: PreviewResponse, selectedPassIds: string[]) => void;
+        onCommitted?: () => void;
     };
 
-    const { open, passes, onClose, onPreview }: Props = $props();
+    const { open, passes, onClose, onCommitted }: Props = $props();
 
-    let step = $state<'passes' | 'upload'>('passes');
+    let step = $state<'passes' | 'upload' | 'draft'>('passes');
+    let preview = $state<PreviewResponse | null>(null);
     let selectedPassIds = $state<string[]>([]);
     let file = $state<File | null>(null);
     let loading = $state(false);
@@ -87,9 +89,8 @@
         errorMessage = null;
 
         try {
-            const preview = await previewImport(file, selectedPassIds);
-
-            onPreview(preview, selectedPassIds);
+            preview = await previewImport(file, selectedPassIds);
+            step = 'draft';
         } catch (error) {
             errorMessage =
                 error instanceof Error ? error.message : 'Failed to preview.';
@@ -102,7 +103,14 @@
         step = 'passes';
         selectedPassIds = [];
         file = null;
+        preview = null;
         errorMessage = null;
+    }
+
+    function handleCommitted(): void {
+        onCommitted?.();
+        reset();
+        onClose();
     }
 
     function handleClose(): void {
@@ -176,7 +184,7 @@
                     </Button>
                 </footer>
             </section>
-        {:else}
+        {:else if step === 'upload'}
             <section class="flex flex-col gap-3">
                 <p class="text-sm text-muted">
                     Upload a CSV with columns:
@@ -214,6 +222,14 @@
                     </Button>
                 </footer>
             </section>
+        {:else if preview != null}
+            <ImportSalesDraft
+                preview={preview}
+                selectedPassIds={selectedPassIds}
+                passes={passes}
+                onCommitted={handleCommitted}
+                onCancel={() => (step = 'upload')}
+            />
         {/if}
     </div>
 </dialog>
