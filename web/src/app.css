@@ -51,9 +51,45 @@
 
 /* Dark-mode token overrides. Tailwind v4 generates utilities like
    `text-ink` as `color: var(--color-ink)`, so flipping the CSS variables
-   at :root cascades through every utility without changing markup. */
+   at :root cascades through every utility without changing markup.
+
+   Two triggers:
+   - explicit user choice: `<html data-theme="dark">`
+   - system preference: `prefers-color-scheme: dark`, unless the user has
+     explicitly opted into light with `<html data-theme="light">`. */
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-ink: oklch(0.94 0.02 270);
+    --color-ink-muted: oklch(0.72 0.03 270);
+    --color-ink-faint: oklch(0.6 0.03 270);
+    --color-surface: oklch(0.18 0.01 270);
+    --color-surface-subtle: oklch(0.13 0.01 270);
+    --color-surface-strong: oklch(0.26 0.015 270);
+    --color-line: oklch(0.28 0.015 270);
+    --color-line-strong: oklch(0.4 0.02 270);
+    --color-primary: oklch(0.72 0.15 270);
+    --color-primary-hover: oklch(0.8 0.16 270);
+    --color-positive: oklch(0.72 0.15 155);
+    --color-positive-strong: oklch(0.8 0.17 155);
+    --color-negative: oklch(0.7 0.18 25);
+    --color-negative-strong: oklch(0.78 0.2 25);
+    --color-warning: oklch(0.74 0.16 70);
+    --color-warning-strong: oklch(0.8 0.17 70);
+    --color-sunk: oklch(0.7 0.14 320);
+    --color-sunk-strong: oklch(0.78 0.15 320);
+}
+
+:root[data-theme='dark'] .skeleton {
+    background-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in oklch, var(--color-surface-strong) 90%, white) 50%,
+        transparent 100%
+    );
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme='light']) {
         --color-ink: oklch(0.94 0.02 270);
         --color-ink-muted: oklch(0.72 0.03 270);
         /* Bumped from L 0.55 to L 0.60 so helper text clears WCAG AA 4.5:1
@@ -83,9 +119,7 @@
         --color-sunk-strong: oklch(0.78 0.15 320);
     }
 
-    /* Skeleton highlight needs to mix toward the lighter surface so it
-       still reads as a sweep against the darker base. */
-    .skeleton {
+    :root:not([data-theme='light']) .skeleton {
         background-image: linear-gradient(
             90deg,
             transparent 0%,

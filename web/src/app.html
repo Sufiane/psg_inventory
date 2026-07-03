@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PSG Inventory</title>
+    <script>
+      // Apply persisted theme before first paint to avoid a light/dark flash.
+      // Absent value means "follow OS" and no data-theme attribute is set.
+      (function () {
+          try {
+              var stored = localStorage.getItem('theme');
+              if (stored === 'light' || stored === 'dark') {
+                  document.documentElement.setAttribute('data-theme', stored);
+              }
+          } catch (_) {}
+      })();
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover" class="bg-surface-subtle text-ink min-h-screen">

@@ -3,6 +3,7 @@
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
     import { page } from '$app/state';
+    import ThemeToggle from '$lib/ui/ThemeToggle.svelte';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
     let user = $derived(data.user);
@@ -66,6 +67,7 @@
             </div>
 
             <div class="order-2 sm:order-3 flex items-center gap-3 text-sm text-ink-muted">
+                <ThemeToggle />
                 <span class="hidden md:inline truncate max-w-[16ch]" title={user.email}>
                     {user.email}
                 </span>
