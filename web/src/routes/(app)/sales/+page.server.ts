@@ -25,11 +25,7 @@ export const load: PageServerLoad = async (event) => {
     }
 
     let matches: FormattedMatch[] = [];
-    let passes: SeasonPass[] = [];
-
-    if ((isNew && !editId) || editSale != null) {
-        passes = await api<SeasonPass[]>(event, '/season-passes');
-    }
+    const passes = await api<SeasonPass[]>(event, '/season-passes');
 
     if (isNew && !editId) {
         const allMatches = await api<FormattedMatch[]>(event, '/matches/current-season');

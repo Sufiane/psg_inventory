@@ -14,6 +14,8 @@
     } from '$lib/format';
     import type { SaleListItem } from '$lib/types';
     import Spinner from '$lib/ui/Spinner.svelte';
+    import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
+    import { invalidateAll } from '$app/navigation';
 
     /**
      * Single-line temporal note for a sale row. Quiet, present-tense, no
@@ -165,6 +167,12 @@
     let newPanelFirstEl = $state<HTMLSelectElement | null>(null);
 
     let isNew = $derived(data.isNew && !editId);
+    let importOpen = $state(false);
+
+    async function onImportCommitted(): Promise<void> {
+        importOpen = false;
+        await invalidateAll();
+    }
 
     // When ?edit={id} resolves to a real editSale, move keyboard focus to the
     // first input so Sam (screen reader) and Alex (keyboard) land in the form
@@ -735,6 +743,13 @@
         </form>
 
         {#if !isNew}
+            <button
+                type="button"
+                onclick={() => (importOpen = true)}
+                class="rounded border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-ink-muted hover:text-ink hover:border-ink transition-colors"
+            >
+                Import CSV
+            </button>
             <a
                 href={urlWithNew(true)}
                 class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
@@ -744,6 +759,13 @@
         {/if}
     </div>
 </div>
+
+<ImportSalesModal
+    open={importOpen}
+    passes={data.passes}
+    onClose={() => (importOpen = false)}
+    onCommitted={onImportCommitted}
+/>
 
 {#if isNew}
     {@render newSalePanel()}
