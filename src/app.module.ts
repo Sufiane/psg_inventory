@@ -9,6 +9,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { MatchesModule } from './api/matches/matches.module';
 import { SalesModule } from './api/sales/sales.module';
+import { SalesImportModule } from './api/sales/import/sales-import.module';
 import { AccountingModule } from './api/accounting/accounting.module';
 import { CronModule } from './crons/cron.module';
 import { AdminModule } from './api/admin/admin.module';
@@ -45,6 +46,7 @@ import { HealthModule } from './api/health/health.module';
         UsersModule,
         MatchesModule,
         SalesModule,
+        SalesImportModule,
         AccountingModule,
         CronModule,
         AdminModule,
