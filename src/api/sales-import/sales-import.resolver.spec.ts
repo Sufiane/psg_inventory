@@ -1,5 +1,5 @@
-import type { Match } from '../../../db/matches/types/match.type';
-import type { SeasonPass } from '../../../db/season-passes/type/season-pass.type';
+import type { Match } from '../../db/matches/types/match.type';
+import type { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { RawImportRow } from './sales-import.csv';
 import { resolveDraftRows } from './sales-import.resolver';

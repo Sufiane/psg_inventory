@@ -1,17 +1,17 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 
-import { MatchesService } from '../../../db/matches/matches.service';
-import { IMatchesDbService } from '../../../db/matches/matches.db.interface';
-import { SeasonPassesService } from '../../../db/season-passes/season-passes.service';
-import { ISeasonPassesDbService } from '../../../db/season-passes/season-passes.db.interface';
-import { SalesImportService as SalesImportDbService } from '../../../db/sales-import/sales-import.service';
-import { ISalesImportDbService } from '../../../db/sales-import/sales-import.db.interface';
-import { DomainException } from '../../../common/exceptions/domain.exception';
-import { ErrorCode } from '../../../common/exceptions/error-codes.enum';
+import { MatchesService } from '../../db/matches/matches.service';
+import { IMatchesDbService } from '../../db/matches/matches.db.interface';
+import { SeasonPassesService } from '../../db/season-passes/season-passes.service';
+import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
+import { SalesImportService as SalesImportDbService } from '../../db/sales-import/sales-import.service';
+import { ISalesImportDbService } from '../../db/sales-import/sales-import.db.interface';
+import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
-import type { Match } from '../../../db/matches/types/match.type';
-import type { SeasonPass } from '../../../db/season-passes/type/season-pass.type';
+import type { Match } from '../../db/matches/types/match.type';
+import type { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { SalesImportService } from './sales-import.service';
 import { CommitRequestDto } from './dto/commit-request.dto';
 

@@ -1,4 +1,4 @@
-import type { Match } from '../../../db/matches/types/match.type';
+import type { Match } from '../../db/matches/types/match.type';
 import type { DraftRowDto, DraftRowStatus } from './dto/draft-row.dto';
 import type { RawImportRow } from './sales-import.csv';
 

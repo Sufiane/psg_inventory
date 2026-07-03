@@ -10,9 +10,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { toHttpException } from '../../../common/exceptions/http-exception.mapper';
-import { User } from '../../../shared/decorators/user.decorator';
-import { AuthenticatedUser } from '../../../shared/types/authenticated-user.type';
+import { toHttpException } from '../../common/exceptions/http-exception.mapper';
+import { User } from '../../shared/decorators/user.decorator';
+import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { CommitRequestDto } from './dto/commit-request.dto';
 import { DeleteBatchDto } from './dto/delete-batch.dto';
 import { PreviewRequestDto } from './dto/preview-request.dto';
