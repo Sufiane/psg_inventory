@@ -11,6 +11,7 @@
         fullWidth?: boolean;
         class?: string;
         ariaLabel?: string;
+        onclick?: (event: MouseEvent) => void;
     };
 
     let {
@@ -22,6 +23,7 @@
         fullWidth = false,
         class: extraClass = '',
         ariaLabel,
+        onclick,
     }: Props = $props();
 
     const base =
@@ -44,6 +46,7 @@
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         aria-label={ariaLabel}
+        {onclick}
     >
         {#if loading}<Spinner size="1em" />{/if}
         {@render children()}

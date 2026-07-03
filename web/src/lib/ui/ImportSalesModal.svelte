@@ -1,0 +1,219 @@
+<script lang="ts">
+    import Button from './Button.svelte';
+    import { previewImport } from '$lib/api/sales-import';
+    import type { SeasonPass } from '$lib/types';
+    import type { PreviewResponse } from '$lib/types/sales-import';
+
+    type Props = {
+        open: boolean;
+        passes: SeasonPass[];
+        onClose: () => void;
+        onPreview: (preview: PreviewResponse, selectedPassIds: string[]) => void;
+    };
+
+    const { open, passes, onClose, onPreview }: Props = $props();
+
+    let step = $state<'passes' | 'upload'>('passes');
+    let selectedPassIds = $state<string[]>([]);
+    let file = $state<File | null>(null);
+    let loading = $state(false);
+    let errorMessage = $state<string | null>(null);
+
+    let dialogEl = $state<HTMLDialogElement | null>(null);
+
+    $effect(() => {
+        if (dialogEl == null) {
+            return;
+        }
+
+        if (open && !dialogEl.open) {
+            dialogEl.showModal();
+        } else if (!open && dialogEl.open) {
+            dialogEl.close();
+        }
+    });
+
+    const passesByYear = $derived.by(() => {
+        const grouped = new Map<number, SeasonPass[]>();
+
+        for (const pass of passes) {
+            const bucket = grouped.get(pass.seasonStartYear) ?? [];
+
+            bucket.push(pass);
+            grouped.set(pass.seasonStartYear, bucket);
+        }
+
+        return [...grouped.entries()].sort(
+            ([leftYear], [rightYear]) => rightYear - leftYear,
+        );
+    });
+
+    const selectedYears = $derived.by(() => {
+        const years = new Set<number>();
+
+        for (const pass of passes) {
+            if (selectedPassIds.includes(pass.id)) {
+                years.add(pass.seasonStartYear);
+            }
+        }
+
+        return [...years];
+    });
+
+    const passesStepValid = $derived(
+        selectedPassIds.length > 0 && selectedYears.length === 1,
+    );
+
+    function togglePass(id: string): void {
+        if (selectedPassIds.includes(id)) {
+            selectedPassIds = selectedPassIds.filter((passId) => passId !== id);
+        } else {
+            selectedPassIds = [...selectedPassIds, id];
+        }
+    }
+
+    function onFileChange(event: Event): void {
+        const input = event.currentTarget as HTMLInputElement;
+
+        file = input.files?.[0] ?? null;
+    }
+
+    async function submitUpload(): Promise<void> {
+        if (file == null) {
+            return;
+        }
+
+        loading = true;
+        errorMessage = null;
+
+        try {
+            const preview = await previewImport(file, selectedPassIds);
+
+            onPreview(preview, selectedPassIds);
+        } catch (error) {
+            errorMessage =
+                error instanceof Error ? error.message : 'Failed to preview.';
+        } finally {
+            loading = false;
+        }
+    }
+
+    function reset(): void {
+        step = 'passes';
+        selectedPassIds = [];
+        file = null;
+        errorMessage = null;
+    }
+
+    function handleClose(): void {
+        reset();
+        onClose();
+    }
+</script>
+
+<dialog
+    bind:this={dialogEl}
+    onclose={handleClose}
+    class="w-full max-w-2xl rounded p-0 backdrop:bg-black/40"
+>
+    <div class="flex flex-col gap-4 p-6">
+        <header class="flex items-center justify-between">
+            <h2 class="text-lg font-medium">Import sales</h2>
+            <button
+                type="button"
+                class="text-sm text-muted hover:text-primary"
+                onclick={handleClose}
+                aria-label="Close import dialog"
+            >
+                Close
+            </button>
+        </header>
+
+        {#if step === 'passes'}
+            <section class="flex flex-col gap-3">
+                <p class="text-sm text-muted">
+                    Pick the season pass(es) these sales draw from. All selected passes
+                    must belong to the same season.
+                </p>
+
+                {#if passesByYear.length === 0}
+                    <p class="text-sm">
+                        No season passes yet.
+                        <a href="/season" class="underline">Create one first</a>.
+                    </p>
+                {:else}
+                    {#each passesByYear as [year, group] (year)}
+                        <fieldset class="flex flex-col gap-2 rounded border p-3">
+                            <legend class="px-1 text-xs font-medium uppercase text-muted">
+                                Season {year}
+                            </legend>
+                            {#each group as pass (pass.id)}
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedPassIds.includes(pass.id)}
+                                        onchange={() => togglePass(pass.id)}
+                                    />
+                                    <span>{pass.label} — {pass.category}, row {pass.row}, seat {pass.seat}</span>
+                                </label>
+                            {/each}
+                        </fieldset>
+                    {/each}
+                {/if}
+
+                {#if selectedYears.length > 1}
+                    <p class="text-sm text-red-600">
+                        Passes span more than one season. Pick from a single season.
+                    </p>
+                {/if}
+
+                <footer class="flex justify-end gap-2">
+                    <Button
+                        disabled={!passesStepValid}
+                        onclick={() => (step = 'upload')}
+                    >
+                        Next
+                    </Button>
+                </footer>
+            </section>
+        {:else}
+            <section class="flex flex-col gap-3">
+                <p class="text-sm text-muted">
+                    Upload a CSV with columns:
+                    <code class="text-xs">
+                        date, opponent, listedPrice, nbTickets, status, invest
+                    </code>
+                    (invest optional).
+                </p>
+
+                <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onchange={onFileChange}
+                    class="text-sm"
+                />
+
+                {#if errorMessage}
+                    <p class="text-sm text-red-600">{errorMessage}</p>
+                {/if}
+
+                <footer class="flex items-center justify-between gap-2">
+                    <button
+                        type="button"
+                        class="text-sm text-muted hover:text-primary"
+                        onclick={() => (step = 'passes')}
+                    >
+                        ← Back
+                    </button>
+                    <Button
+                        disabled={file == null || loading}
+                        loading={loading}
+                        onclick={submitUpload}
+                    >
+                        Preview
+                    </Button>
+                </footer>
+            </section>
+        {/if}
+    </div>
+</dialog>
