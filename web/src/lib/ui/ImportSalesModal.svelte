@@ -143,14 +143,14 @@
 <dialog
     bind:this={dialogEl}
     onclose={handleClose}
-    class="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-2xl overflow-auto rounded bg-surface p-0 shadow-xl backdrop:bg-black/40"
+    class="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-2xl overflow-auto rounded border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-black/50"
 >
     <div class="flex flex-col gap-4 p-6">
         <header class="flex items-center justify-between">
             <h2 class="text-lg font-medium">Import sales</h2>
             <button
                 type="button"
-                class="text-sm text-muted hover:text-primary"
+                class="text-sm text-ink-muted hover:text-primary"
                 onclick={handleClose}
                 aria-label="Close import dialog"
             >
@@ -160,7 +160,7 @@
 
         {#if step === 'passes'}
             <section class="flex flex-col gap-3">
-                <p class="text-sm text-muted">
+                <p class="text-sm text-ink-muted">
                     Pick the season pass(es) these sales draw from. All selected passes
                     must belong to the same season.
                 </p>
@@ -173,8 +173,8 @@
                 {:else}
                     {#if currentGroup != null}
                         {@const [year, group] = currentGroup}
-                        <fieldset class="flex flex-col gap-2 rounded border p-3">
-                            <legend class="px-1 text-xs font-medium uppercase text-muted">
+                        <fieldset class="flex flex-col gap-2 rounded border border-line p-3">
+                            <legend class="px-1 text-xs font-medium uppercase text-ink-muted">
                                 Current season · {year}
                             </legend>
                             {#each group as pass (pass.id)}
@@ -191,14 +191,14 @@
                     {/if}
 
                     {#if previousGroups.length > 0}
-                        <details class="rounded border p-3">
+                        <details class="rounded border border-line p-3">
                             <summary class="cursor-pointer text-sm">
                                 Previous seasons
                             </summary>
                             <div class="mt-2 flex flex-col gap-3">
                                 {#each previousGroups as [year, group] (year)}
                                     <fieldset class="flex flex-col gap-2">
-                                        <legend class="text-xs font-medium uppercase text-muted">
+                                        <legend class="text-xs font-medium uppercase text-ink-muted">
                                             Season {year}
                                         </legend>
                                         {#each group as pass (pass.id)}
@@ -219,7 +219,9 @@
                 {/if}
 
                 {#if hasPreviousSelected}
-                    <p class="rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+                    <p
+                        class="rounded border border-warning bg-warning/10 p-2 text-xs text-warning-strong"
+                    >
                         Importing into a past season will recompute that season's
                         accounting numbers. Any closed-season totals shown elsewhere
                         will update.
@@ -243,7 +245,7 @@
             </section>
         {:else if step === 'upload'}
             <section class="flex flex-col gap-3">
-                <p class="text-sm text-muted">
+                <p class="text-sm text-ink-muted">
                     Upload a CSV with columns:
                     <code class="text-xs">
                         date, opponent, listedPrice, nbTickets, status, invest
@@ -259,13 +261,13 @@
                 />
 
                 {#if errorMessage}
-                    <p class="text-sm text-red-600">{errorMessage}</p>
+                    <p class="text-sm text-negative-strong">{errorMessage}</p>
                 {/if}
 
                 <footer class="flex items-center justify-between gap-2">
                     <button
                         type="button"
-                        class="text-sm text-muted hover:text-primary"
+                        class="text-sm text-ink-muted hover:text-primary"
                         onclick={() => (step = 'passes')}
                     >
                         ← Back

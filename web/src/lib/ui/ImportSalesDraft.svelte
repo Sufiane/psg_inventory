@@ -151,7 +151,7 @@
 
 <section class="flex flex-col gap-3">
     {#if commitResult != null}
-        <div class="rounded border p-4 text-sm">
+        <div class="rounded border border-line p-4 text-sm">
             <p class="mb-2">
                 {commitResult.salesCreated} sales imported.
             </p>
@@ -159,35 +159,35 @@
                 <Button onclick={undo} loading={loading}>Undo import</Button>
                 <button
                     type="button"
-                    class="text-sm text-muted hover:text-primary"
+                    class="text-sm text-ink-muted hover:text-primary"
                     onclick={finish}
                 >
                     Done
                 </button>
             </div>
             {#if errorMessage}
-                <p class="mt-2 text-red-600">{errorMessage}</p>
+                <p class="mt-2 text-negative-strong">{errorMessage}</p>
             {/if}
         </div>
     {:else}
         <div class="flex items-center justify-between text-sm">
             <span>
                 {summary.total} rows ·
-                <span class="text-red-600">{summary.errors} errors</span> ·
-                <span class="text-amber-600">{summary.warnings} warnings</span>
+                <span class="text-negative-strong">{summary.errors} errors</span> ·
+                <span class="text-warning-strong">{summary.warnings} warnings</span>
             </span>
             <button
                 type="button"
-                class="text-sm text-muted hover:text-primary"
+                class="text-sm text-ink-muted hover:text-primary"
                 onclick={onCancel}
             >
                 ← Back
             </button>
         </div>
 
-        <div class="max-h-96 overflow-auto rounded border">
+        <div class="max-h-96 overflow-auto rounded border border-line">
             <table class="w-full text-sm">
-                <thead class="bg-black/5 text-left text-xs uppercase text-muted">
+                <thead class="bg-surface-subtle text-left text-xs uppercase text-ink-muted">
                     <tr>
                         <th class="p-2">Status</th>
                         <th class="p-2">Date</th>
@@ -202,12 +202,12 @@
                 </thead>
                 <tbody>
                     {#each rows as row, index (index)}
-                        <tr class="border-t align-top">
+                        <tr class="border-t border-line align-top">
                             <td class="p-2 text-xs">
                                 <span
-                                    class:text-red-600={row.rowStatus.startsWith('error:')}
-                                    class:text-amber-600={row.rowStatus.startsWith('warn:')}
-                                    class:text-green-700={row.rowStatus === 'ok'}
+                                    class:text-negative-strong={row.rowStatus.startsWith('error:')}
+                                    class:text-warning-strong={row.rowStatus.startsWith('warn:')}
+                                    class:text-positive-strong={row.rowStatus === 'ok'}
                                 >
                                     {row.rowStatus}
                                 </span>
@@ -220,7 +220,7 @@
                                         updateRow(index, {
                                             date: (event.currentTarget as HTMLInputElement).value,
                                         })}
-                                    class="w-32 rounded border px-1"
+                                    class="w-32 rounded border border-line-strong bg-surface px-1"
                                 />
                             </td>
                             <td class="p-2">
@@ -231,7 +231,7 @@
                                         updateRow(index, {
                                             opponent: (event.currentTarget as HTMLInputElement).value,
                                         })}
-                                    class="w-28 rounded border px-1"
+                                    class="w-28 rounded border border-line-strong bg-surface px-1"
                                 />
                             </td>
                             <td class="p-2">
@@ -245,7 +245,7 @@
                                                 (event.currentTarget as HTMLInputElement).value,
                                             ),
                                         })}
-                                    class="w-20 rounded border px-1"
+                                    class="w-20 rounded border border-line-strong bg-surface px-1"
                                 />
                             </td>
                             <td class="p-2">
@@ -259,7 +259,7 @@
                                                 (event.currentTarget as HTMLInputElement).value,
                                             ),
                                         })}
-                                    class="w-16 rounded border px-1"
+                                    class="w-16 rounded border border-line-strong bg-surface px-1"
                                 />
                             </td>
                             <td class="p-2">
@@ -273,7 +273,7 @@
                                                 (event.currentTarget as HTMLInputElement).value,
                                             ),
                                         })}
-                                    class="w-20 rounded border px-1"
+                                    class="w-20 rounded border border-line-strong bg-surface px-1"
                                 />
                             </td>
                             <td class="p-2">
@@ -284,7 +284,7 @@
                                             status: (event.currentTarget as HTMLSelectElement)
                                                 .value as DraftRow['status'],
                                         })}
-                                    class="rounded border px-1"
+                                    class="rounded border border-line-strong bg-surface px-1"
                                 >
                                     <option>PENDING</option>
                                     <option>SOLD</option>
@@ -307,12 +307,12 @@
                                                         (event.currentTarget as HTMLInputElement).value,
                                                     ),
                                                 )}
-                                            class="w-12 rounded border px-1"
+                                            class="w-12 rounded border border-line-strong bg-surface px-1"
                                         />
                                     </label>
                                 {/each}
                                 {#if row.nbTickets > 1 && selectedPassIds.length > 1}
-                                    <p class="text-xs text-amber-600">
+                                    <p class="text-xs text-warning-strong">
                                         Split {row.nbTickets} tickets across passes.
                                     </p>
                                 {/if}
@@ -320,7 +320,7 @@
                             <td class="p-2">
                                 <button
                                     type="button"
-                                    class="text-xs text-red-600"
+                                    class="text-xs text-negative-strong"
                                     onclick={() => deleteRow(index)}
                                     aria-label="Delete row"
                                 >
@@ -334,7 +334,7 @@
         </div>
 
         {#if missingMatches.length > 0}
-            <details class="rounded border p-3 text-sm">
+            <details class="rounded border border-line p-3 text-sm">
                 <summary class="cursor-pointer">
                     {missingMatches.length} home matches without a sale
                 </summary>
@@ -356,7 +356,7 @@
         {/if}
 
         {#if errorMessage}
-            <p class="text-sm text-red-600">{errorMessage}</p>
+            <p class="text-sm text-negative-strong">{errorMessage}</p>
         {/if}
 
         <footer class="flex justify-end">
