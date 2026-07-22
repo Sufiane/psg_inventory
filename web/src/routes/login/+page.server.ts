@@ -67,12 +67,12 @@ export const actions: Actions = {
         }
 
         const body = (await response.json()) as LoginResponse;
-        const claims = decodeJwt(body.token);
+        const claims = decodeJwt(body.accessToken);
         const maxAge = claims?.exp
             ? Math.max(claims.exp - Math.floor(Date.now() / 1000), 60)
             : 60 * 60 * 24;
 
-        event.cookies.set(JWT_COOKIE, body.token, {
+        event.cookies.set(JWT_COOKIE, body.accessToken, {
             httpOnly: true,
             secure: event.url.protocol === 'https:',
             sameSite: 'lax',

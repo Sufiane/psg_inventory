@@ -234,4 +234,4 @@ export type CreateMatchPayload = {
     result?: { isWin: boolean; score: MatchScore };
 };
 
-export type LoginResponse = { token: JwtToken };
+export type LoginResponse = { accessToken: JwtToken };
