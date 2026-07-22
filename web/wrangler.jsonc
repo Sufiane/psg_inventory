@@ -9,7 +9,7 @@
     "directory": ".svelte-kit/cloudflare"
   },
   "vars": {
-    "BACKEND_URL": "https://psg-inventory.onrender.com"
+    "BACKEND_URL": "https://psginventory-production.up.railway.app"
   },
   "observability": {
     "enabled": true
