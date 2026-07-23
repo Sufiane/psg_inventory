@@ -10,7 +10,6 @@ import {
     Query,
 } from '@nestjs/common';
 
-import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { SeasonPass } from './types/season-pass.type';
 import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
@@ -29,24 +28,16 @@ export class SeasonPassesController {
         @User() user: AuthenticatedUser,
         @Query() query: ListSeasonPassesDto,
     ): Promise<SeasonPass[]> {
-        try {
-            if (query.season != null) {
-                return await this.service.findBySeason(user.id, query.season);
-            }
-
-            return await this.service.findAll(user.id);
-        } catch (error) {
-            throw toHttpException(error);
+        if (query.season != null) {
+            return await this.service.findBySeason(user.id, query.season);
         }
+
+        return await this.service.findAll(user.id);
     }
 
     @Get('/current-season')
     async findCurrent(@User() user: AuthenticatedUser): Promise<SeasonPass[]> {
-        try {
-            return await this.service.findCurrentSeason(user.id);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.service.findCurrentSeason(user.id);
     }
 
     @Get('/:passId')
@@ -54,11 +45,7 @@ export class SeasonPassesController {
         @User() user: AuthenticatedUser,
         @Param() { passId }: GetSeasonPassDto,
     ): Promise<SeasonPass> {
-        try {
-            return await this.service.findOne(user.id, passId);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.service.findOne(user.id, passId);
     }
 
     @Post('/')
@@ -66,11 +53,7 @@ export class SeasonPassesController {
         @User() user: AuthenticatedUser,
         @Body() payload: CreateSeasonPassDto,
     ): Promise<SeasonPass> {
-        try {
-            return await this.service.create(user.id, payload);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.service.create(user.id, payload);
     }
 
     @Put('/:passId')
@@ -79,11 +62,7 @@ export class SeasonPassesController {
         @Param() { passId }: GetSeasonPassDto,
         @Body() payload: UpdateSeasonPassDto,
     ): Promise<SeasonPass> {
-        try {
-            return await this.service.update(user.id, passId, payload);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.service.update(user.id, passId, payload);
     }
 
     @Delete('/:passId')
@@ -92,10 +71,6 @@ export class SeasonPassesController {
         @User() user: AuthenticatedUser,
         @Param() { passId }: GetSeasonPassDto,
     ): Promise<void> {
-        try {
-            await this.service.remove(user.id, passId);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        await this.service.remove(user.id, passId);
     }
 }

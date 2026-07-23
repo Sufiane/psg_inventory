@@ -1,6 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import type { SeasonYear } from '@psg/shared/time';
-import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
@@ -16,20 +15,12 @@ export class AccountingController {
     async getCurrentSeason(
         @User() user: AuthenticatedUser,
     ): Promise<TimePeriodAccounting> {
-        try {
-            return await this.accountingService.getCurrentSeason(user.id);
-        } catch (e) {
-            throw toHttpException(e);
-        }
+        return await this.accountingService.getCurrentSeason(user.id);
     }
 
     @Get('all-time')
     async getAllTime(@User() user: AuthenticatedUser): Promise<TimePeriodAccounting> {
-        try {
-            return await this.accountingService.getAllTime(user.id);
-        } catch (e) {
-            throw toHttpException(e);
-        }
+        return await this.accountingService.getAllTime(user.id);
     }
 
     @Get('/season/:seasonStartYear')
@@ -37,14 +28,10 @@ export class AccountingController {
         @User() user: AuthenticatedUser,
         @Param() { seasonStartYear }: GetSeasonDto,
     ): Promise<TimePeriodAccounting> {
-        try {
-            return await this.accountingService.getGivenSeason(
-                user.id,
-                parseInt(seasonStartYear, 10) as SeasonYear,
-            );
-        } catch (e) {
-            throw toHttpException(e);
-        }
+        return await this.accountingService.getGivenSeason(
+            user.id,
+            parseInt(seasonStartYear, 10) as SeasonYear,
+        );
     }
 
     @Get('/amortization/:seasonStartYear')
@@ -52,13 +39,9 @@ export class AccountingController {
         @User() user: AuthenticatedUser,
         @Param() { seasonStartYear }: GetSeasonDto,
     ): Promise<Amortization> {
-        try {
-            return await this.accountingService.getAmortization(
-                user.id,
-                parseInt(seasonStartYear, 10) as SeasonYear,
-            );
-        } catch (e) {
-            throw toHttpException(e);
-        }
+        return await this.accountingService.getAmortization(
+            user.id,
+            parseInt(seasonStartYear, 10) as SeasonYear,
+        );
     }
 }

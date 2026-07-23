@@ -1,6 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 
-import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { QueryMatchDto } from './dto/query-match.dto';
 import { IMatchesService } from './interfaces/matches.service.interface';
 import { GetMatchDto } from './dto/get-match.dto';
@@ -37,10 +36,6 @@ export class MatchesController {
         @Param() { matchId }: GetMatchDto,
         @Query() { withResult }: QueryMatchDto,
     ) {
-        try {
-            return await this.matchesService.getMatch(matchId, withResult);
-        } catch (e) {
-            throw toHttpException(e);
-        }
+        return await this.matchesService.getMatch(matchId, withResult);
     }
 }

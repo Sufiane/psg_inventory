@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { toHttpException } from '../../common/exceptions/http-exception.mapper';
 import { User } from '../../shared/decorators/user.decorator';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 import { CommitRequestDto } from './dto/commit-request.dto';
@@ -36,15 +35,11 @@ export class SalesImportController {
             throw new BadRequestException('file_required');
         }
 
-        try {
-            return await this.salesImportService.preview(
-                user.id,
-                file.buffer,
-                body.selectedPassIds,
-            );
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.salesImportService.preview(
+            user.id,
+            file.buffer,
+            body.selectedPassIds,
+        );
     }
 
     @Post('commit')
@@ -52,11 +47,7 @@ export class SalesImportController {
         @User() user: AuthenticatedUser,
         @Body() body: CommitRequestDto,
     ): Promise<CommitResult> {
-        try {
-            return await this.salesImportService.commit(user.id, body);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.salesImportService.commit(user.id, body);
     }
 
     @Delete(':batchId')
@@ -64,10 +55,6 @@ export class SalesImportController {
         @User() user: AuthenticatedUser,
         @Param() params: DeleteBatchDto,
     ): Promise<{ deleted: number }> {
-        try {
-            return await this.salesImportService.revert(user.id, params.batchId);
-        } catch (error) {
-            throw toHttpException(error);
-        }
+        return await this.salesImportService.revert(user.id, params.batchId);
     }
 }
