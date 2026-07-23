@@ -44,6 +44,7 @@ const map: Record<ErrorCode, () => HttpException> = {
         new BadRequestException(ErrorCode.IMPORT_ROWS_INVALID),
     [ErrorCode.IMPORT_PASSES_MIXED_SEASONS]: () =>
         new BadRequestException(ErrorCode.IMPORT_PASSES_MIXED_SEASONS),
+    [ErrorCode.USER_NOT_FOUND]: () => new NotFoundException(ErrorCode.USER_NOT_FOUND),
 };
 
 export function toHttpException(e: unknown): HttpException {

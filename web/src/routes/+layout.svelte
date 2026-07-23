@@ -4,6 +4,7 @@
     import type { LayoutData } from './$types';
     import { page } from '$app/state';
     import ThemeToggle from '$lib/ui/ThemeToggle.svelte';
+    import ToastHost from '$lib/ui/ToastHost.svelte';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
     let user = $derived(data.user);
@@ -93,3 +94,5 @@
         {@render children()}
     </main>
 {/if}
+
+<ToastHost />

@@ -3,8 +3,9 @@
     import { enhance } from '$app/forms';
     import { competitionLabel } from '$lib/format';
     import Spinner from '$lib/ui/Spinner.svelte';
+    import { toastStore } from '$lib/stores/toast.svelte';
 
-    type Op = 'loadCurrent' | 'loadSeason' | 'create' | 'cancelStaleSales';
+    type Op = 'loadCurrent' | 'loadSeason' | 'create' | 'cancelStaleSales' | 'flushUserCache';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     const currentYear = new Date().getFullYear();
@@ -19,6 +20,50 @@
             return async ({ update }: { update: () => Promise<void> }) => {
                 await update();
                 submitting = null;
+            };
+        };
+    }
+
+    type FlushResult = { type: string; data?: unknown };
+
+    function trackFlushUserCache() {
+        return ({ formElement }: { formElement: HTMLFormElement }) => {
+            submitting = 'flushUserCache';
+
+            return async ({ result }: { result: FlushResult }) => {
+                submitting = null;
+
+                if (result.type === 'success' && result.data) {
+                    const { email, failedKeys, total } = result.data as {
+                        email: string;
+                        failedKeys: string[];
+                        total: number;
+                    };
+
+                    if (failedKeys.length === 0) {
+                        toastStore.push(`Cache flushed for ${email}.`, 'positive');
+                    } else if (failedKeys.length === total) {
+                        toastStore.push(
+                            `Cache flush failed for ${email} (${failedKeys.join(', ')}).`,
+                            'negative',
+                        );
+                    } else {
+                        toastStore.push(
+                            `Cache flushed for ${email}, but ${failedKeys.join(', ')} failed.`,
+                            'warning',
+                        );
+                    }
+
+                    formElement.reset();
+                } else {
+                    const message =
+                        result.type === 'failure'
+                            ? ((result.data as { message?: string } | undefined)?.message ??
+                              'Cache flush failed.')
+                            : 'Cache flush failed unexpectedly.';
+
+                    toastStore.push(message, 'negative');
+                }
             };
         };
     }
@@ -204,6 +249,46 @@
                     <Spinner size="1em" />
                 {/if}
                 Cancel stale unrealized sales
+            </button>
+        </form>
+    </section>
+
+    <section class="bg-surface rounded-lg border border-line p-6 md:col-span-2">
+        <h2 class="text-base font-semibold tracking-tight text-ink mb-2">
+            Flush user cache
+        </h2>
+        <p class="text-sm text-ink-muted mb-4">
+            Clears all cached data (accounting, sales, season passes) for a single user.
+            Use after a manual database fix that bypassed the app's normal
+            cache-invalidation logic.
+        </p>
+
+        <form
+            method="POST"
+            action="?/flushUserCache"
+            use:enhance={trackFlushUserCache()}
+            class="flex flex-wrap items-end gap-3"
+        >
+            <label class="flex-1 min-w-[16rem]">
+                <span class="block text-sm font-medium text-ink mb-1">Email</span>
+                <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="user@example.com"
+                    class="w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                />
+            </label>
+
+            <button
+                type="submit"
+                disabled={submitting !== null}
+                class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+            >
+                {#if submitting === 'flushUserCache'}
+                    <Spinner size="1em" />
+                {/if}
+                Flush cache
             </button>
         </form>
     </section>

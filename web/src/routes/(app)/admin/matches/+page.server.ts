@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
-import { COMPETITIONS, type Competition } from '$lib/types';
+import { COMPETITIONS, type Competition, type CacheFlushResult } from '$lib/types';
 
 export const load: PageServerLoad = () => {
     return { competitions: COMPETITIONS };
@@ -123,5 +123,33 @@ export const actions: Actions = {
         }
 
         return { success: true, info: 'Stale unrealized sales cancelled.' };
+    },
+
+    flushUserCache: async (event) => {
+        const form = await event.request.formData();
+        const email = form.get('email');
+
+        if (typeof email !== 'string' || email.length === 0) {
+            return fail(400, { message: 'Email is required.' });
+        }
+
+        let results: CacheFlushResult[];
+
+        try {
+            results = await api<CacheFlushResult[]>(event, '/admin/users/cache/flush', {
+                method: 'POST',
+                json: { email },
+            });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to flush cache.';
+
+            return fail(400, { message });
+        }
+
+        const failedKeys = results
+            .filter((result) => result.status === 'failed')
+            .map((result) => result.key);
+
+        return { email, failedKeys, total: results.length };
     },
 };

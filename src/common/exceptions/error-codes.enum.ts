@@ -15,4 +15,5 @@ export enum ErrorCode {
     IMPORT_CSV_INVALID = 'import_csv_invalid',
     IMPORT_ROWS_INVALID = 'import_rows_invalid',
     IMPORT_PASSES_MIXED_SEASONS = 'import_passes_mixed_seasons',
+    USER_NOT_FOUND = 'user_not_found',
 }
