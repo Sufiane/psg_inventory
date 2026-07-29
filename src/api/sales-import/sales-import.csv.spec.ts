@@ -18,6 +18,7 @@ describe('parseImportCsv', () => {
                     nbTickets: 1,
                     status: 'SOLD',
                     invest: 80,
+                    soldAt: null,
                 },
             ]);
         }

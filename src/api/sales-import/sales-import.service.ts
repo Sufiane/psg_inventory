@@ -17,6 +17,7 @@ import { CommitRequestDto } from './dto/commit-request.dto';
 import { PreviewResponse } from './dto/preview-response.dto';
 import { parseImportCsv } from './sales-import.csv';
 import { resolveDraftRows, validateCommitRows } from './sales-import.resolver';
+import { dateOnlyToUtcNoon } from './utils/date-only.util';
 
 export type CommitResult = {
     batchId: string;
@@ -79,6 +80,10 @@ export class SalesImportService {
             profit: this.computeProfit(row.listedPrice),
             nbTickets: row.nbTickets as TicketCount,
             status: row.status as SaleStatus,
+            soldAt:
+                row.status === 'SOLD' && row.soldAt != null
+                    ? dateOnlyToUtcNoon(row.soldAt)
+                    : null,
             allocations: row.allocations.map((allocation) => ({
                 seasonPassId: allocation.seasonPassId as SeasonPassId,
                 nbTickets: allocation.nbTickets as TicketCount,

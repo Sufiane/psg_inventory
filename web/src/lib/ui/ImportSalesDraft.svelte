@@ -9,6 +9,10 @@
         PreviewResponse,
     } from '$lib/types/sales-import';
     import type { SeasonPass } from '$lib/types';
+    import type { TicketCount } from '@psg/shared/counts';
+    import type { MatchId, SeasonPassId } from '@psg/shared/ids';
+    import type { Invest, ListedPrice } from '@psg/shared/money';
+    import type { IsoDateString } from '@psg/shared/time';
 
     type Props = {
         preview: PreviewResponse;
@@ -65,20 +69,23 @@
         rows = rows.map((row, i) => (i === index ? { ...row, ...patch, rowStatus: 'ok' } : row));
     }
 
-    function updateAllocation(rowIndex: number, passId: string, count: number): void {
+    function updateAllocation(rowIndex: number, passId: SeasonPassId, count: number): void {
         rows = rows.map((row, i) => {
             if (i !== rowIndex) {
                 return row;
             }
 
             const existing = row.allocations.filter((a) => a.seasonPassId !== passId);
-            const next = count > 0 ? [...existing, { seasonPassId: passId, nbTickets: count }] : existing;
+            const next =
+                count > 0
+                    ? [...existing, { seasonPassId: passId, nbTickets: count as TicketCount }]
+                    : existing;
 
             return { ...row, allocations: next, rowStatus: 'ok' };
         });
     }
 
-    function allocationFor(row: DraftRow, passId: string): number {
+    function allocationFor(row: DraftRow, passId: SeasonPassId): number {
         return row.allocations.find((a) => a.seasonPassId === passId)?.nbTickets ?? 0;
     }
 
@@ -90,7 +97,14 @@
         const passIds = selectedPassIds;
         const firstPassId = passIds[0];
         const allocations =
-            firstPassId != null ? [{ seasonPassId: firstPassId, nbTickets: 1 }] : [];
+            firstPassId != null
+                ? [
+                      {
+                          seasonPassId: firstPassId as SeasonPassId,
+                          nbTickets: 1 as TicketCount,
+                      },
+                  ]
+                : [];
 
         rows = [
             ...rows,
@@ -98,11 +112,11 @@
                 rowIndex: rows.length,
                 date: missing.date,
                 opponent: missing.opponentName,
-                listedPrice: 0,
-                nbTickets: 1,
-                invest: 0,
+                listedPrice: 0 as ListedPrice,
+                nbTickets: 1 as TicketCount,
+                invest: 0 as Invest,
                 status: 'PENDING',
-                matchId: missing.matchId,
+                matchId: missing.matchId as MatchId,
                 allocations,
                 rowStatus: 'ok',
             },
@@ -196,6 +210,7 @@
                         <th class="p-2">Tickets</th>
                         <th class="p-2">Invest</th>
                         <th class="p-2">Sale status</th>
+                        <th class="p-2">Sold at</th>
                         <th class="p-2">Allocations</th>
                         <th class="p-2"></th>
                     </tr>
@@ -243,7 +258,7 @@
                                         updateRow(index, {
                                             listedPrice: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
-                                            ),
+                                            ) as ListedPrice,
                                         })}
                                     class="w-20 rounded border border-line-strong bg-surface px-1"
                                 />
@@ -257,7 +272,7 @@
                                         updateRow(index, {
                                             nbTickets: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
-                                            ),
+                                            ) as TicketCount,
                                         })}
                                     class="w-16 rounded border border-line-strong bg-surface px-1"
                                 />
@@ -271,7 +286,7 @@
                                         updateRow(index, {
                                             invest: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
-                                            ),
+                                            ) as Invest,
                                         })}
                                     class="w-20 rounded border border-line-strong bg-surface px-1"
                                 />
@@ -290,6 +305,19 @@
                                     <option>SOLD</option>
                                     <option>CANCELLED</option>
                                 </select>
+                            </td>
+                            <td class="p-2">
+                                <input
+                                    type="date"
+                                    value={row.soldAt ?? ''}
+                                    disabled={row.status !== 'SOLD'}
+                                    onchange={(event) =>
+                                        updateRow(index, {
+                                            soldAt: ((event.currentTarget as HTMLInputElement)
+                                                .value || undefined) as IsoDateString | undefined,
+                                        })}
+                                    class="w-32 rounded border border-line-strong bg-surface px-1 disabled:opacity-50"
+                                />
                             </td>
                             <td class="p-2 text-xs">
                                 {#each selectedPasses() as pass (pass.id)}

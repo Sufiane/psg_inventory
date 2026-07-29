@@ -27,6 +27,7 @@ export class SalesImportService implements ISalesImportDbService {
                         profit: sale.profit,
                         nbTickets: sale.nbTickets,
                         status: sale.status,
+                        soldAt: sale.soldAt,
                         importBatchId: payload.batchId,
                         Allocations: {
                             create: sale.allocations.map((allocation) => ({

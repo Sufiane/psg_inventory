@@ -1,3 +1,8 @@
+import type { TicketCount } from '@psg/shared/counts';
+import type { MatchId, SeasonPassId } from '@psg/shared/ids';
+import type { Invest, ListedPrice } from '@psg/shared/money';
+import type { IsoDateString } from '@psg/shared/time';
+
 export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
 
 export type DraftRowStatus =
@@ -7,22 +12,24 @@ export type DraftRowStatus =
     | 'error:match-missing'
     | 'error:opponent-not-found'
     | 'error:unallocated'
-    | 'error:invalid-cell';
+    | 'error:invalid-cell'
+    | 'error:sold-after-kickoff';
 
 export type DraftAllocation = {
-    seasonPassId: string;
-    nbTickets: number;
+    seasonPassId: SeasonPassId;
+    nbTickets: TicketCount;
 };
 
 export type DraftRow = {
     rowIndex: number;
     date: string;
     opponent: string;
-    listedPrice: number;
-    nbTickets: number;
-    invest: number;
+    listedPrice: ListedPrice;
+    nbTickets: TicketCount;
+    invest: Invest;
     status: SaleStatus;
-    matchId?: string;
+    soldAt?: IsoDateString;
+    matchId?: MatchId;
     allocations: DraftAllocation[];
     rowStatus: DraftRowStatus;
 };

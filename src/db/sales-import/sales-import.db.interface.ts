@@ -15,6 +15,7 @@ export type BulkSaleInput = {
     profit: Profit;
     nbTickets: TicketCount;
     status: SaleStatus;
+    soldAt: Date | null;
     allocations: BulkSaleAllocationInput[];
 };
 

@@ -11,6 +11,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { DraftAllocationDto } from './draft-allocation.dto';
+import { DATE_ONLY_REGEX } from '../utils/date-only.util';
 
 export const DRAFT_ROW_STATUSES = [
     'ok',
@@ -20,6 +21,7 @@ export const DRAFT_ROW_STATUSES = [
     'error:opponent-not-found',
     'error:unallocated',
     'error:invalid-cell',
+    'error:sold-after-kickoff',
 ] as const;
 
 export type DraftRowStatus = (typeof DRAFT_ROW_STATUSES)[number];
@@ -30,7 +32,7 @@ export class DraftRowDto {
     rowIndex!: number;
 
     @IsString()
-    @Matches(/^\d{4}-\d{2}-\d{2}$/)
+    @Matches(DATE_ONLY_REGEX)
     date!: string;
 
     @IsString()
@@ -50,6 +52,11 @@ export class DraftRowDto {
 
     @IsIn(['PENDING', 'SOLD', 'CANCELLED'])
     status!: 'PENDING' | 'SOLD' | 'CANCELLED';
+
+    @IsOptional()
+    @IsString()
+    @Matches(DATE_ONLY_REGEX)
+    soldAt?: string;
 
     @IsOptional()
     @IsUUID('4')

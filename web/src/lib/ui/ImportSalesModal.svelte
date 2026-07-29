@@ -248,9 +248,9 @@
                 <p class="text-sm text-ink-muted">
                     Upload a CSV with columns:
                     <code class="text-xs">
-                        date, opponent, listedPrice, nbTickets, status, invest
+                        date, opponent, listedPrice, nbTickets, status, invest, soldAt
                     </code>
-                    (invest optional).
+                    (invest, soldAt optional — soldAt only applies to SOLD rows).
                 </p>
 
                 <input

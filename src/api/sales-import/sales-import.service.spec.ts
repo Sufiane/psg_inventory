@@ -159,17 +159,65 @@ describe('SalesImportService', () => {
             expect(importDb.bulkCreate).toHaveBeenCalledTimes(1);
         });
 
-        it('throws IMPORT_ROWS_INVALID when a row has an error', async () => {
+        it('passes a provided soldAt through to bulkCreate for SOLD rows', async () => {
             passesDb.findById.mockResolvedValue(passFixture({}));
             matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+            importDb.bulkCreate.mockResolvedValue(1);
 
-            const bad: CommitRequestDto = {
+            const withSoldAt: CommitRequestDto = {
                 ...validDto,
-                rows: [{ ...validDto.rows[0]!, allocations: [] }],
+                rows: [{ ...validDto.rows[0]!, soldAt: '2025-09-10' }],
             };
 
-            await expect(service.commit(userId, bad)).rejects.toMatchObject({
-                code: ErrorCode.IMPORT_ROWS_INVALID,
+            await service.commit(userId, withSoldAt);
+
+            expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    sales: [
+                        expect.objectContaining({
+                            soldAt: new Date('2025-09-10T12:00:00.000Z'),
+                        }),
+                    ],
+                }),
+            );
+        });
+
+        describe('when the row is not SOLD', () => {
+            it('nulls soldAt, even if provided', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                const pending: CommitRequestDto = {
+                    ...validDto,
+                    rows: [
+                        { ...validDto.rows[0]!, status: 'PENDING', soldAt: '2025-09-10' },
+                    ],
+                };
+
+                await service.commit(userId, pending);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [expect.objectContaining({ soldAt: null })],
+                    }),
+                );
+            });
+        });
+
+        describe('when a row has an error', () => {
+            it('throws IMPORT_ROWS_INVALID', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+
+                const bad: CommitRequestDto = {
+                    ...validDto,
+                    rows: [{ ...validDto.rows[0]!, allocations: [] }],
+                };
+
+                await expect(service.commit(userId, bad)).rejects.toMatchObject({
+                    code: ErrorCode.IMPORT_ROWS_INVALID,
+                });
             });
         });
 

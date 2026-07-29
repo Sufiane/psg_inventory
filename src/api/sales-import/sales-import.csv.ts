@@ -1,13 +1,17 @@
 import Papa from 'papaparse';
+import type { Invest, ListedPrice } from '@psg/shared/money';
+import type { TicketCount } from '@psg/shared/counts';
+import type { IsoDateString } from '@psg/shared/time';
 
 export type RawImportRow = {
     rowIndex: number;
     date: string;
     opponent: string;
-    listedPrice: number;
-    nbTickets: number;
+    listedPrice: ListedPrice;
+    nbTickets: TicketCount;
     status: 'PENDING' | 'SOLD' | 'CANCELLED';
-    invest: number;
+    invest: Invest;
+    soldAt: IsoDateString | null;
 };
 
 export type CsvParseResult =
@@ -23,8 +27,27 @@ const REQUIRED_COLUMNS = [
     'nbTickets',
     'status',
 ] as const;
-const OPTIONAL_COLUMNS = ['invest'] as const;
+const OPTIONAL_COLUMNS = ['invest', 'soldAt'] as const;
 const ALL_KNOWN_COLUMNS = new Set<string>([...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS]);
+
+// `cast` does real conversion, not just a type-level assertion — e.g. `Number(trimmed)`
+// for a numeric brand. A bare `trimmed as T` would leave the runtime value a string,
+// which is wrong for anything but string-based brands, so every cell (required or
+// optional) goes through one of these two so trimming + conversion stays in one place.
+function parseCell<T>(raw: string | undefined, cast: (trimmed: string) => T): T {
+    return cast((raw ?? '').trim());
+}
+
+// Same as parseCell, but a blank cell means "not provided" (null) rather than an
+// empty-string sentinel or a call to `cast` with an empty string.
+function parseOptionalCell<T>(
+    raw: string | undefined,
+    cast: (trimmed: string) => T,
+): T | null {
+    const trimmed = (raw ?? '').trim();
+
+    return trimmed.length > 0 ? cast(trimmed) : null;
+}
 
 export function parseImportCsv(buffer: Buffer): CsvParseResult {
     const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
@@ -70,19 +93,23 @@ export function parseImportCsv(buffer: Buffer): CsvParseResult {
             continue;
         }
 
-        const investRaw = raw.invest;
-
         rows.push({
             rowIndex: index,
-            date: (raw.date ?? '').trim(),
-            opponent: (raw.opponent ?? '').trim(),
-            listedPrice: Number((raw.listedPrice ?? '').trim()),
-            nbTickets: Number((raw.nbTickets ?? '').trim()),
-            status: (raw.status ?? '').trim().toUpperCase() as RawImportRow['status'],
+            date: parseCell(raw.date, (value) => value),
+            opponent: parseCell(raw.opponent, (value) => value),
+            listedPrice: parseCell(
+                raw.listedPrice,
+                (value) => Number(value) as ListedPrice,
+            ),
+            nbTickets: parseCell(raw.nbTickets, (value) => Number(value) as TicketCount),
+            status: parseCell(
+                raw.status,
+                (value) => value.toUpperCase() as RawImportRow['status'],
+            ),
             invest:
-                investRaw != null && investRaw.trim().length > 0
-                    ? Number(investRaw.trim())
-                    : 0,
+                parseOptionalCell(raw.invest, (value) => Number(value) as Invest) ??
+                (0 as Invest),
+            soldAt: parseOptionalCell(raw.soldAt, (value) => value as IsoDateString),
         });
     }
 

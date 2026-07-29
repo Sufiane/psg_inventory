@@ -1,6 +1,10 @@
+import type { Invest, ListedPrice } from '@psg/shared/money';
+import type { TicketCount } from '@psg/shared/counts';
+import type { IsoDateString } from '@psg/shared/time';
 import type { Match } from '../../db/matches/types/match.type';
 import type { DraftRowDto, DraftRowStatus } from './dto/draft-row.dto';
 import type { RawImportRow } from './sales-import.csv';
+import { DATE_ONLY_REGEX } from './utils/date-only.util';
 
 export type ResolveInput = {
     rawRows: RawImportRow[];
@@ -59,11 +63,30 @@ function isInvalidRow(raw: RawImportRow): boolean {
         return true;
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) {
+    if (!DATE_ONLY_REGEX.test(raw.date)) {
+        return true;
+    }
+
+    if (raw.soldAt != null && !DATE_ONLY_REGEX.test(raw.soldAt)) {
         return true;
     }
 
     return false;
+}
+
+// A sale can't be marked SOLD after the match has kicked off — same rule the
+// api layer enforces for the normal sell flow (sales.service.ts). soldAt is a
+// date-only field here, so the check is day-level: sold the same day as the
+// match is allowed (kickoff time within the day is unknown), later days aren't.
+function resolveSoldAtStatus(
+    raw: { soldAt: IsoDateString | null },
+    match: Match | null,
+): DraftRowStatus | null {
+    if (raw.soldAt == null || match == null) {
+        return null;
+    }
+
+    return raw.soldAt > isoDate(match.date) ? 'error:sold-after-kickoff' : null;
 }
 
 function resolveMatch(
@@ -151,10 +174,11 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
             rowIndex: row.rowIndex,
             date: row.date,
             opponent: row.opponent,
-            listedPrice: row.listedPrice,
-            nbTickets: row.nbTickets,
-            invest: row.invest,
+            listedPrice: row.listedPrice as ListedPrice,
+            nbTickets: row.nbTickets as TicketCount,
+            invest: row.invest as Invest,
             status: row.status,
+            soldAt: (row.soldAt ?? null) as IsoDateString | null,
         };
         let rowStatus: DraftRowStatus = 'ok';
         let matchId: string | undefined;
@@ -178,6 +202,7 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
                 const allValid = row.allocations.every((allocation) =>
                     selected.has(allocation.seasonPassId),
                 );
+                const soldAtStatus = resolveSoldAtStatus(raw, match);
 
                 if (
                     row.allocations.length === 0 ||
@@ -185,6 +210,8 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
                     !allValid
                 ) {
                     rowStatus = 'error:unallocated';
+                } else if (soldAtStatus != null) {
+                    rowStatus = soldAtStatus;
                 } else if (matchStatus != null) {
                     rowStatus = matchStatus;
                 }
@@ -224,6 +251,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
                 nbTickets: raw.nbTickets,
                 invest: raw.invest,
                 status: raw.status,
+                ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
                 allocations: [],
                 rowStatus: 'error:invalid-cell',
             });
@@ -233,6 +261,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
 
         const { match, status: matchStatus } = resolveMatch(raw, byDate);
         const allocationResult = buildAllocations(raw.nbTickets, input.selectedPassIds);
+        const soldAtStatus = resolveSoldAtStatus(raw, match);
 
         let finalStatus: DraftRowStatus = 'ok';
 
@@ -240,6 +269,8 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
             finalStatus = matchStatus;
         } else if (allocationResult.status?.startsWith('error:')) {
             finalStatus = allocationResult.status;
+        } else if (soldAtStatus != null) {
+            finalStatus = soldAtStatus;
         } else if (matchStatus != null) {
             finalStatus = matchStatus;
         } else if (allocationResult.status != null) {
@@ -264,6 +295,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
             nbTickets: raw.nbTickets,
             invest: raw.invest,
             status: raw.status,
+            ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
             matchId: match?.id,
             allocations: allocationResult.allocations,
             rowStatus: finalStatus,

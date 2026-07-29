@@ -1,6 +1,9 @@
 import type { Match } from '../../db/matches/types/match.type';
 import type { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice } from '@psg/shared/money';
+import type { TicketCount } from '@psg/shared/counts';
+import type { IsoDateString } from '@psg/shared/time';
 import type { RawImportRow } from './sales-import.csv';
 import { resolveDraftRows } from './sales-import.resolver';
 
@@ -39,10 +42,11 @@ function makeRow(overrides: Partial<RawImportRow>): RawImportRow {
         rowIndex: 0,
         date: '2025-09-14',
         opponent: 'Marseille',
-        listedPrice: 120,
-        nbTickets: 1,
+        listedPrice: 120 as ListedPrice,
+        nbTickets: 1 as TicketCount,
         status: 'SOLD',
-        invest: 0,
+        invest: 0 as Invest,
+        soldAt: null,
         ...overrides,
     };
 }
@@ -97,7 +101,7 @@ describe('resolveDraftRows', () => {
     });
 
     it('defaults nb=1 to first pass and marks ok', () => {
-        const rows = [makeRow({ nbTickets: 1 })];
+        const rows = [makeRow({ nbTickets: 1 as TicketCount })];
         const result = resolveDraftRows({
             rawRows: rows,
             homeMatches: [marseille],
@@ -111,7 +115,7 @@ describe('resolveDraftRows', () => {
     });
 
     it('warns on nb>1 with single pass and assigns everything to it', () => {
-        const rows = [makeRow({ nbTickets: 2 })];
+        const rows = [makeRow({ nbTickets: 2 as TicketCount })];
         const result = resolveDraftRows({
             rawRows: rows,
             homeMatches: [marseille],
@@ -125,7 +129,7 @@ describe('resolveDraftRows', () => {
     });
 
     it('errors on nb>1 with multi-pass and leaves allocations empty', () => {
-        const rows = [makeRow({ nbTickets: 3 })];
+        const rows = [makeRow({ nbTickets: 3 as TicketCount })];
         const result = resolveDraftRows({
             rawRows: rows,
             homeMatches: [marseille],
@@ -137,7 +141,7 @@ describe('resolveDraftRows', () => {
     });
 
     it('flags invalid cells (nb=0, negative price)', () => {
-        const rows = [makeRow({ nbTickets: 0 })];
+        const rows = [makeRow({ nbTickets: 0 as TicketCount })];
         const result = resolveDraftRows({
             rawRows: rows,
             homeMatches: [marseille],
@@ -145,6 +149,29 @@ describe('resolveDraftRows', () => {
         });
 
         expect(result.rows[0]!.rowStatus).toBe('error:invalid-cell');
+    });
+
+    it('accepts an optional soldAt on or before the match date', () => {
+        const rows = [makeRow({ soldAt: '2025-09-10' as IsoDateString })];
+        const result = resolveDraftRows({
+            rawRows: rows,
+            homeMatches: [marseille],
+            selectedPassIds: [passA.id],
+        });
+
+        expect(result.rows[0]!.rowStatus).toBe('ok');
+        expect(result.rows[0]!.soldAt).toBe('2025-09-10');
+    });
+
+    it('flags a soldAt after the match date as error:sold-after-kickoff', () => {
+        const rows = [makeRow({ soldAt: '2025-09-15' as IsoDateString })];
+        const result = resolveDraftRows({
+            rawRows: rows,
+            homeMatches: [marseille],
+            selectedPassIds: [passA.id],
+        });
+
+        expect(result.rows[0]!.rowStatus).toBe('error:sold-after-kickoff');
     });
 
     it('lists missing matches in coverage', () => {
@@ -162,7 +189,7 @@ describe('resolveDraftRows', () => {
         const rows = [
             makeRow({ rowIndex: 0 }),
             makeRow({ rowIndex: 1, date: '2025-12-25' }),
-            makeRow({ rowIndex: 2, nbTickets: 2 }),
+            makeRow({ rowIndex: 2, nbTickets: 2 as TicketCount }),
         ];
         const result = resolveDraftRows({
             rawRows: rows,
