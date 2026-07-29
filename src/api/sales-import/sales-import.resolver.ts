@@ -296,7 +296,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
             invest: raw.invest,
             status: raw.status,
             ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
-            matchId: match?.id,
+            ...(match != null ? { matchId: match.id } : {}),
             allocations: allocationResult.allocations,
             rowStatus: finalStatus,
         });

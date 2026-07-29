@@ -5,21 +5,21 @@ import type { CategoryLabel, PassLabel, RowLabel, SeatLabel } from '@psg/shared/
 export class UpdateSeasonPassDto {
     @IsInt()
     @Min(0)
-    price: SeasonPassPrice;
+    price!: SeasonPassPrice;
 
     @IsString()
     @MaxLength(64)
-    label: PassLabel;
+    label!: PassLabel;
 
     @IsString()
     @MaxLength(64)
-    category: CategoryLabel;
+    category!: CategoryLabel;
 
     @IsString()
     @MaxLength(32)
-    row: RowLabel;
+    row!: RowLabel;
 
     @IsString()
     @MaxLength(32)
-    seat: SeatLabel;
+    seat!: SeatLabel;
 }

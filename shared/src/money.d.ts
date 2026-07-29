@@ -1,4 +1,4 @@
-import type { Brand } from '../brand';
+import type { Brand } from './brand';
 
 export type Invest = Brand<number, 'Invest'>;
 export type Profit = Brand<number, 'Profit'>;

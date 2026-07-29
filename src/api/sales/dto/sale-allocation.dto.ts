@@ -4,9 +4,9 @@ import type { SeasonPassId } from '@psg/shared/ids';
 
 export class SaleAllocationDto {
     @IsUUID()
-    seasonPassId: SeasonPassId;
+    seasonPassId!: SeasonPassId;
 
     @IsInt()
     @Min(1)
-    nbTickets: TicketCount;
+    nbTickets!: TicketCount;
 }

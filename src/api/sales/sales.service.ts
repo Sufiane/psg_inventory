@@ -115,10 +115,12 @@ export class SalesService implements ISalesService {
         await this.salesDbService.updateSale({
             saleId: payload.saleId,
             userId,
-            invest: payload.invest,
-            listedPrice: payload.listedPrice,
             sold: payload.sold,
             profit: payload.listedPrice ? this.getProfit(payload.listedPrice) : undefined,
+            ...(payload.invest !== undefined ? { invest: payload.invest } : {}),
+            ...(payload.listedPrice !== undefined
+                ? { listedPrice: payload.listedPrice }
+                : {}),
             ...(payload.allocations ? { allocations: payload.allocations } : {}),
         });
 

@@ -6,25 +6,25 @@ import type { SeasonYear } from '@psg/shared/time';
 export class CreateSeasonPassDto {
     @IsInt()
     @Min(1900)
-    seasonStartYear: SeasonYear;
+    seasonStartYear!: SeasonYear;
 
     @IsInt()
     @Min(0)
-    price: SeasonPassPrice;
+    price!: SeasonPassPrice;
 
     @IsString()
     @MaxLength(64)
-    label: PassLabel;
+    label!: PassLabel;
 
     @IsString()
     @MaxLength(64)
-    category: CategoryLabel;
+    category!: CategoryLabel;
 
     @IsString()
     @MaxLength(32)
-    row: RowLabel;
+    row!: RowLabel;
 
     @IsString()
     @MaxLength(32)
-    seat: SeatLabel;
+    seat!: SeatLabel;
 }

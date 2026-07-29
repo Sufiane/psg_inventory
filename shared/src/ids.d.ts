@@ -1,4 +1,4 @@
-import type { Brand } from '../brand';
+import type { Brand } from './brand';
 
 export type UserId = Brand<string, 'UserId'>;
 export type SaleId = Brand<string, 'SaleId'>;

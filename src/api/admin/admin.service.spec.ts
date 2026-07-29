@@ -102,7 +102,7 @@ describe('AdminService', () => {
 
     describe('flushUserCache', () => {
         const email = 'user@example.com' as Email;
-        const user = { id: 'user-1', email } as Users;
+        const user = { id: 'user-1', email } as unknown as Users;
 
         describe('when the user does not exist', () => {
             it('should throw a domain exception', async () => {

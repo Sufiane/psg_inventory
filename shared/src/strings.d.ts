@@ -1,4 +1,4 @@
-import type { Brand } from '../brand';
+import type { Brand } from './brand';
 
 export type Email = Brand<string, 'Email'>;
 export type HashedPassword = Brand<string, 'HashedPassword'>;

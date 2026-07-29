@@ -324,15 +324,17 @@ function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
     const sorted = [...days].sort((firstDay, secondDay) => firstDay - secondDay);
     const sum = days.reduce((acc, day) => acc + day, 0);
     const mid = Math.floor(sorted.length / 2);
+    // rows.length > 0 (checked above) guarantees sorted/days are non-empty,
+    // so every index below is in bounds.
     const median =
-        sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+        sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 
     return {
         soldCount: rows.length as SoldCount,
         avgLeadDays: (Math.round((sum / rows.length) * 10) / 10) as LeadDays,
         medianLeadDays: (Math.round(median * 10) / 10) as LeadDays,
-        minLeadDays: sorted[0],
-        maxLeadDays: sorted[sorted.length - 1],
+        minLeadDays: sorted[0]!,
+        maxLeadDays: sorted[sorted.length - 1]!,
     };
 }
 
