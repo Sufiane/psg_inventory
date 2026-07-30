@@ -11,7 +11,7 @@ export const load: PageServerLoad = async (event) => {
     ]);
     // Most recent fixtures first; users log sales close to the match date.
     const matches = [...allMatches].sort(
-        (left, right) => new Date(right.date).getTime() - new Date(left.date).getTime(),
+        (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
     );
     const presetMatchId = event.url.searchParams.get('matchId');
 
