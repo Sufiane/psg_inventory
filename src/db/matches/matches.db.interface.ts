@@ -11,6 +11,7 @@ export abstract class IMatchesDbService {
     ): Promise<Match[]>;
     abstract getOneMatch(id: MatchId, withResult?: boolean): Promise<Match | null>;
     abstract getHomeMatchesForSeason(seasonStartYear: SeasonYear): Promise<Match[]>;
+    abstract getEarliestUpcomingMatchDate(): Promise<Date | null>;
 
     abstract loadMatches(matches: FormattedMatch[]): Promise<void>;
     abstract createMatch(payload: {

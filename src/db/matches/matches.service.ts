@@ -62,6 +62,16 @@ export class MatchesService implements IMatchesDbService {
         }) as Promise<Match[]>;
     }
 
+    async getEarliestUpcomingMatchDate(): Promise<Date | null> {
+        const match = await this.prisma.matches.findFirst({
+            select: { date: true },
+            where: { date: { gte: new Date() } },
+            orderBy: { date: 'asc' },
+        });
+
+        return match?.date ?? null;
+    }
+
     async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {
         return this.redisService.get(
             CACHE_KEYS.match(id),

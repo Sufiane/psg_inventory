@@ -46,4 +46,54 @@ describe('MatchesService', () => {
             });
         });
     });
+
+    describe('getCurrentSeason', () => {
+        beforeEach(() => {
+            jest.useFakeTimers().setSystemTime(new Date(2026, 6, 29));
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        describe('when there are upcoming matches', () => {
+            it('derives the season bucket from the earliest upcoming match instead of today', async () => {
+                const dbResult = [] as Match[];
+
+                matchsDbService.getEarliestUpcomingMatchDate.mockResolvedValue(
+                    new Date(2026, 7, 15),
+                );
+                matchsDbService.getMatches.mockResolvedValue(dbResult);
+
+                await service.getCurrentSeason();
+
+                expect(matchsDbService.getMatches).toHaveBeenCalledWith(
+                    {
+                        from: new Date(2026, 6, 29),
+                        to: new Date(2027, 6, 31),
+                    },
+                    false,
+                );
+            });
+        });
+
+        describe('when there are no upcoming matches', () => {
+            it('falls back to today for bucketing', async () => {
+                const dbResult = [] as Match[];
+
+                matchsDbService.getEarliestUpcomingMatchDate.mockResolvedValue(null);
+                matchsDbService.getMatches.mockResolvedValue(dbResult);
+
+                await service.getCurrentSeason();
+
+                expect(matchsDbService.getMatches).toHaveBeenCalledWith(
+                    {
+                        from: new Date(2026, 6, 29),
+                        to: new Date(2026, 6, 31),
+                    },
+                    false,
+                );
+            });
+        });
+    });
 });

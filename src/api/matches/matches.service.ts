@@ -4,7 +4,7 @@ import type { MatchId } from '@psg/shared/ids';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
+import { getSeasonBucket } from '../../shared/utils/season.utils';
 import { add } from 'date-fns';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
@@ -32,10 +32,13 @@ export class MatchesService implements IMatchesService {
     }
 
     async getCurrentSeason(withResult: boolean = false): Promise<FormattedMatch[]> {
-        const currentSeasonDate = getCurrentSeasonDate();
+        const now = new Date();
+        const earliestUpcoming =
+            await this.matchsDbService.getEarliestUpcomingMatchDate();
+        const season = getSeasonBucket(earliestUpcoming ?? now);
 
         const dbResponse = await this.matchsDbService.getMatches(
-            { from: currentSeasonDate.start, to: currentSeasonDate.end },
+            { from: now, to: season.end },
             withResult,
         );
 
