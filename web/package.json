@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "typecheck": "svelte-kit sync && tsc --noEmit"
+    "typecheck": "svelte-kit sync && tsc --noEmit",
+    "icons": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-cloudflare": "7.2.8",
@@ -16,6 +17,7 @@
     "@sveltejs/vite-plugin-svelte": "7.1.2",
     "@tailwindcss/vite": "4.3.0",
     "@types/node": "25.9.1",
+    "sharp": "0.35.3",
     "svelte": "5.56.0",
     "svelte-check": "4.5.0",
     "tailwindcss": "4.3.0",

@@ -2,6 +2,7 @@
     import '../app.css';
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
+    import { browser, dev } from '$app/environment';
     import { page } from '$app/state';
     import ThemeToggle from '$lib/ui/ThemeToggle.svelte';
     import ToastHost from '$lib/ui/ToastHost.svelte';
@@ -9,6 +10,12 @@
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
     let user = $derived(data.user);
     let path = $derived(page.url.pathname);
+
+    $effect(() => {
+        if (browser && !dev && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    });
 
     type NavItem = { href: string; label: string; match: (p: string) => boolean };
 

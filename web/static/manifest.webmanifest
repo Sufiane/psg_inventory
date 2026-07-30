@@ -1,0 +1,15 @@
+{
+  "name": "PSG Inventory",
+  "short_name": "PSG Inventory",
+  "description": "Ticket and match-day inventory management for PSG.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#00284a",
+  "theme_color": "#004170",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
