@@ -41,6 +41,7 @@ export class MatchesService implements IMatchesDbService {
                 this.prisma.matches.findMany({
                     ...matchQuery(withResult),
                     where: where,
+                    orderBy: { date: 'asc' },
                 }) as Promise<Match[]>,
         );
 

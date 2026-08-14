@@ -5,14 +5,11 @@ import { parseAllocationsFromForm } from '$lib/sale-allocations';
 import type { FormattedMatch, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
-    const [allMatches, passes] = await Promise.all([
+    // /matches/current-season already returns matches earliest-first.
+    const [matches, passes] = await Promise.all([
         api<FormattedMatch[]>(event, '/matches/current-season'),
         api<SeasonPass[]>(event, '/season-passes'),
     ]);
-    // Most recent fixtures first; users log sales close to the match date.
-    const matches = [...allMatches].sort(
-        (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
-    );
     const presetMatchId = event.url.searchParams.get('matchId');
 
     return { matches, presetMatchId, passes };

@@ -28,16 +28,8 @@ export const load: PageServerLoad = async (event) => {
     const passes = await api<SeasonPass[]>(event, '/season-passes');
 
     if (isNew && !editId) {
-        const allMatches = await api<FormattedMatch[]>(event, '/matches/current-season');
-
-        // Most recent first: latest fixture date at the top. User typically
-        // logs a sale right after listing tickets, which is rarely for a match
-        // months away; sorting desc surfaces today's / upcoming fixtures first
-        // and pushes long-tail past fixtures to the bottom.
-        matches = [...allMatches].sort(
-            (left, right) =>
-                new Date(right.date).getTime() - new Date(left.date).getTime(),
-        );
+        // /matches/current-season already returns matches earliest-first.
+        matches = await api<FormattedMatch[]>(event, '/matches/current-season');
     }
 
     return { sales, year, editSale, matches, isNew, passes };
