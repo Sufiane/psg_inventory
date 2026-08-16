@@ -26,12 +26,43 @@
 
     type FlushResult = { type: string; data?: unknown };
 
+    let flushEmail = $state('');
+
     function trackFlushUserCache() {
-        return ({ formElement }: { formElement: HTMLFormElement }) => {
+        return ({
+            formElement,
+            cancel,
+        }: {
+            formElement: HTMLFormElement;
+            cancel: () => void;
+        }) => {
+            // Gated here, not on the button's onclick: Enter inside the
+            // email field submits the form without ever dispatching a click
+            // on the button, so a click-only guard would silently skip the
+            // confirmation on the most natural path through this form.
+            const message = `Flush cache for ${flushEmail}? This clears their cached accounting, sales, and season pass data.`;
+
+            if (flushEmail && !confirm(message)) {
+                cancel();
+                return;
+            }
+
             submitting = 'flushUserCache';
 
-            return async ({ result }: { result: FlushResult }) => {
+            return async ({
+                result,
+                update,
+            }: {
+                result: FlushResult;
+                update: () => Promise<void>;
+            }) => {
                 submitting = null;
+                // Also populate `form` so the inline banner at the top of the
+                // page reports the outcome, not just the toast. PRODUCT.md:
+                // "Form errors announced inline beside the offending field,
+                // not only in a toast." The toast stays for the per-key
+                // breakdown the banner has no room for.
+                await update();
 
                 if (result.type === 'success' && result.data) {
                     const { email, failedKeys, total } = result.data as {
@@ -55,6 +86,7 @@
                     }
 
                     formElement.reset();
+                    flushEmail = '';
                 } else {
                     const message =
                         result.type === 'failure'
@@ -274,6 +306,7 @@
                 <input
                     type="email"
                     name="email"
+                    bind:value={flushEmail}
                     required
                     placeholder="user@example.com"
                     class="w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"

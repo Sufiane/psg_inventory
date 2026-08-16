@@ -150,6 +150,25 @@ export const actions: Actions = {
             .filter((result) => result.status === 'failed')
             .map((result) => result.key);
 
-        return { email, failedKeys, total: results.length };
+        // `success`/`info`/`message` only matter when JS never hydrates and
+        // use:enhance never runs, so the client-side toast handler ignores
+        // them. Any failure is surfaced as the negative banner (`message`),
+        // not glossed as a partial success.
+        if (failedKeys.length > 0) {
+            const message =
+                failedKeys.length === results.length
+                    ? `Cache flush failed for ${email} (${failedKeys.join(', ')}).`
+                    : `Cache flushed for ${email}, but ${failedKeys.join(', ')} failed.`;
+
+            return { email, failedKeys, total: results.length, message };
+        }
+
+        return {
+            success: true,
+            email,
+            failedKeys,
+            total: results.length,
+            info: `Cache flushed for ${email}.`,
+        };
     },
 };
