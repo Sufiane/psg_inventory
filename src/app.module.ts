@@ -16,6 +16,7 @@ import { AdminModule } from './api/admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { SeasonPassesModule } from './api/season-passes/season-passes.module';
 import { HealthModule } from './api/health/health.module';
+import { ObserveModule } from './observe';
 
 @Module({
     imports: [
@@ -43,6 +44,17 @@ import { HealthModule } from './api/health/health.module';
                       }),
             },
         }),
+        // Telemetry stays off without credentials — no observe.nestjs.com
+        // account is required to run this app locally or in CI.
+        ...(process.env.OBSERVE_APP_KEY && process.env.OBSERVE_APP_SECRET
+            ? [
+                  ObserveModule.forRoot({
+                      appKey: process.env.OBSERVE_APP_KEY,
+                      appSecret: process.env.OBSERVE_APP_SECRET,
+                      serviceId: 'psg-inventory-backend',
+                  }),
+              ]
+            : []),
         UsersModule,
         MatchesModule,
         SalesModule,
