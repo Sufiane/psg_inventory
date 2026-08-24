@@ -36,6 +36,7 @@
     "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.2.1",
     "@nestjs/schedule": "6.1.3",
+    "@nestjs/observe": "0.1.3",
     "@nestjs/swagger": "11.4.7",
     "@prisma/client": "6.0.1",
     "@types/redis": "4.0.11",

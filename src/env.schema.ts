@@ -23,6 +23,16 @@ class EnvironmentVariables {
     @IsString()
     FRONTEND_ORIGIN?: string;
 
+    // @nestjs/observe telemetry. Both unset -> instrumentation stays off
+    // (local dev/CI don't need an observe.nestjs.com account to boot/test).
+    @IsOptional()
+    @IsString()
+    OBSERVE_APP_KEY?: string;
+
+    @IsOptional()
+    @IsString()
+    OBSERVE_APP_SECRET?: string;
+
     @IsOptional()
     @IsString()
     PORT?: string;
