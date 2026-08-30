@@ -67,8 +67,16 @@ export class LlmService extends ILlmService {
         const apiKey = configService.get('GEMINI_API_KEY', { infer: true });
 
         // Key passed explicitly rather than relying on SDK env auto-discovery,
-        // so GEMINI_API_KEY is our own convention.
-        this.client = apiKey == null ? undefined : new GoogleGenAI({ apiKey });
+        // so GEMINI_API_KEY is our own convention. GEMINI_API_KEY is
+        // @IsOptional() @IsString() in env.schema.ts, so GEMINI_API_KEY= (set
+        // but empty — e.g. an unresolved secret-manager reference) validates
+        // fine as '', which is not null. Guard on length too, or a real
+        // client gets constructed with an empty key and the failure surfaces
+        // later as an opaque upstream 401/403 instead of this clear log line.
+        this.client =
+            apiKey == null || apiKey.length === 0
+                ? undefined
+                : new GoogleGenAI({ apiKey });
     }
 
     async complete(request: LlmCompletionRequest): Promise<LlmCompletionResult> {

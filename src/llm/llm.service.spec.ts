@@ -57,6 +57,31 @@ describe('LlmService', () => {
         });
     });
 
+    // GEMINI_API_KEY is @IsOptional() @IsString() in env.schema.ts, so
+    // GEMINI_API_KEY= (present but empty — an unresolved secret-manager
+    // reference is a common way to end up here) validates fine as ''. That
+    // is not null, so it must be treated the same as "not configured"
+    // rather than being handed to the SDK as a real key.
+    describe('when GEMINI_API_KEY is set to an empty string', () => {
+        let service: LlmService;
+
+        beforeEach(() => {
+            service = new LlmService(configWithKey(''));
+        });
+
+        it('does not construct a Gemini client', () => {
+            expect(GoogleGenAI as unknown as jest.Mock).not.toHaveBeenCalled();
+        });
+
+        it('throws ASK_LLM_UNAVAILABLE without calling the model', async () => {
+            await expect(
+                service.complete({ systemPrompt: 'system', userMessage: 'question' }),
+            ).rejects.toThrow(new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE));
+
+            expect(generateContentMock).not.toHaveBeenCalled();
+        });
+    });
+
     describe('when GEMINI_API_KEY is configured', () => {
         let service: LlmService;
 
