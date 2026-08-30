@@ -1,11 +1,14 @@
 import {
+    BadGatewayException,
     BadRequestException,
     ConflictException,
     ForbiddenException,
     HttpException,
+    HttpStatus,
     InternalServerErrorException,
     Logger,
     NotFoundException,
+    UnprocessableEntityException,
 } from '@nestjs/common';
 
 import { DomainException } from './domain.exception';
@@ -45,6 +48,12 @@ const map: Record<ErrorCode, () => HttpException> = {
     [ErrorCode.IMPORT_PASSES_MIXED_SEASONS]: () =>
         new BadRequestException(ErrorCode.IMPORT_PASSES_MIXED_SEASONS),
     [ErrorCode.USER_NOT_FOUND]: () => new NotFoundException(ErrorCode.USER_NOT_FOUND),
+    [ErrorCode.ASK_LLM_UNAVAILABLE]: () =>
+        new BadGatewayException(ErrorCode.ASK_LLM_UNAVAILABLE),
+    [ErrorCode.ASK_RATE_LIMITED]: () =>
+        new HttpException(ErrorCode.ASK_RATE_LIMITED, HttpStatus.TOO_MANY_REQUESTS),
+    [ErrorCode.ASK_UNANSWERABLE]: () =>
+        new UnprocessableEntityException(ErrorCode.ASK_UNANSWERABLE),
 };
 
 export function toHttpException(e: unknown): HttpException {

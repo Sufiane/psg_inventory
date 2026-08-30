@@ -16,4 +16,7 @@ export enum ErrorCode {
     IMPORT_ROWS_INVALID = 'import_rows_invalid',
     IMPORT_PASSES_MIXED_SEASONS = 'import_passes_mixed_seasons',
     USER_NOT_FOUND = 'user_not_found',
+    ASK_LLM_UNAVAILABLE = 'ask_llm_unavailable',
+    ASK_RATE_LIMITED = 'ask_rate_limited',
+    ASK_UNANSWERABLE = 'ask_unanswerable',
 }
