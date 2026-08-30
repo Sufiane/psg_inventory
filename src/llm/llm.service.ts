@@ -100,11 +100,23 @@ export class LlmService extends ILlmService {
             });
 
             const text = response.text?.trim() ?? '';
+            const finishReason = response.candidates?.[0]?.finishReason;
+
+            // Checked unconditionally, before the empty-text branch below,
+            // not only when text is empty: under ThinkingLevel.LOW, thinking
+            // can consume most of MAX_OUTPUT_TOKENS before candidate text
+            // generation starts, so the cap can cut generation off
+            // mid-sentence and still leave a non-empty fragment. That
+            // fragment must not reach the caller as a complete, trustworthy
+            // answer next to the authoritative figures panel.
+            if (finishReason === FinishReason.MAX_TOKENS) {
+                this.logger.warn('Model output was truncated by the token cap');
+
+                throw new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
+            }
 
             if (text.length === 0) {
-                throw this.buildEmptyResponseException(
-                    response.candidates?.[0]?.finishReason,
-                );
+                throw this.buildUnansweredException(finishReason);
             }
 
             const inputTokens = response.usageMetadata?.promptTokenCount ?? 0;
@@ -134,20 +146,13 @@ export class LlmService extends ILlmService {
         }
     }
 
-    // Empty candidate text is ambiguous on its own: a genuine safety/content
-    // block should read to the user as "bad question" (422), but a length
-    // cutoff (the thinking-budget-exhaustion failure mode this tier is prone
-    // to) is a provider problem that should read as "try again" (502), not
-    // as an accusation about the question. finishReason disambiguates them.
-    private buildEmptyResponseException(
+    // Reached only once the MAX_TOKENS case above has already been ruled
+    // out, so empty text here always means a genuine safety/content block or
+    // a prompt-level block — it should read to the user as "bad question"
+    // (422), never as a provider problem.
+    private buildUnansweredException(
         finishReason: FinishReason | undefined,
     ): DomainException {
-        if (finishReason === FinishReason.MAX_TOKENS) {
-            this.logger.warn('Model output was truncated by the token cap');
-
-            return new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
-        }
-
         this.logger.warn(
             `Model returned no text; finishReason=${finishReason ?? 'none'}; treating as unanswerable`,
         );

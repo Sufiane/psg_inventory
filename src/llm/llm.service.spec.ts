@@ -141,6 +141,27 @@ describe('LlmService', () => {
             });
         });
 
+        // Under ThinkingLevel.LOW, thinking can eat most of
+        // MAX_OUTPUT_TOKENS before candidate text generation even starts, so
+        // the cap can cut off text mid-sentence while still leaving a
+        // non-empty fragment. That fragment must not reach the caller as a
+        // complete, trustworthy answer.
+        describe('when text is non-empty but truncated by the output token cap', () => {
+            beforeEach(() => {
+                generateContentMock.mockResolvedValue({
+                    text: 'You have made EUR 840 this season, and against Marseille',
+                    usageMetadata: { promptTokenCount: 900, candidatesTokenCount: 4000 },
+                    candidates: [{ finishReason: FinishReason.MAX_TOKENS }],
+                });
+            });
+
+            it('throws ASK_LLM_UNAVAILABLE instead of returning the partial answer', async () => {
+                await expect(
+                    service.complete({ systemPrompt: 'system', userMessage: 'question' }),
+                ).rejects.toThrow(new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE));
+            });
+        });
+
         describe('when the response is blocked for safety', () => {
             beforeEach(() => {
                 generateContentMock.mockResolvedValue({
