@@ -31,6 +31,8 @@ import { ObserveModule } from './observe';
                         'req.headers.cookie',
                         'req.body.password',
                         'req.body.refreshToken',
+                        'req.headers["x-goog-api-key"]',
+                        'req.headers["x-api-key"]',
                     ],
                     remove: true,
                 },

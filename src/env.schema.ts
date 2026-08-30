@@ -12,6 +12,9 @@ class EnvironmentVariables {
     FOOTBALL_DATA_API_KEY!: string;
 
     @IsString()
+    GEMINI_API_KEY!: string;
+
+    @IsString()
     REDIS_URL!: string;
 
     // seconds; refresh tokens live this long. Defaults to 7 days when unset.
@@ -32,6 +35,11 @@ class EnvironmentVariables {
     @IsOptional()
     @IsString()
     OBSERVE_APP_SECRET?: string;
+
+    // Max /ask questions per user per hour. Defaults to 20 when unset.
+    @IsOptional()
+    @IsString()
+    ASK_RATE_LIMIT_PER_HOUR?: string;
 
     @IsOptional()
     @IsString()
