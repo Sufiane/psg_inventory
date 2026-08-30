@@ -26,14 +26,19 @@ import { AskModule } from './api/ask/ask.module';
             pinoHttp: {
                 genReqId: (req) =>
                     (req.headers['x-request-id'] as string) ?? randomUUID(),
+                // The Gemini API key never rides an inbound request header —
+                // it's attached by LlmService to its own outbound call to
+                // Google, so a redact entry here for x-goog-api-key/x-api-key
+                // would protect nothing and imply coverage this app doesn't
+                // have. LlmService's own error-path logging never logs the
+                // client config or key, only the error object and a derived
+                // status code.
                 redact: {
                     paths: [
                         'req.headers.authorization',
                         'req.headers.cookie',
                         'req.body.password',
                         'req.body.refreshToken',
-                        'req.headers["x-goog-api-key"]',
-                        'req.headers["x-api-key"]',
                     ],
                     remove: true,
                 },
