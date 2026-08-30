@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { FinishReason, GoogleGenAI } from '@google/genai';
+import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai';
 
 import { DomainException } from '../common/exceptions/domain.exception';
 import { ErrorCode } from '../common/exceptions/error-codes.enum';
@@ -17,6 +17,11 @@ jest.mock('@google/genai', () => {
             MAX_TOKENS: 'MAX_TOKENS',
             SAFETY: 'SAFETY',
             RECITATION: 'RECITATION',
+        },
+        ThinkingLevel: {
+            LOW: 'LOW',
+            MEDIUM: 'MEDIUM',
+            HIGH: 'HIGH',
         },
     };
 });
@@ -81,7 +86,7 @@ describe('LlmService', () => {
                 });
             });
 
-            it('disables thinking so it cannot silently eat the output budget', async () => {
+            it('sets thinking to the lowest level so it cannot silently eat the output budget', async () => {
                 await service.complete({
                     systemPrompt: 'system',
                     userMessage: 'question',
@@ -89,7 +94,9 @@ describe('LlmService', () => {
 
                 const config = generateContentMock.mock.calls[0][0].config;
 
-                expect(config.thinkingConfig).toEqual({ thinkingBudget: 0 });
+                expect(config.thinkingConfig).toEqual({
+                    thinkingLevel: ThinkingLevel.LOW,
+                });
             });
         });
 

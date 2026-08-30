@@ -1,4 +1,4 @@
-import { FinishReason, GoogleGenAI } from '@google/genai';
+import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -12,16 +12,23 @@ import {
 
 const MODEL = 'gemini-3.7-flash';
 
-// The system prompt caps answers at a few sentences, so this bounds a runaway
-// generation without any risk of truncating a legitimate answer.
-const MAX_OUTPUT_TOKENS = 2000;
+// The system prompt caps answers at a few sentences, so this bounds a
+// runaway generation. Raised from 2000 to leave headroom for THINKING_LEVEL
+// below: "low" thinking still consumes some of this budget before candidate
+// text is produced (unlike a hard-disabled thinkingBudget: 0), so the cap
+// needs slack beyond what the answer text alone would need.
+const MAX_OUTPUT_TOKENS = 4000;
 
-// This tier shares MAX_OUTPUT_TOKENS with Gemini's default-on "thinking"
-// budget: a long thinking chain can exhaust the cap before any candidate
-// text is produced. The answers this feature needs are short, grounded
-// lookups over a JSON payload, not multi-step reasoning, so thinking is
-// disabled outright rather than budgeted, removing the failure mode.
-const THINKING_BUDGET_DISABLED = 0;
+// Gemini 3-series models (this app uses gemini-3.7-flash) control thinking
+// via thinkingConfig.thinkingLevel ("low"/"medium"/"high", default
+// "medium"), not the older thinkingBudget field — thinkingBudget isn't part
+// of the documented 3-series config surface. The answers this feature needs
+// are short, grounded lookups over a JSON payload, not multi-step
+// reasoning, so thinking is set to the lowest level rather than left at the
+// default, minimizing (though not eliminating, see MAX_OUTPUT_TOKENS above)
+// the risk of thinking exhausting the output cap before any answer text is
+// produced.
+const THINKING_LEVEL_LOW = ThinkingLevel.LOW;
 
 const TOO_MANY_REQUESTS = 429;
 
@@ -80,7 +87,7 @@ export class LlmService extends ILlmService {
                 config: {
                     systemInstruction: request.systemPrompt,
                     maxOutputTokens: MAX_OUTPUT_TOKENS,
-                    thinkingConfig: { thinkingBudget: THINKING_BUDGET_DISABLED },
+                    thinkingConfig: { thinkingLevel: THINKING_LEVEL_LOW },
                 },
             });
 
