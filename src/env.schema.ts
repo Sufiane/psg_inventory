@@ -11,8 +11,11 @@ class EnvironmentVariables {
     @IsString()
     FOOTBALL_DATA_API_KEY!: string;
 
+    // /ask degrades gracefully without a key: the app boots and every other
+    // route works, only POST /ask itself fails with ASK_LLM_UNAVAILABLE.
+    @IsOptional()
     @IsString()
-    GEMINI_API_KEY!: string;
+    GEMINI_API_KEY?: string;
 
     @IsString()
     REDIS_URL!: string;
