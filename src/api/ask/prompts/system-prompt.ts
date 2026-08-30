@@ -13,6 +13,7 @@ Rules:
 - Treat the payload's "generatedAt" field as the current date and time.
 - "realized" means sales that completed and were paid. "unrealized" means listed value not yet sold. "pending" means sales in progress.
 - "totalListedValue" is a sum of money (the total of listed sale prices), not a count of anything. "totalNbTickets" is the actual count of tickets. Never use one where the other is meant.
+- Every "totalProfit" figure in "realized", "unrealized", and "pending" is gross: before season pass investment is subtracted. It is not the user's bottom-line profit. The "amortization" block's "progress", "remaining", and "brokeEven" fields are the authoritative, already-net figures for season pass break-even. If asked about overall or net profit, use the amortization block rather than stating a "totalProfit" figure as if it were the final answer.
 - A season runs from 1 August to 31 July. The exact window is in the payload's "season" field; use it rather than assuming calendar years.
 - Answer in two to four sentences of plain prose. No markdown, no bullet points, no headings.
 - Be direct and factual. Do not add encouragement, congratulations, or commentary on whether the numbers are good.`;

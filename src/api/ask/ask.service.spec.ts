@@ -114,10 +114,13 @@ describe('AskService', () => {
         it('returns figures taken from the context, not from the model', async () => {
             const result = await service.ask(USER_ID, 'How is the season going?');
 
-            expect(result.figures.currentSeasonProfit).toBe(840);
+            // Net profit: totalProfit(840) - totalInvest(300) -
+            // totalSeasonInvestment(900), the same formula the rest of the
+            // app uses (web/src/routes/+page.server.ts).
+            expect(result.figures.currentSeasonProfit).toBe(-360);
             expect(result.figures.currentSeasonSales).toBe(12);
             expect(result.figures.currentSeasonTickets).toBe(24);
-            expect(result.figures.allTimeProfit).toBe(840);
+            expect(result.figures.allTimeProfit).toBe(-360);
             expect(result.figures.pendingSales).toBe(2);
             expect(result.figures.totalSeasonInvestment).toBe(900);
             expect(result.figures.amortizationRemaining).toBe(60);
@@ -229,6 +232,41 @@ describe('AskService', () => {
 
             it('falls back to the default limit instead of blocking every request', async () => {
                 await expect(service.ask(USER_ID, 'anything')).resolves.toBeDefined();
+            });
+        });
+    });
+
+    describe('the profit figures', () => {
+        describe('when the period has realized sales', () => {
+            it('reports net profit, not gross totalProfit', async () => {
+                const result = await service.ask(USER_ID, 'anything');
+
+                // 840 (totalProfit) - 300 (totalInvest) - 900
+                // (totalSeasonInvestment): matches the net-profit formula
+                // used everywhere else in the app, so a "profit" figure
+                // never contradicts the break-even tile for the same season.
+                expect(result.figures.currentSeasonProfit).toBe(-360);
+                expect(result.figures.allTimeProfit).toBe(-360);
+            });
+        });
+
+        describe('when the period has no realized sales', () => {
+            beforeEach(() => {
+                accounting.getCurrentSeason.mockResolvedValue({
+                    ...period,
+                    realized: null,
+                });
+                accounting.getAllTime.mockResolvedValue({
+                    ...period,
+                    realized: null,
+                });
+            });
+
+            it('reports profit as null rather than a false zero', async () => {
+                const result = await service.ask(USER_ID, 'anything');
+
+                expect(result.figures.currentSeasonProfit).toBeNull();
+                expect(result.figures.allTimeProfit).toBeNull();
             });
         });
     });

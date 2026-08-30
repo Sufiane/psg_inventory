@@ -16,7 +16,7 @@ import { IAskService } from './interfaces/ask.service.interface';
 import { buildAskContext } from './context/build-context';
 import { SYSTEM_PROMPT } from './prompts/system-prompt';
 import { AskAnswer, AskFigures } from './types/ask-answer.type';
-import { AskContext } from './types/context.type';
+import { AskContext, AskPeriod } from './types/context.type';
 
 const DEFAULT_RATE_LIMIT_PER_HOUR = 20;
 const HOUR_IN_SECONDS = 3600;
@@ -146,17 +146,36 @@ export class AskService extends IAskService {
     private toFigures(askContext: AskContext): AskFigures {
         return {
             seasonStartYear: askContext.season.startYear,
-            currentSeasonProfit: askContext.currentSeason.realized?.totalProfit ?? null,
+            currentSeasonProfit: this.toNetProfit(askContext.currentSeason),
             currentSeasonSales:
                 askContext.currentSeason.realized?.totalListedValue ?? null,
             currentSeasonTickets:
                 askContext.currentSeason.realized?.totalNbTickets ?? null,
-            allTimeProfit: askContext.allTime.realized?.totalProfit ?? null,
+            allTimeProfit: this.toNetProfit(askContext.allTime),
             allTimeSales: askContext.allTime.realized?.totalListedValue ?? null,
             pendingSales: askContext.currentSeason.pending?.totalListedValue ?? null,
             totalSeasonInvestment: askContext.currentSeason.totalSeasonInvestment,
             amortizationRemaining: askContext.amortization.remaining,
             brokeEven: askContext.amortization.brokeEven,
         };
+    }
+
+    // "Profit" everywhere else in this app means net profit: realized
+    // profit minus what was spent to realize it and minus the season pass
+    // cost (see web/src/routes/+page.server.ts). askContext.*.realized.
+    // totalProfit is gross, so exposing it as "profit" here would read as
+    // contradicting the amortization/break-even figures for the same
+    // season. Null when there are no realized sales, rather than a
+    // misleading zero.
+    private toNetProfit(period: AskPeriod): number | null {
+        if (period.realized == null) {
+            return null;
+        }
+
+        return (
+            period.realized.totalProfit -
+            period.realized.totalInvest -
+            period.totalSeasonInvestment
+        );
     }
 }
