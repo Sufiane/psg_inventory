@@ -9,5 +9,6 @@ import { IMatchesService } from './interfaces/matches.service.interface';
     imports: [DbModule, FootballDataModule],
     controllers: [MatchesController],
     providers: [{ provide: IMatchesService, useClass: MatchesService }],
+    exports: [IMatchesService],
 })
 export class MatchesModule {}

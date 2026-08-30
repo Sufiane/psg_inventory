@@ -8,5 +8,6 @@ import { IAccountingService } from './interfaces/accounting.service.interface';
     imports: [DbModule],
     controllers: [AccountingController],
     providers: [{ provide: IAccountingService, useClass: AccountingService }],
+    exports: [IAccountingService],
 })
 export class AccountingModule {}
