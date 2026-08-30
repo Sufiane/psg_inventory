@@ -15,6 +15,7 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { IAccountingService } from '../accounting/interfaces/accounting.service.interface';
+import { formatMatch } from '../matches/formatters/format-match.formatter';
 import { IMatchesService } from '../matches/interfaces/matches.service.interface';
 import { IAskService } from './interfaces/ask.service.interface';
 import { buildAskContext } from './context/build-context';
@@ -67,12 +68,19 @@ export class AskService extends IAskService {
         const seasonWindow = getCurrentSeasonDate();
         const seasonStartYear = seasonWindow.start.getUTCFullYear() as SeasonYear;
 
-        const [currentSeason, allTime, amortization, matches] = await Promise.all([
+        const [currentSeason, allTime, amortization, seasonMatches] = await Promise.all([
             this.accountingService.getCurrentSeason(userId),
             this.accountingService.getAllTime(userId),
             this.accountingService.getAmortization(userId, seasonStartYear),
-            this.matchesService.getCurrentSeason(true),
+            // getCurrentSeason(true) resolves to future fixtures only (from
+            // "now" forward), so the played/upcoming split downstream would
+            // always see an empty `played` array. getSeasonMatches is bounded
+            // by the season's start date instead, covering matches that have
+            // already been played this season.
+            this.matchesService.getSeasonMatches(String(seasonStartYear), true),
         ]);
+
+        const matches = seasonMatches.map((match) => formatMatch(match, true));
 
         const askContext = buildAskContext({
             currentSeason,

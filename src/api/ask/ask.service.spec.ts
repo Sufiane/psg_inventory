@@ -70,7 +70,7 @@ describe('AskService', () => {
         accounting.getCurrentSeason.mockResolvedValue(period);
         accounting.getAllTime.mockResolvedValue(period);
         accounting.getAmortization.mockResolvedValue(amortization);
-        matches.getCurrentSeason.mockResolvedValue([]);
+        matches.getSeasonMatches.mockResolvedValue([]);
         redis.incrementWithTtl.mockResolvedValue(1);
         llm.complete.mockResolvedValue({
             text: 'You have made EUR 840 this season.',
@@ -326,6 +326,33 @@ describe('AskService', () => {
 
                 expect(releasedKey).toBe(incrementedKey);
             });
+        });
+    });
+
+    describe('when fetching matches for the context', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+            jest.setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        // getCurrentSeason(true) resolves to future-fixtures-only (from
+        // "now" forward), so `played` in the context is structurally always
+        // empty. getSeasonMatches bounds by the season's start date instead,
+        // covering matches that have already been played.
+        it('fetches matches bounded by the season start, not by now', async () => {
+            await service.ask(USER_ID, 'anything');
+
+            expect(matches.getSeasonMatches).toHaveBeenCalledWith('2025', true);
+        });
+
+        it('does not use getCurrentSeason, which excludes already-played matches', async () => {
+            await service.ask(USER_ID, 'anything');
+
+            expect(matches.getCurrentSeason).not.toHaveBeenCalled();
         });
     });
 
