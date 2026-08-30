@@ -1,4 +1,5 @@
 import type { Amortization } from '../../accounting/types/amortization.type';
+import type { MaxMinData } from '../../accounting/types/accounting.type';
 import type { TimePeriodAccounting } from '../../accounting/types/time-period-accounting.type';
 import type { FormattedMatch } from '../../matches/types/formatted-match.type';
 import type {
@@ -19,18 +20,7 @@ export type BuildAskContextInput = {
     generatedAt: Date;
 };
 
-type RawExtreme = {
-    price: number;
-    profit: number;
-    match: {
-        opponent: string;
-        date: Date;
-        atHome: boolean;
-        competition: string;
-    };
-};
-
-function toExtreme(raw: RawExtreme | null | undefined): AskExtreme | null {
+function toExtreme(raw: MaxMinData | null | undefined): AskExtreme | null {
     if (raw == null) {
         return null;
     }
@@ -60,8 +50,8 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
         totalNbTickets: raw.totalNbTickets,
         averageTicketPrice: raw.averageTicketPrice,
         averageProfit: raw.averageProfit,
-        highest: toExtreme(raw.highest as unknown as RawExtreme),
-        lowest: toExtreme(raw.lowest as unknown as RawExtreme),
+        highest: toExtreme(raw.highest),
+        lowest: toExtreme(raw.lowest),
     };
 }
 

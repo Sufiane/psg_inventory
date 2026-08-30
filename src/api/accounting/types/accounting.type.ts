@@ -18,7 +18,7 @@ export type Accounting = {
     lowest: MaxMinData;
 };
 
-type MaxMinData = {
+export type MaxMinData = {
     price: ListedPrice;
     profit: Profit;
     match: Match;
