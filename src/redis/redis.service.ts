@@ -31,6 +31,20 @@ export class RedisService extends BaseRedis {
         await this.redis.set(key, JSON.stringify(value), { EX: jitterTtl(ttl) });
     }
 
+    // Fixed-window counter. INCR is atomic, so concurrent questions cannot
+    // both read a stale count and slip past the cap. The TTL is set only when
+    // the counter is created (count === 1) — re-expiring on every hit would
+    // turn this into a sliding window that never resets for an active user.
+    async incrementWithTtl(key: CacheKey<number>, ttlSeconds: number): Promise<number> {
+        const count = await this.redis.incr(key);
+
+        if (count === 1) {
+            await this.redis.expire(key, ttlSeconds);
+        }
+
+        return count;
+    }
+
     // Cache-aside with single-flight: only one caller per key runs `loader` at
     // a time. Others wait for the cache to fill. Lock is a Redis SET NX EX on
     // `lock:${key}` with a random token; release compares token before DEL so
