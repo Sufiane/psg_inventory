@@ -195,6 +195,17 @@ describe('buildAskContext', () => {
             ]);
         });
 
+        it('carries the net profit, not the gross totalProfit', () => {
+            const askContext = buildAskContext(makeInput());
+
+            // 840 (totalProfit) - 300 (totalInvest) - 900
+            // (totalSeasonInvestment): the same net-profit formula used
+            // everywhere else in the app (web/src/routes/+page.server.ts),
+            // so the model reasons over the same number the UI tile shows.
+            expect(askContext.currentSeason.netProfit).toBe(-360);
+            expect(askContext.allTime.netProfit).toBe(-360);
+        });
+
         it('carries the lead time', () => {
             const askContext = buildAskContext(makeInput());
 
@@ -237,6 +248,13 @@ describe('buildAskContext', () => {
 
             expect(askContext.currentSeason.totalSeasonInvestment).toBe(0);
             expect(askContext.currentSeason.seasonPasses).toEqual([]);
+        });
+
+        it('reports net profit as null rather than a false zero', () => {
+            const askContext = buildAskContext(input);
+
+            expect(askContext.currentSeason.netProfit).toBeNull();
+            expect(askContext.allTime.netProfit).toBeNull();
         });
 
         it('reports the pass as absent', () => {

@@ -42,6 +42,13 @@ export type AskPeriod = {
     pending: AskAccounting | null;
     seasonPasses: AskSeasonPass[];
     totalSeasonInvestment: number;
+    // Bottom-line profit for this period: realized.totalProfit minus
+    // realized.totalInvest minus totalSeasonInvestment. Null when there are
+    // no realized sales, rather than a misleading zero. This is the
+    // authoritative "profit" figure — realized.totalProfit is gross and
+    // should never be stated as the user's profit on its own (see
+    // SYSTEM_PROMPT).
+    netProfit: number | null;
     leadTime: AskLeadTime | null;
 };
 

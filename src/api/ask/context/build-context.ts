@@ -59,9 +59,28 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
     };
 }
 
+// "Profit" everywhere else in this app means net profit: realized profit
+// minus what was spent to realize it and minus the season pass cost (see
+// web/src/routes/+page.server.ts). realized.totalProfit is gross, so
+// exposing it as "profit" would read as contradicting the amortization/
+// break-even figures for the same season. Null when there are no realized
+// sales, rather than a misleading zero.
+function toNetProfit(
+    realized: AskAccounting | null,
+    totalSeasonInvestment: number,
+): number | null {
+    if (realized == null) {
+        return null;
+    }
+
+    return realized.totalProfit - realized.totalInvest - totalSeasonInvestment;
+}
+
 function toPeriod(period: TimePeriodAccounting): AskPeriod {
+    const realized = toAccounting(period.realized);
+
     return {
-        realized: toAccounting(period.realized),
+        realized,
         unrealized: toAccounting(period.unrealized),
         pending: toAccounting(period.pending),
         seasonPasses: period.seasonInvestments.map((pass) => ({
@@ -71,6 +90,7 @@ function toPeriod(period: TimePeriodAccounting): AskPeriod {
             seasonStartYear: pass.seasonStartYear,
         })),
         totalSeasonInvestment: period.totalSeasonInvestment,
+        netProfit: toNetProfit(realized, period.totalSeasonInvestment),
         leadTime:
             period.leadTime == null
                 ? null
