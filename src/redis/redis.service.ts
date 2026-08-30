@@ -13,6 +13,17 @@ const RETRY_INITIAL_MS = 50;
 const RETRY_MAX_MS = 250;
 const WAIT_BUDGET_MS = LOCK_TTL_SEC * 1000;
 
+// INCR then EXPIRE as two round-trips leaves a window where a crash between
+// them strands the key with no TTL (never expires). A single script makes
+// the increment and the first-hit expiry atomic in one round trip.
+const INCREMENT_WITH_TTL_SCRIPT = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return current
+`;
+
 function jitterTtl(ttl: number): number {
     const jitter = Math.floor(Math.random() * ttl * TTL_JITTER_RATIO);
 
@@ -31,18 +42,26 @@ export class RedisService extends BaseRedis {
         await this.redis.set(key, JSON.stringify(value), { EX: jitterTtl(ttl) });
     }
 
-    // Fixed-window counter. INCR is atomic, so concurrent questions cannot
-    // both read a stale count and slip past the cap. The TTL is set only when
-    // the counter is created (count === 1) — re-expiring on every hit would
-    // turn this into a sliding window that never resets for an active user.
+    // Fixed-window counter, atomic end to end via a single Lua script (see
+    // INCREMENT_WITH_TTL_SCRIPT): concurrent questions cannot both read a
+    // stale count and slip past the cap, and a crash mid-call cannot strand
+    // the key without a TTL. The TTL is set only when the counter is created
+    // (count === 1) — re-expiring on every hit would turn this into a
+    // sliding window that never resets for an active user.
+    //
+    // No try/catch here: a Redis outage should fail loudly, the same as
+    // every other RedisService caller in this app (accounting.service.ts,
+    // sales.service.ts, admin.service.ts) — the error bubbles up and
+    // AllExceptionsFilter/toHttpException already turn any unmapped error
+    // into a logged, structured 500 (ErrorCode.INTERNAL_ERROR) rather than a
+    // raw leak or a silent no-op.
     async incrementWithTtl(key: CacheKey<number>, ttlSeconds: number): Promise<number> {
-        const count = await this.redis.incr(key);
+        const count = await this.redis.eval(INCREMENT_WITH_TTL_SCRIPT, {
+            keys: [key],
+            arguments: [String(ttlSeconds)],
+        });
 
-        if (count === 1) {
-            await this.redis.expire(key, ttlSeconds);
-        }
-
-        return count;
+        return Number(count);
     }
 
     // Cache-aside with single-flight: only one caller per key runs `loader` at
