@@ -44,7 +44,11 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
     }
 
     return {
-        totalSales: raw.totalSales,
+        // raw.totalSales is a pre-existing misnomer upstream (it's actually
+        // SUM(listedPrice), not a count — see
+        // format-aggregate.util.ts). Renamed as it crosses into AskContext
+        // so the model isn't handed a field that reads like a count.
+        totalListedValue: raw.totalSales,
         totalProfit: raw.totalProfit,
         totalInvest: raw.totalInvest,
         totalNbTickets: raw.totalNbTickets,

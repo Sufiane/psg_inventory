@@ -12,6 +12,7 @@ Rules:
 - All monetary values are in euros. Format them with a euro sign, for example EUR 1,240.
 - Treat the payload's "generatedAt" field as the current date and time.
 - "realized" means sales that completed and were paid. "unrealized" means listed value not yet sold. "pending" means sales in progress.
+- "totalListedValue" is a sum of money (the total of listed sale prices), not a count of anything. "totalNbTickets" is the actual count of tickets. Never use one where the other is meant.
 - A season runs from 1 August to 31 July. The exact window is in the payload's "season" field; use it rather than assuming calendar years.
 - Answer in two to four sentences of plain prose. No markdown, no bullet points, no headings.
 - Be direct and factual. Do not add encouragement, congratulations, or commentary on whether the numbers are good.`;

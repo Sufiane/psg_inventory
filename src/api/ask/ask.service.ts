@@ -147,12 +147,13 @@ export class AskService extends IAskService {
         return {
             seasonStartYear: askContext.season.startYear,
             currentSeasonProfit: askContext.currentSeason.realized?.totalProfit ?? null,
-            currentSeasonSales: askContext.currentSeason.realized?.totalSales ?? null,
+            currentSeasonSales:
+                askContext.currentSeason.realized?.totalListedValue ?? null,
             currentSeasonTickets:
                 askContext.currentSeason.realized?.totalNbTickets ?? null,
             allTimeProfit: askContext.allTime.realized?.totalProfit ?? null,
-            allTimeSales: askContext.allTime.realized?.totalSales ?? null,
-            pendingSales: askContext.currentSeason.pending?.totalSales ?? null,
+            allTimeSales: askContext.allTime.realized?.totalListedValue ?? null,
+            pendingSales: askContext.currentSeason.pending?.totalListedValue ?? null,
             totalSeasonInvestment: askContext.currentSeason.totalSeasonInvestment,
             amortizationRemaining: askContext.amortization.remaining,
             brokeEven: askContext.amortization.brokeEven,

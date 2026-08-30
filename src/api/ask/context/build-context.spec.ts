@@ -133,7 +133,7 @@ describe('buildAskContext', () => {
             const askContext = buildAskContext(makeInput());
 
             expect(askContext.currentSeason.realized).toEqual({
-                totalSales: 12,
+                totalListedValue: 12,
                 totalProfit: 840,
                 totalInvest: 300,
                 totalNbTickets: 24,

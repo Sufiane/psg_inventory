@@ -8,7 +8,10 @@ export type AskExtreme = {
 };
 
 export type AskAccounting = {
-    totalSales: number;
+    // Sum of listed sale prices, not a count of anything — see
+    // SYSTEM_PROMPT for the explicit definition sent to the model, which
+    // exists precisely so this isn't confused with totalNbTickets.
+    totalListedValue: number;
     totalProfit: number;
     totalInvest: number;
     totalNbTickets: number;
