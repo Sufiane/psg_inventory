@@ -301,6 +301,32 @@ describe('AskService', () => {
                 );
             });
         });
+
+        describe('when the hour rolls over while the model call is in flight', () => {
+            beforeEach(() => {
+                jest.useFakeTimers();
+                jest.setSystemTime(new Date('2026-01-01T12:59:59.900Z'));
+
+                llm.complete.mockImplementation(async () => {
+                    jest.setSystemTime(new Date('2026-01-01T13:00:00.100Z'));
+
+                    throw new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
+                });
+            });
+
+            afterEach(() => {
+                jest.useRealTimers();
+            });
+
+            it('releases against the same hour bucket it incremented', async () => {
+                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow();
+
+                const incrementedKey = redis.incrementWithTtl.mock.calls[0]![0];
+                const releasedKey = redis.decrement.mock.calls[0]![0];
+
+                expect(releasedKey).toBe(incrementedKey);
+            });
+        });
     });
 
     describe('when the model call fails with a Gemini-side (provider) rate-limited error', () => {

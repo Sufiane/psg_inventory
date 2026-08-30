@@ -50,7 +50,18 @@ export class AskService extends IAskService {
     }
 
     async ask(userId: UserId, question: string): Promise<AskAnswer> {
-        await this.enforceRateLimit(userId);
+        // Computed once and threaded through both the increment and the
+        // (possible) release below, rather than each call recomputing
+        // `new Date()` independently. A request that starts near the top of
+        // an hour and fails seconds (or longer) later, after the hour has
+        // rolled over, must still release the same bucket it incremented —
+        // recomputing at release time would target the next hour's key
+        // instead, either silently skipping the refund or stealing a slot
+        // from a concurrent request that legitimately started in the new
+        // window.
+        const rateLimitKey = this.rateLimitKey(userId);
+
+        await this.enforceRateLimit(rateLimitKey);
 
         const generatedAt = new Date();
         const seasonWindow = getCurrentSeasonDate();
@@ -72,7 +83,7 @@ export class AskService extends IAskService {
             generatedAt,
         });
 
-        const completion = await this.completeOrReleaseSlot(userId, {
+        const completion = await this.completeOrReleaseSlot(rateLimitKey, {
             systemPrompt: SYSTEM_PROMPT,
             userMessage: this.buildUserMessage(askContext, question),
         });
@@ -89,9 +100,11 @@ export class AskService extends IAskService {
         };
     }
 
-    private async enforceRateLimit(userId: UserId): Promise<void> {
-        const key = this.rateLimitKey(userId);
-        const count = await this.redisService.incrementWithTtl(key, HOUR_IN_SECONDS);
+    private async enforceRateLimit(rateLimitKey: CacheKey<number>): Promise<void> {
+        const count = await this.redisService.incrementWithTtl(
+            rateLimitKey,
+            HOUR_IN_SECONDS,
+        );
 
         if (count > this.rateLimitPerHour) {
             this.logger.warn(`ask rate limit exceeded count=${count}`);
@@ -110,24 +123,24 @@ export class AskService extends IAskService {
     // all users, not this user's fault), which should be refunded exactly
     // like a transient 5xx/network error.
     private async completeOrReleaseSlot(
-        userId: UserId,
+        rateLimitKey: CacheKey<number>,
         request: LlmCompletionRequest,
     ): Promise<LlmCompletionResult> {
         try {
             return await this.llmService.complete(request);
         } catch (error) {
-            await this.releaseRateLimitSlot(userId);
+            await this.releaseRateLimitSlot(rateLimitKey);
 
             throw error;
         }
     }
 
-    private async releaseRateLimitSlot(userId: UserId): Promise<void> {
+    private async releaseRateLimitSlot(rateLimitKey: CacheKey<number>): Promise<void> {
         try {
-            await this.redisService.decrement(this.rateLimitKey(userId));
+            await this.redisService.decrement(rateLimitKey);
         } catch (error) {
             this.logger.warn(
-                `failed to release rate limit slot for userId=${userId}`,
+                `failed to release rate limit slot for key=${rateLimitKey}`,
                 error,
             );
         }
