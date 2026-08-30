@@ -38,8 +38,10 @@ export class AskService extends IAskService {
             infer: true,
         });
 
+        const parsed = configured == null ? NaN : parseInt(configured, 10);
+
         this.rateLimitPerHour =
-            configured == null ? DEFAULT_RATE_LIMIT_PER_HOUR : parseInt(configured, 10);
+            Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RATE_LIMIT_PER_HOUR;
     }
 
     async ask(userId: UserId, question: string): Promise<AskAnswer> {

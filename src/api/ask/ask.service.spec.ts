@@ -176,6 +176,63 @@ describe('AskService', () => {
         });
     });
 
+    describe('when ASK_RATE_LIMIT_PER_HOUR is malformed', () => {
+        describe('when it is an empty string', () => {
+            beforeEach(() => {
+                service = new AskService(
+                    accounting,
+                    matches,
+                    llm,
+                    redis,
+                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: '' }),
+                );
+                redis.incrementWithTtl.mockResolvedValue(21);
+            });
+
+            it('falls back to the default limit instead of disabling it', async () => {
+                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
+                    new DomainException(ErrorCode.ASK_RATE_LIMITED),
+                );
+            });
+        });
+
+        describe('when it is non-numeric garbage', () => {
+            beforeEach(() => {
+                service = new AskService(
+                    accounting,
+                    matches,
+                    llm,
+                    redis,
+                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: 'not-a-number' }),
+                );
+                redis.incrementWithTtl.mockResolvedValue(21);
+            });
+
+            it('falls back to the default limit instead of disabling it', async () => {
+                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
+                    new DomainException(ErrorCode.ASK_RATE_LIMITED),
+                );
+            });
+        });
+
+        describe('when it is zero or negative', () => {
+            beforeEach(() => {
+                service = new AskService(
+                    accounting,
+                    matches,
+                    llm,
+                    redis,
+                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: '-5' }),
+                );
+                redis.incrementWithTtl.mockResolvedValue(1);
+            });
+
+            it('falls back to the default limit instead of blocking every request', async () => {
+                await expect(service.ask(USER_ID, 'anything')).resolves.toBeDefined();
+            });
+        });
+    });
+
     describe('when the model call fails', () => {
         beforeEach(() => {
             llm.complete.mockRejectedValue(
