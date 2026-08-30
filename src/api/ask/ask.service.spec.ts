@@ -303,17 +303,22 @@ describe('AskService', () => {
         });
     });
 
-    describe('when the model call fails with a rate-limited error', () => {
+    describe('when the model call fails with a Gemini-side (provider) rate-limited error', () => {
         beforeEach(() => {
             llm.complete.mockRejectedValue(
                 new DomainException(ErrorCode.ASK_RATE_LIMITED),
             );
         });
 
-        it('does not release a rate limit slot', async () => {
+        // Our own hourly limiter throws out of enforceRateLimit(), before
+        // complete() is ever called — it can never land in this catch. The
+        // only source of ASK_RATE_LIMITED here is llm.service.ts mapping a
+        // Gemini-side 429 (their shared quota, not this user's fault), so it
+        // should be refunded like any other complete() failure.
+        it('releases the rate limit slot it consumed', async () => {
             await expect(service.ask(USER_ID, 'anything')).rejects.toThrow();
 
-            expect(redis.decrement).not.toHaveBeenCalled();
+            expect(redis.decrement).toHaveBeenCalledTimes(1);
         });
     });
 });

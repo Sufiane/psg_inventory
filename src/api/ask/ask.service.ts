@@ -6,7 +6,11 @@ import type { SeasonYear } from '@psg/shared/time';
 
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
-import { ILlmService } from '../../llm/llm.service.interface';
+import {
+    ILlmService,
+    LlmCompletionRequest,
+    LlmCompletionResult,
+} from '../../llm/llm.service.interface';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
@@ -96,24 +100,23 @@ export class AskService extends IAskService {
         }
     }
 
-    // A failed model call still consumed an hourly slot for zero answers. A
-    // transient Gemini 5xx/network error shouldn't cost the user one of
-    // their questions, so give the slot back on any failure except a rate
-    // limit itself (that one is the count doing its job, not a failure).
+    // A failed model call still consumed an hourly slot for zero answers, so
+    // give the slot back on every complete() failure, no exceptions.
+    // enforceRateLimit() is the only legitimate source of a deliberate
+    // non-refund, and it always throws before complete() is ever invoked —
+    // so this catch can never see our own limiter's ASK_RATE_LIMITED. The
+    // only thing that can throw ASK_RATE_LIMITED from inside complete() is
+    // llm.service.ts mapping a Gemini-side 429 (their shared quota across
+    // all users, not this user's fault), which should be refunded exactly
+    // like a transient 5xx/network error.
     private async completeOrReleaseSlot(
         userId: UserId,
-        request: Parameters<ILlmService['complete']>[0],
-    ): Promise<Awaited<ReturnType<ILlmService['complete']>>> {
+        request: LlmCompletionRequest,
+    ): Promise<LlmCompletionResult> {
         try {
             return await this.llmService.complete(request);
         } catch (error) {
-            const isRateLimited =
-                error instanceof DomainException &&
-                error.code === ErrorCode.ASK_RATE_LIMITED;
-
-            if (!isRateLimited) {
-                await this.releaseRateLimitSlot(userId);
-            }
+            await this.releaseRateLimitSlot(userId);
 
             throw error;
         }
