@@ -74,4 +74,36 @@ describe('RedisService', () => {
             });
         });
     });
+
+    describe('decrement', () => {
+        it('decrements atomically via a single round trip', async () => {
+            evalMock.mockResolvedValue(4);
+
+            await service.decrement(RATE_LIMIT_KEY);
+
+            expect(evalMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('scopes the script to the given key', async () => {
+            evalMock.mockResolvedValue(4);
+
+            await service.decrement(RATE_LIMIT_KEY);
+
+            const options = evalMock.mock.calls[0][1] as { keys: string[] };
+
+            expect(options.keys).toEqual([RATE_LIMIT_KEY]);
+        });
+
+        describe('when redis is unavailable', () => {
+            beforeEach(() => {
+                evalMock.mockRejectedValue(new Error('connect ECONNREFUSED'));
+            });
+
+            it('propagates the failure rather than swallowing it', async () => {
+                await expect(service.decrement(RATE_LIMIT_KEY)).rejects.toThrow(
+                    'connect ECONNREFUSED',
+                );
+            });
+        });
+    });
 });
