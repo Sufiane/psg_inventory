@@ -139,6 +139,24 @@ export class RedisService extends BaseRedis {
         await this.redis.del(key);
     }
 
+    // Used to give back a slot a caller consumed via incrementWithTtl but
+    // could not make use of (e.g. a fixed-window rate limit counter after a
+    // downstream failure). Never lets the key go negative or resurrect an
+    // expired window: DECR on a missing key would recreate it with no TTL.
+    async decrement(key: CacheKey<number>): Promise<void> {
+        const exists = await this.redis.exists(key);
+
+        if (exists === 0) {
+            return;
+        }
+
+        const value = await this.redis.decr(key);
+
+        if (value < 0) {
+            await this.redis.set(key, '0');
+        }
+    }
+
     async invalidatePattern(pattern: CacheKeyPattern): Promise<void> {
         const keys: string[] = [];
 

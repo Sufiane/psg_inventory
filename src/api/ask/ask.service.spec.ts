@@ -245,5 +245,37 @@ describe('AskService', () => {
                 new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE),
             );
         });
+
+        it('releases the rate limit slot it consumed', async () => {
+            await expect(service.ask(USER_ID, 'anything')).rejects.toThrow();
+
+            expect(redis.decrement).toHaveBeenCalledTimes(1);
+        });
+
+        describe('when releasing the slot also fails', () => {
+            beforeEach(() => {
+                redis.decrement.mockRejectedValue(new Error('redis unavailable'));
+            });
+
+            it('still propagates the original llm error, not the decrement error', async () => {
+                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
+                    new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE),
+                );
+            });
+        });
+    });
+
+    describe('when the model call fails with a rate-limited error', () => {
+        beforeEach(() => {
+            llm.complete.mockRejectedValue(
+                new DomainException(ErrorCode.ASK_RATE_LIMITED),
+            );
+        });
+
+        it('does not release a rate limit slot', async () => {
+            await expect(service.ask(USER_ID, 'anything')).rejects.toThrow();
+
+            expect(redis.decrement).not.toHaveBeenCalled();
+        });
     });
 });

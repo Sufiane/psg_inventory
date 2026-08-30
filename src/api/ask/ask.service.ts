@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { CacheKey } from '@psg/shared/cache';
 import type { UserId } from '@psg/shared/ids';
 import type { SeasonYear } from '@psg/shared/time';
 
@@ -67,7 +68,7 @@ export class AskService extends IAskService {
             generatedAt,
         });
 
-        const completion = await this.llmService.complete({
+        const completion = await this.completeOrReleaseSlot(userId, {
             systemPrompt: SYSTEM_PROMPT,
             userMessage: this.buildUserMessage(askContext, question),
         });
@@ -85,8 +86,7 @@ export class AskService extends IAskService {
     }
 
     private async enforceRateLimit(userId: UserId): Promise<void> {
-        const hourBucket = new Date().toISOString().slice(0, 13);
-        const key = CACHE_KEYS.askRateLimit(userId, hourBucket);
+        const key = this.rateLimitKey(userId);
         const count = await this.redisService.incrementWithTtl(key, HOUR_IN_SECONDS);
 
         if (count > this.rateLimitPerHour) {
@@ -94,6 +94,46 @@ export class AskService extends IAskService {
 
             throw new DomainException(ErrorCode.ASK_RATE_LIMITED);
         }
+    }
+
+    // A failed model call still consumed an hourly slot for zero answers. A
+    // transient Gemini 5xx/network error shouldn't cost the user one of
+    // their questions, so give the slot back on any failure except a rate
+    // limit itself (that one is the count doing its job, not a failure).
+    private async completeOrReleaseSlot(
+        userId: UserId,
+        request: Parameters<ILlmService['complete']>[0],
+    ): Promise<Awaited<ReturnType<ILlmService['complete']>>> {
+        try {
+            return await this.llmService.complete(request);
+        } catch (error) {
+            const isRateLimited =
+                error instanceof DomainException &&
+                error.code === ErrorCode.ASK_RATE_LIMITED;
+
+            if (!isRateLimited) {
+                await this.releaseRateLimitSlot(userId);
+            }
+
+            throw error;
+        }
+    }
+
+    private async releaseRateLimitSlot(userId: UserId): Promise<void> {
+        try {
+            await this.redisService.decrement(this.rateLimitKey(userId));
+        } catch (error) {
+            this.logger.warn(
+                `failed to release rate limit slot for userId=${userId}`,
+                error,
+            );
+        }
+    }
+
+    private rateLimitKey(userId: UserId): CacheKey<number> {
+        const hourBucket = new Date().toISOString().slice(0, 13);
+
+        return CACHE_KEYS.askRateLimit(userId, hourBucket);
     }
 
     private buildUserMessage(askContext: AskContext, question: string): string {
