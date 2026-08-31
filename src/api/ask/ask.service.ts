@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CacheKey } from '@psg/shared/cache';
+import type { TicketCount } from '@psg/shared/counts';
 import type { UserId } from '@psg/shared/ids';
+import type { Profit, TotalInvestment, TotalListedValue } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 import { DomainException } from '../../common/exceptions/domain.exception';
@@ -169,18 +171,26 @@ export class AskService extends IAskService {
     // the database's, not the model's. netProfit is computed once in
     // build-context.ts and shared here, so the tile and the model's prose
     // can never disagree about what "profit" means for a period.
+    // AskContext's own fields are plain numbers (it's the internal LLM-payload
+    // shape, flattened straight to JSON text — a brand would be stripped by
+    // JSON.stringify anyway, so there's nothing to preserve there). AskFigures
+    // is the wire contract the frontend actually consumes, so the cast to
+    // each field's real brand happens here, at the one boundary it matters.
     private toFigures(askContext: AskContext): AskFigures {
         return {
-            seasonStartYear: askContext.season.startYear,
-            currentSeasonProfit: askContext.currentSeason.netProfit,
-            currentSeasonSales:
-                askContext.currentSeason.realized?.totalListedValue ?? null,
-            currentSeasonTickets:
-                askContext.currentSeason.realized?.totalNbTickets ?? null,
-            allTimeProfit: askContext.allTime.netProfit,
-            allTimeSales: askContext.allTime.realized?.totalListedValue ?? null,
-            pendingSales: askContext.currentSeason.pending?.totalListedValue ?? null,
-            totalSeasonInvestment: askContext.currentSeason.totalSeasonInvestment,
+            seasonStartYear: askContext.season.startYear as SeasonYear,
+            currentSeasonProfit: askContext.currentSeason.netProfit as Profit | null,
+            currentSeasonSales: (askContext.currentSeason.realized?.totalListedValue ??
+                null) as TotalListedValue | null,
+            currentSeasonTickets: (askContext.currentSeason.realized?.totalNbTickets ??
+                null) as TicketCount | null,
+            allTimeProfit: askContext.allTime.netProfit as Profit | null,
+            allTimeSales: (askContext.allTime.realized?.totalListedValue ??
+                null) as TotalListedValue | null,
+            pendingSales: (askContext.currentSeason.pending?.totalListedValue ??
+                null) as TotalListedValue | null,
+            totalSeasonInvestment: askContext.currentSeason
+                .totalSeasonInvestment as TotalInvestment,
             amortizationRemaining: askContext.amortization.remaining,
             brokeEven: askContext.amortization.brokeEven,
         };
