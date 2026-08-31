@@ -1,3 +1,7 @@
+import type { TicketCount } from '@psg/shared/counts';
+import type { Profit, TotalInvestment, TotalListedValue } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
+
 export type AskExtreme = {
     price: number;
     profit: number;
@@ -11,10 +15,10 @@ export type AskAccounting = {
     // Sum of listed sale prices, not a count of anything — see
     // SYSTEM_PROMPT for the explicit definition sent to the model, which
     // exists precisely so this isn't confused with totalNbTickets.
-    totalListedValue: number;
+    totalListedValue: TotalListedValue;
     totalProfit: number;
     totalInvest: number;
-    totalNbTickets: number;
+    totalNbTickets: TicketCount;
     averageTicketPrice: number;
     averageProfit: number;
     highest: AskExtreme | null;
@@ -33,6 +37,9 @@ export type AskSeasonPass = {
     label: string;
     category: string;
     price: number;
+    // Unbranded to match its actual upstream source (TimePeriodAccounting's
+    // seasonInvestments, itself seasonStartYear: number) — see the same
+    // reasoning on AskAmortization.remaining below.
     seasonStartYear: number;
 };
 
@@ -41,14 +48,14 @@ export type AskPeriod = {
     unrealized: AskAccounting | null;
     pending: AskAccounting | null;
     seasonPasses: AskSeasonPass[];
-    totalSeasonInvestment: number;
+    totalSeasonInvestment: TotalInvestment;
     // Bottom-line profit for this period: realized.totalProfit minus
     // realized.totalInvest minus totalSeasonInvestment. Null when there are
     // no realized sales, rather than a misleading zero. This is the
     // authoritative "profit" figure — realized.totalProfit is gross and
     // should never be stated as the user's profit on its own (see
     // SYSTEM_PROMPT).
-    netProfit: number | null;
+    netProfit: Profit | null;
     leadTime: AskLeadTime | null;
 };
 
@@ -57,6 +64,10 @@ export type AskAmortization = {
     hasPass: boolean;
     totalRealized: number;
     progress: number;
+    // Unbranded to match its actual source, Amortization.remaining in
+    // src/api/accounting/types/amortization.type.ts, which is itself a plain
+    // number — inventing a brand here would just be decoration, since the
+    // real gap is upstream and out of this feature's scope to fix.
     remaining: number;
     surplus: number;
     brokeEven: boolean;
@@ -84,7 +95,7 @@ export type AskContext = {
     generatedAt: string;
     currency: 'EUR';
     season: {
-        startYear: number;
+        startYear: SeasonYear;
         startDate: string;
         endDate: string;
     };

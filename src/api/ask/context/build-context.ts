@@ -1,3 +1,6 @@
+import type { TotalInvestment, TotalListedValue, Profit } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
+
 import type { Amortization } from '../../accounting/types/amortization.type';
 import type { MaxMinData } from '../../accounting/types/accounting.type';
 import type { TimePeriodAccounting } from '../../accounting/types/time-period-accounting.type';
@@ -45,10 +48,14 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
 
     return {
         // raw.totalSales is a pre-existing misnomer upstream (it's actually
-        // SUM(listedPrice), not a count — see
-        // format-aggregate.util.ts). Renamed as it crosses into AskContext
-        // so the model isn't handed a field that reads like a count.
-        totalListedValue: raw.totalSales,
+        // SUM(listedPrice), not a count — see format-aggregate.util.ts) and
+        // is even branded as SaleCount there, which is itself wrong for the
+        // same reason. Renamed and re-branded as it crosses into AskContext
+        // so the model isn't handed a field that reads like a count. The
+        // double cast is necessary (not laziness): SaleCount and
+        // TotalListedValue are both `number`-based brands with no direct
+        // relationship, so TS won't allow a single-step reinterpretation.
+        totalListedValue: raw.totalSales as unknown as TotalListedValue,
         totalProfit: raw.totalProfit,
         totalInvest: raw.totalInvest,
         totalNbTickets: raw.totalNbTickets,
@@ -67,17 +74,24 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
 // sales, rather than a misleading zero.
 function toNetProfit(
     realized: AskAccounting | null,
-    totalSeasonInvestment: number,
-): number | null {
+    totalSeasonInvestment: TotalInvestment,
+): Profit | null {
     if (realized == null) {
         return null;
     }
 
-    return realized.totalProfit - realized.totalInvest - totalSeasonInvestment;
+    return (realized.totalProfit -
+        realized.totalInvest -
+        totalSeasonInvestment) as Profit;
 }
 
 function toPeriod(period: TimePeriodAccounting): AskPeriod {
     const realized = toAccounting(period.realized);
+    // totalSeasonInvestment is a plain number upstream (TimePeriodAccounting
+    // has no brand for it) — cast once here, where it's read off the raw
+    // service result, rather than at every place AskContext's value is later
+    // consumed.
+    const totalSeasonInvestment = period.totalSeasonInvestment as TotalInvestment;
 
     return {
         realized,
@@ -89,8 +103,8 @@ function toPeriod(period: TimePeriodAccounting): AskPeriod {
             price: pass.price,
             seasonStartYear: pass.seasonStartYear,
         })),
-        totalSeasonInvestment: period.totalSeasonInvestment,
-        netProfit: toNetProfit(realized, period.totalSeasonInvestment),
+        totalSeasonInvestment,
+        netProfit: toNetProfit(realized, totalSeasonInvestment),
         leadTime:
             period.leadTime == null
                 ? null
@@ -137,7 +151,10 @@ export function buildAskContext(input: BuildAskContextInput): AskContext {
         generatedAt: input.generatedAt.toISOString(),
         currency: 'EUR',
         season: {
-            startYear: input.seasonWindow.start.getUTCFullYear(),
+            // Cast here, where the raw year is first computed from the
+            // resolved season window, rather than downstream at each place
+            // that reads AskContext.season.startYear back out.
+            startYear: input.seasonWindow.start.getUTCFullYear() as SeasonYear,
             startDate: input.seasonWindow.start.toISOString(),
             endDate: input.seasonWindow.end.toISOString(),
         },

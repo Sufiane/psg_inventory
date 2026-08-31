@@ -54,7 +54,7 @@ function extractStatus(error: unknown): number | null {
 }
 
 @Injectable()
-export class LlmService extends ILlmService {
+export class LlmService implements ILlmService {
     private readonly logger = new Logger(LlmService.name);
     // Undefined when GEMINI_API_KEY is unset, so the app can still boot for
     // every other route. Only a call to complete() fails, and it fails
@@ -62,8 +62,6 @@ export class LlmService extends ILlmService {
     private readonly client: GoogleGenAI | undefined;
 
     constructor(configService: ConfigService<{ GEMINI_API_KEY?: string }, true>) {
-        super();
-
         const apiKey = configService.get('GEMINI_API_KEY', { infer: true });
 
         // Key passed explicitly rather than relying on SDK env auto-discovery,
