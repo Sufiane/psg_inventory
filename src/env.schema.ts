@@ -1,5 +1,5 @@
-import { IsOptional, IsString, validateSync } from 'class-validator';
-import { plainToInstance } from 'class-transformer';
+import { IsInt, IsOptional, IsPositive, IsString, validateSync } from 'class-validator';
+import { plainToInstance, Type } from 'class-transformer';
 
 class EnvironmentVariables {
     @IsString()
@@ -40,9 +40,15 @@ class EnvironmentVariables {
     OBSERVE_APP_SECRET?: string;
 
     // Max /ask questions per user per hour. Defaults to 20 when unset.
+    // Validated as a number, not left as a string parsed downstream: a
+    // misconfigured value (empty, non-numeric, zero/negative) fails loudly
+    // at boot instead of silently falling back — a bad value here should be
+    // caught immediately, not linger unnoticed for however long.
     @IsOptional()
-    @IsString()
-    ASK_RATE_LIMIT_PER_HOUR?: string;
+    @Type(() => Number)
+    @IsInt()
+    @IsPositive()
+    ASK_RATE_LIMIT_PER_HOUR?: number;
 
     @IsOptional()
     @IsString()

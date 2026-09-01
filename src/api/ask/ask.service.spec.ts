@@ -83,7 +83,7 @@ describe('AskService', () => {
             matches,
             llm,
             redis,
-            new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: '20' }),
+            new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: 20 }),
         );
     });
 
@@ -179,60 +179,46 @@ describe('AskService', () => {
         });
     });
 
-    describe('when ASK_RATE_LIMIT_PER_HOUR is malformed', () => {
-        describe('when it is an empty string', () => {
-            beforeEach(() => {
-                service = new AskService(
-                    accounting,
-                    matches,
-                    llm,
-                    redis,
-                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: '' }),
-                );
-                redis.incrementWithTtl.mockResolvedValue(21);
-            });
-
-            it('falls back to the default limit instead of disabling it', async () => {
-                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
-                    new DomainException(ErrorCode.ASK_RATE_LIMITED),
-                );
-            });
+    // A malformed ASK_RATE_LIMIT_PER_HOUR (empty, non-numeric, zero/negative)
+    // can no longer reach this constructor: env.schema.ts validates it as a
+    // positive integer at boot, so the app fails to start on a bad value
+    // rather than this service having to guard against one. See
+    // env.schema.spec.ts for that validation coverage.
+    describe('when ASK_RATE_LIMIT_PER_HOUR is configured', () => {
+        beforeEach(() => {
+            service = new AskService(
+                accounting,
+                matches,
+                llm,
+                redis,
+                new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: 2 }),
+            );
+            redis.incrementWithTtl.mockResolvedValue(3);
         });
 
-        describe('when it is non-numeric garbage', () => {
-            beforeEach(() => {
-                service = new AskService(
-                    accounting,
-                    matches,
-                    llm,
-                    redis,
-                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: 'not-a-number' }),
-                );
-                redis.incrementWithTtl.mockResolvedValue(21);
-            });
+        it('enforces the configured limit instead of the default', async () => {
+            await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
+                new DomainException(ErrorCode.ASK_RATE_LIMITED),
+            );
+        });
+    });
 
-            it('falls back to the default limit instead of disabling it', async () => {
-                await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
-                    new DomainException(ErrorCode.ASK_RATE_LIMITED),
-                );
-            });
+    describe('when ASK_RATE_LIMIT_PER_HOUR is unset', () => {
+        beforeEach(() => {
+            service = new AskService(
+                accounting,
+                matches,
+                llm,
+                redis,
+                new ConfigService({}),
+            );
+            redis.incrementWithTtl.mockResolvedValue(21);
         });
 
-        describe('when it is zero or negative', () => {
-            beforeEach(() => {
-                service = new AskService(
-                    accounting,
-                    matches,
-                    llm,
-                    redis,
-                    new ConfigService({ ASK_RATE_LIMIT_PER_HOUR: '-5' }),
-                );
-                redis.incrementWithTtl.mockResolvedValue(1);
-            });
-
-            it('falls back to the default limit instead of blocking every request', async () => {
-                await expect(service.ask(USER_ID, 'anything')).resolves.toBeDefined();
-            });
+        it('falls back to the default limit of 20', async () => {
+            await expect(service.ask(USER_ID, 'anything')).rejects.toThrow(
+                new DomainException(ErrorCode.ASK_RATE_LIMITED),
+            );
         });
     });
 

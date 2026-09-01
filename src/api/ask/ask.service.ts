@@ -36,16 +36,14 @@ export class AskService implements IAskService {
         private readonly matchesService: IMatchesService,
         private readonly llmService: ILlmService,
         private readonly redisService: RedisService,
-        configService: ConfigService<{ ASK_RATE_LIMIT_PER_HOUR?: string }, true>,
+        configService: ConfigService<{ ASK_RATE_LIMIT_PER_HOUR?: number }, true>,
     ) {
-        const configured = configService.get('ASK_RATE_LIMIT_PER_HOUR', {
-            infer: true,
-        });
-
-        const parsed = configured == null ? NaN : parseInt(configured, 10);
-
+        // env.schema.ts validates this as a positive integer at boot, so any
+        // value that reaches here is already trustworthy — no parsing or
+        // fallback guard needed, just a default for when it's unset.
         this.rateLimitPerHour =
-            Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_RATE_LIMIT_PER_HOUR;
+            configService.get('ASK_RATE_LIMIT_PER_HOUR', { infer: true }) ??
+            DEFAULT_RATE_LIMIT_PER_HOUR;
     }
 
     async ask(userId: UserId, question: string): Promise<AskAnswer> {
