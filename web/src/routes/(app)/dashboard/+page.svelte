@@ -1,15 +1,22 @@
 <script lang="ts">
-    import type { PageData } from './$types';
+    import type { ActionData, PageData } from './$types';
     import { fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
+    import AskCard from '$lib/ui/AskCard.svelte';
     import Button from '$lib/ui/Button.svelte';
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
     import { competitionLabel, dateTime, signedMoney } from '$lib/format';
 
-    let { data }: { data: PageData } = $props();
+    let { data, form }: { data: PageData; form: ActionData } = $props();
+
+    const askAnswer = $derived(form && 'answer' in form ? form.answer : null);
+    const askMessage = $derived(form && 'message' in form ? form.message : null);
+    const askQuestion = $derived(
+        askAnswer ? askAnswer.question : form && 'question' in form ? form.question : '',
+    );
 
     function netTone(value: number): string {
         if (value < 0) {
@@ -65,6 +72,10 @@
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Current season</h1>
 
     <Button href="/sales/new">New sale</Button>
+</div>
+
+<div class="mb-6">
+    <AskCard answer={askAnswer} message={askMessage} question={askQuestion} />
 </div>
 
 {#await data.accounting}

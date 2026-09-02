@@ -17,6 +17,7 @@ import { RedisModule } from './redis/redis.module';
 import { SeasonPassesModule } from './api/season-passes/season-passes.module';
 import { HealthModule } from './api/health/health.module';
 import { ObserveModule } from './observe';
+import { AskModule } from './api/ask/ask.module';
 
 @Module({
     imports: [
@@ -65,6 +66,7 @@ import { ObserveModule } from './observe';
         RedisModule,
         SeasonPassesModule,
         HealthModule,
+        AskModule,
     ],
     providers: [
         {

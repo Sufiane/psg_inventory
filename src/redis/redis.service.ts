@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import type { CacheKey, CacheKeyPattern } from '@psg/shared/cache';
 import { BaseRedis } from './base.service';
+import { DECREMENT_SCRIPT } from './scripts/decrement.script';
+import { INCREMENT_WITH_TTL_SCRIPT } from './scripts/increment-with-ttl.script';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
 const TTL_JITTER_RATIO = 0.1;
@@ -29,6 +31,28 @@ export class RedisService extends BaseRedis {
 
     async set<T>(key: CacheKey<T>, value: T | null, ttl: number): Promise<void> {
         await this.redis.set(key, JSON.stringify(value), { EX: jitterTtl(ttl) });
+    }
+
+    // Fixed-window counter, atomic end to end via a single Lua script (see
+    // INCREMENT_WITH_TTL_SCRIPT): concurrent questions cannot both read a
+    // stale count and slip past the cap, and a crash mid-call cannot strand
+    // the key without a TTL. The TTL is set only when the counter is created
+    // (count === 1) — re-expiring on every hit would turn this into a
+    // sliding window that never resets for an active user.
+    //
+    // No try/catch here: a Redis outage should fail loudly, the same as
+    // every other RedisService caller in this app (accounting.service.ts,
+    // sales.service.ts, admin.service.ts) — the error bubbles up and
+    // AllExceptionsFilter/toHttpException already turn any unmapped error
+    // into a logged, structured 500 (ErrorCode.INTERNAL_ERROR) rather than a
+    // raw leak or a silent no-op.
+    async incrementWithTtl(key: CacheKey<number>, ttlSeconds: number): Promise<number> {
+        const count = await this.redis.eval(INCREMENT_WITH_TTL_SCRIPT, {
+            keys: [key],
+            arguments: [String(ttlSeconds)],
+        });
+
+        return Number(count);
     }
 
     // Cache-aside with single-flight: only one caller per key runs `loader` at
@@ -123,6 +147,15 @@ export class RedisService extends BaseRedis {
 
     async invalidate<T>(key: CacheKey<T>): Promise<void> {
         await this.redis.del(key);
+    }
+
+    // Used to give back a slot a caller consumed via incrementWithTtl but
+    // could not make use of (e.g. a fixed-window rate limit counter after a
+    // downstream failure). Atomic via DECREMENT_SCRIPT (scripts/decrement.script.ts): never
+    // lets the key go negative, never resurrects an expired window, and
+    // never strips or recreates the key's TTL.
+    async decrement(key: CacheKey<number>): Promise<void> {
+        await this.redis.eval(DECREMENT_SCRIPT, { keys: [key] });
     }
 
     async invalidatePattern(pattern: CacheKeyPattern): Promise<void> {

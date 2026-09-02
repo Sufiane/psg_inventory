@@ -5,5 +5,6 @@ export type Profit = Brand<number, 'Profit'>;
 export type ListedPrice = Brand<number, 'ListedPrice'>;
 export type SeasonPassPrice = Brand<number, 'SeasonPassPrice'>;
 export type TotalInvestment = Brand<number, 'TotalInvestment'>;
+export type TotalListedValue = Brand<number, 'TotalListedValue'>;
 export type AvgTicketPrice = Brand<number, 'AvgTicketPrice'>;
 export type AvgProfit = Brand<number, 'AvgProfit'>;

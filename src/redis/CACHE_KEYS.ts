@@ -15,6 +15,8 @@ export default {
         `accounting:user:id:${userId}:start:${start.toISOString()}:end:${end?.toISOString()}` as CacheKey<TimePeriodAccounting>,
     amortization: (userId: string, seasonStartYear: number): CacheKey<Amortization> =>
         `accounting:user:id:${userId}:amortization:${seasonStartYear}` as CacheKey<Amortization>,
+    askRateLimit: (userId: string, hourBucket: string): CacheKey<number> =>
+        `ask:user:id:${userId}:hour:${hourBucket}` as CacheKey<number>,
     invalidateAccounting: (userId: string): CacheKeyPattern =>
         `accounting:user:id:${userId}:*` as CacheKeyPattern,
     invalidateMatches: (from?: Date): CacheKeyPattern =>

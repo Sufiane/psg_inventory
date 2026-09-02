@@ -1,5 +1,5 @@
-import { IsOptional, IsString, validateSync } from 'class-validator';
-import { plainToInstance } from 'class-transformer';
+import { IsInt, IsOptional, IsPositive, IsString, validateSync } from 'class-validator';
+import { plainToInstance, Type } from 'class-transformer';
 
 class EnvironmentVariables {
     @IsString()
@@ -10,6 +10,12 @@ class EnvironmentVariables {
 
     @IsString()
     FOOTBALL_DATA_API_KEY!: string;
+
+    // /ask degrades gracefully without a key: the app boots and every other
+    // route works, only POST /ask itself fails with ASK_LLM_UNAVAILABLE.
+    @IsOptional()
+    @IsString()
+    GEMINI_API_KEY?: string;
 
     @IsString()
     REDIS_URL!: string;
@@ -32,6 +38,17 @@ class EnvironmentVariables {
     @IsOptional()
     @IsString()
     OBSERVE_APP_SECRET?: string;
+
+    // Max /ask questions per user per hour. Defaults to 20 when unset.
+    // Validated as a number, not left as a string parsed downstream: a
+    // misconfigured value (empty, non-numeric, zero/negative) fails loudly
+    // at boot instead of silently falling back — a bad value here should be
+    // caught immediately, not linger unnoticed for however long.
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @IsPositive()
+    ASK_RATE_LIMIT_PER_HOUR?: number;
 
     @IsOptional()
     @IsString()

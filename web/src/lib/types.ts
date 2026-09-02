@@ -7,6 +7,8 @@ import type {
     ListedPrice,
     Profit,
     SeasonPassPrice,
+    TotalInvestment,
+    TotalListedValue,
 } from '@psg/shared/money';
 import type {
     CategoryLabel,
@@ -240,4 +242,27 @@ export type CacheFlushResult = {
     key: 'accounting' | 'sales' | 'season-passes' | 'user-by-email';
     status: 'ok' | 'failed';
     error?: string;
+};
+
+export type AskFigures = {
+    seasonStartYear: SeasonYear;
+    currentSeasonProfit: Profit | null;
+    currentSeasonSales: TotalListedValue | null;
+    currentSeasonTickets: TicketCount | null;
+    allTimeProfit: Profit | null;
+    allTimeSales: TotalListedValue | null;
+    pendingSales: TotalListedValue | null;
+    totalSeasonInvestment: TotalInvestment;
+    // Amortization.remaining is unbranded upstream (src/api/accounting/types/
+    // amortization.type.ts) — left as a plain number here to match its actual
+    // source rather than inventing a brand this feature doesn't own.
+    amortizationRemaining: number;
+    brokeEven: boolean;
+};
+
+export type AskAnswer = {
+    question: string;
+    answer: string;
+    figures: AskFigures;
+    generatedAt: string;
 };
