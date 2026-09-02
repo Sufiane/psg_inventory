@@ -6,7 +6,7 @@
 
 **Architecture:** No RAG, no NL-to-SQL. A pure builder flattens the results of the existing `IAccountingService` and `IMatchesService` methods into a small `AskContext` object; that context plus the question go to Google Gemini in one non-streaming call; the endpoint returns the model's prose *and* the context figures so the UI renders authoritative numbers from the database rather than from model output. The Gemini SDK is confined to one file (`src/llm/llm.service.ts`), mirroring how `FootballDataService` already isolates the football-data API.
 
-**Tech Stack:** NestJS 10, Prisma 6 (untouched — no schema change), Redis (existing, for rate limiting), `@google/genai`, SvelteKit 2 + Svelte 5 runes, Jest.
+**Tech Stack:** NestJS 11, Prisma 6 (untouched — no schema change), Redis (existing, for rate limiting), `@google/genai`, SvelteKit 2 + Svelte 5 runes, Jest.
 
 ## Global Constraints
 
@@ -29,14 +29,7 @@
 
 ## Pre-flight
 
-- [ ] **Confirm the working tree is clean of unrelated changes**
-
-```bash
-cd /Users/sufianesouissi/Development/psg_inventory
-git status --short
-```
-
-At the time this plan was written, `package.json` and `package-lock.json` carried an **unrelated, uncommitted NestJS 10 -> 11 major upgrade** (`@nestjs/common` 10.4.8 -> 11.2.1, plus a new `@nestjs/observe` dependency). That change is not part of this feature. Resolve it — commit it separately, or revert it with `git restore package.json package-lock.json && npm ci` — **before** starting Task 1. Installing a new dependency on top of a half-applied major upgrade will produce a `package-lock.json` diff that is impossible to review.
+`package.json` / `package-lock.json` carry a staged NestJS 10 -> 11 reconciliation (node_modules had already drifted to 11.2.1 via the `@nestjs/observe` telemetry package; package.json/lockfile were rewritten to match, verified via clean typecheck, 74/74 tests, and a clean build). That change is intentional and already resolved — it is a separate staged commit from this feature's work, not a blocker. `@nestjs/config` moved 3.3.0 -> 4.0.4 as part of it; its `ConfigService<K, WasValidated>` generic and `.get()` overload shapes are unchanged from what this plan already assumes, so Tasks 1, 5, and 6 need no rework.
 
 ---
 
