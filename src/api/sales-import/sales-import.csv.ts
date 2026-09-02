@@ -3,13 +3,16 @@ import type { Invest, ListedPrice } from '@psg/shared/money';
 import type { TicketCount } from '@psg/shared/counts';
 import type { IsoDateString } from '@psg/shared/time';
 
+export const SALE_ROW_STATUSES = ['PENDING', 'SOLD', 'CANCELLED'] as const;
+export type SaleRowStatus = (typeof SALE_ROW_STATUSES)[number];
+
 export type RawImportRow = {
     rowIndex: number;
     date: string;
     opponent: string;
     listedPrice: ListedPrice;
     nbTickets: TicketCount;
-    status: 'PENDING' | 'SOLD' | 'CANCELLED';
+    status: SaleRowStatus;
     invest: Invest;
     soldAt: IsoDateString | null;
 };

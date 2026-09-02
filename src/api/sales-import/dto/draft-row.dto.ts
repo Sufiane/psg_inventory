@@ -11,6 +11,7 @@ import {
     ValidateNested,
 } from 'class-validator';
 import { DraftAllocationDto } from './draft-allocation.dto';
+import { SALE_ROW_STATUSES, type SaleRowStatus } from '../sales-import.csv';
 import { DATE_ONLY_REGEX } from '../utils/date-only.util';
 
 export const DRAFT_ROW_STATUSES = [
@@ -50,8 +51,8 @@ export class DraftRowDto {
     @Min(0)
     invest!: number;
 
-    @IsIn(['PENDING', 'SOLD', 'CANCELLED'])
-    status!: 'PENDING' | 'SOLD' | 'CANCELLED';
+    @IsIn(SALE_ROW_STATUSES)
+    status!: SaleRowStatus;
 
     @IsOptional()
     @IsString()

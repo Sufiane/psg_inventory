@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
-import { SaleStatus } from '@prisma/client';
 
 import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
@@ -79,7 +78,7 @@ export class SalesImportService {
             invest: row.invest as Invest,
             profit: this.computeProfit(row.listedPrice),
             nbTickets: row.nbTickets as TicketCount,
-            status: row.status as SaleStatus,
+            status: row.status,
             soldAt:
                 row.status === 'SOLD' && row.soldAt != null
                     ? dateOnlyToUtcNoon(row.soldAt)
