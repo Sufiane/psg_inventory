@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import type { CacheKey, CacheKeyPattern } from '@psg/shared/cache';
 import { BaseRedis } from './base.service';
+import { DECREMENT_SCRIPT } from './scripts/decrement.script';
+import { INCREMENT_WITH_TTL_SCRIPT } from './scripts/increment-with-ttl.script';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/;
 const TTL_JITTER_RATIO = 0.1;
@@ -12,36 +14,6 @@ const LOCK_TTL_SEC = 10;
 const RETRY_INITIAL_MS = 50;
 const RETRY_MAX_MS = 250;
 const WAIT_BUDGET_MS = LOCK_TTL_SEC * 1000;
-
-// INCR then EXPIRE as two round-trips leaves a window where a crash between
-// them strands the key with no TTL (never expires). A single script makes
-// the increment and the first-hit expiry atomic in one round trip.
-const INCREMENT_WITH_TTL_SCRIPT = `
-local current = redis.call('INCR', KEYS[1])
-if current == 1 then
-    redis.call('EXPIRE', KEYS[1], ARGV[1])
-end
-return current
-`;
-
-// EXISTS -> DECR -> conditional SET as three separate round-trips leaves a
-// race: if the key's TTL expires in the gap between EXISTS and DECR, DECR
-// recreates it at -1 with no TTL, and the clamp-to-zero SET (without
-// KEEPTTL) would leave that key permanently orphaned with no expiry. A
-// single script makes the existence check, the decrement, and the clamp
-// atomic in one round trip, and KEEPTTL preserves whatever TTL the key
-// already had rather than reissuing or dropping it.
-const DECREMENT_SCRIPT = `
-if redis.call('EXISTS', KEYS[1]) == 0 then
-    return 0
-end
-local current = redis.call('DECR', KEYS[1])
-if current < 0 then
-    redis.call('SET', KEYS[1], '0', 'KEEPTTL')
-    return 0
-end
-return current
-`;
 
 function jitterTtl(ttl: number): number {
     const jitter = Math.floor(Math.random() * ttl * TTL_JITTER_RATIO);
@@ -179,7 +151,7 @@ export class RedisService extends BaseRedis {
 
     // Used to give back a slot a caller consumed via incrementWithTtl but
     // could not make use of (e.g. a fixed-window rate limit counter after a
-    // downstream failure). Atomic via DECREMENT_SCRIPT (see above): never
+    // downstream failure). Atomic via DECREMENT_SCRIPT (scripts/decrement.script.ts): never
     // lets the key go negative, never resurrects an expired window, and
     // never strips or recreates the key's TTL.
     async decrement(key: CacheKey<number>): Promise<void> {
