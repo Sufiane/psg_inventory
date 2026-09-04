@@ -1,6 +1,7 @@
 import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { DomainException } from '../common/exceptions/domain.exception';
 import { ErrorCode } from '../common/exceptions/error-codes.enum';
@@ -31,6 +32,17 @@ const MAX_OUTPUT_TOKENS = 4000;
 const THINKING_LEVEL_LOW = ThinkingLevel.LOW;
 
 const TOO_MANY_REQUESTS = 429;
+
+// Google's "model overloaded" status. Transient — worth a couple of quick
+// retries before failing the whole /ask.
+const SERVICE_UNAVAILABLE = 503;
+
+const MAX_RETRY_ATTEMPTS = 2;
+const RETRY_BACKOFF_BASE_MS = 300;
+
+// Bounds a stalled call so it fails fast instead of riding out to
+// Cloudflare's edge timeout as an opaque 524.
+const GEMINI_TIMEOUT_MS = 30_000;
 
 // Provider failures are classified by HTTP status, not by SDK exception class
 // name, so this stays correct regardless of how @google/genai names its error
@@ -85,17 +97,24 @@ export class LlmService implements ILlmService {
         }
 
         const startedAt = Date.now();
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
 
         try {
-            const response = await this.client.models.generateContent({
-                model: MODEL,
-                contents: request.userMessage,
-                config: {
-                    systemInstruction: request.systemPrompt,
-                    maxOutputTokens: MAX_OUTPUT_TOKENS,
-                    thinkingConfig: { thinkingLevel: THINKING_LEVEL_LOW },
+            const response = await this.callGemini(
+                this.client,
+                {
+                    model: MODEL,
+                    contents: request.userMessage,
+                    config: {
+                        systemInstruction: request.systemPrompt,
+                        maxOutputTokens: MAX_OUTPUT_TOKENS,
+                        thinkingConfig: { thinkingLevel: THINKING_LEVEL_LOW },
+                        abortSignal: controller.signal,
+                    },
                 },
-            });
+                controller.signal,
+            );
 
             const text = response.text?.trim() ?? '';
             const finishReason = response.candidates?.[0]?.finishReason;
@@ -130,6 +149,12 @@ export class LlmService implements ILlmService {
                 throw error;
             }
 
+            if (controller.signal.aborted) {
+                this.logger.error(`Gemini call timed out after ${GEMINI_TIMEOUT_MS}ms`);
+
+                throw new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
+            }
+
             const status = extractStatus(error);
 
             if (status === TOO_MANY_REQUESTS) {
@@ -141,6 +166,44 @@ export class LlmService implements ILlmService {
             this.logger.error(`Gemini call failed status=${status ?? 'unknown'}`, error);
 
             throw new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    // Retries only a 503 (SERVICE_UNAVAILABLE) — every other failure
+    // (network error, 429, 4xx, an aborted signal) is left to the caller's
+    // catch block untouched, since those aren't the transient-overload
+    // pattern this exists for.
+    private async callGemini(
+        client: GoogleGenAI,
+        payload: Parameters<GoogleGenAI['models']['generateContent']>[0],
+        signal: AbortSignal,
+        attempt = 0,
+    ): Promise<Awaited<ReturnType<GoogleGenAI['models']['generateContent']>>> {
+        try {
+            return await client.models.generateContent(payload);
+        } catch (error) {
+            if (
+                extractStatus(error) !== SERVICE_UNAVAILABLE ||
+                attempt >= MAX_RETRY_ATTEMPTS
+            ) {
+                throw error;
+            }
+
+            const nextAttempt = attempt + 1;
+            const backoffMs = RETRY_BACKOFF_BASE_MS * nextAttempt;
+
+            this.logger.warn(
+                `Gemini overloaded (503); retrying attempt=${nextAttempt}/${MAX_RETRY_ATTEMPTS} in ${backoffMs}ms`,
+            );
+
+            // node:timers/promises rejects immediately with an AbortError if
+            // `signal` is already aborted or fires while waiting, so a
+            // backoff wait can never outlive GEMINI_TIMEOUT_MS.
+            await sleep(backoffMs, undefined, { signal });
+
+            return this.callGemini(client, payload, signal, nextAttempt);
         }
     }
 

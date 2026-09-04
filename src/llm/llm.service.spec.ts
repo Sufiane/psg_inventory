@@ -194,6 +194,55 @@ describe('LlmService', () => {
             });
         });
 
+        describe('when the provider returns HTTP 503 (overloaded)', () => {
+            describe('and a retry succeeds', () => {
+                beforeEach(() => {
+                    generateContentMock
+                        .mockRejectedValueOnce({ status: 503 })
+                        .mockResolvedValueOnce({
+                            text: 'You have made EUR 840 this season.',
+                            usageMetadata: {
+                                promptTokenCount: 900,
+                                candidatesTokenCount: 40,
+                            },
+                            candidates: [{ finishReason: FinishReason.STOP }],
+                        });
+                });
+
+                it('returns the model text without surfacing the transient failure', async () => {
+                    const result = await service.complete({
+                        systemPrompt: 'system',
+                        userMessage: 'question',
+                    });
+
+                    expect(result).toEqual({
+                        text: 'You have made EUR 840 this season.',
+                        inputTokens: 900,
+                        outputTokens: 40,
+                    });
+                    expect(generateContentMock).toHaveBeenCalledTimes(2);
+                });
+            });
+
+            describe('and every attempt is overloaded', () => {
+                beforeEach(() => {
+                    generateContentMock.mockRejectedValue({ status: 503 });
+                });
+
+                it('throws ASK_LLM_UNAVAILABLE after exhausting retries', async () => {
+                    await expect(
+                        service.complete({
+                            systemPrompt: 'system',
+                            userMessage: 'question',
+                        }),
+                    ).rejects.toThrow(new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE));
+
+                    // Initial attempt + MAX_RETRY_ATTEMPTS retries.
+                    expect(generateContentMock).toHaveBeenCalledTimes(3);
+                });
+            });
+        });
+
         describe('when the provider returns HTTP 429', () => {
             beforeEach(() => {
                 generateContentMock.mockRejectedValue({ status: 429 });
