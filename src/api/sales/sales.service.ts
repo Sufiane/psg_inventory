@@ -13,15 +13,14 @@ import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
 import { PSG_COMMISSION } from '../../shared/constants';
-import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
+import {
+    getSeasonWindow,
+    seasonStartYearFromDate,
+} from '../../shared/utils/season.utils';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { SaleAllocationDto } from './dto/sale-allocation.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
-
-function seasonStartYearFromDate(date: Date): number {
-    return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
-}
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -49,11 +48,11 @@ export class SalesService implements ISalesService {
     }
 
     async getCurrentSeasonSales(userId: UserId): Promise<FormattedSale[]> {
-        const { start, end } = getCurrentSeasonDate();
-        const sales = await this.salesDbService.getSalesByRange(userId, {
-            from: start,
-            to: end,
-        });
+        const { start: from, end: to } = getSeasonWindow(
+            seasonStartYearFromDate(new Date()),
+            'exclusive',
+        );
+        const sales = await this.salesDbService.getSalesByRange(userId, { from, to });
 
         return sales.map((sale) => this.formatSale(sale));
     }
@@ -62,8 +61,7 @@ export class SalesService implements ISalesService {
         userId: UserId,
         seasonStartYear: SeasonYear,
     ): Promise<FormattedSale[]> {
-        const from = new Date(seasonStartYear, 7, 1);
-        const to = new Date(seasonStartYear + 1, 7, 1);
+        const { start: from, end: to } = getSeasonWindow(seasonStartYear, 'exclusive');
         const sales = await this.salesDbService.getSalesByRange(userId, { from, to });
 
         return sales.map((sale) => this.formatSale(sale));

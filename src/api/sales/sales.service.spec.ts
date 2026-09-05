@@ -103,6 +103,23 @@ describe('SalesService', () => {
         module.useLogger(false);
     });
 
+    describe('getCurrentSeasonSales', () => {
+        it('queries with the same exclusive-upper season bounds getSalesByRange expects', async () => {
+            jest.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
+
+            salesDbService.getSalesByRange.mockResolvedValueOnce([]);
+
+            await service.getCurrentSeasonSales(userId);
+
+            expect(salesDbService.getSalesByRange).toHaveBeenCalledWith(userId, {
+                from: new Date('2025-08-01T00:00:00.000Z'),
+                to: new Date('2026-08-01T00:00:00.000Z'),
+            });
+
+            jest.useRealTimers();
+        });
+    });
+
     describe('updateSale kickoff guard', () => {
         it('rejects marking a sale SOLD after the match kickoff', async () => {
             salesDbService.getOneSale.mockResolvedValue(
@@ -216,6 +233,70 @@ describe('SalesService', () => {
                 }),
             ).rejects.toMatchObject({
                 code: ErrorCode.SALE_INVALID_ALLOCATIONS,
+            });
+        });
+    });
+
+    describe('updateSale allocations', () => {
+        const futureMatchDate = new Date(Date.now() + 60 * 60_000);
+
+        describe('when the pass belongs to a different season than the match', () => {
+            const payload: UpdateSaleDto = {
+                saleId,
+                sold: false,
+                allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
+            } as UpdateSaleDto;
+
+            beforeEach(() => {
+                salesDbService.getOneSale.mockResolvedValue(saleFixture(futureMatchDate));
+                matchesDbService.getOneMatch.mockResolvedValue(
+                    matchFixture(new Date('2024-09-15')),
+                );
+                seasonPassesDbService.findById.mockResolvedValue(
+                    passFixture({ seasonStartYear: 2023 }),
+                );
+            });
+
+            it('rejects the update with SALE_ALLOCATION_PASS_MISMATCH', async () => {
+                await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_ALLOCATION_PASS_MISMATCH,
+                });
+            });
+
+            it('does not write the sale', async () => {
+                await expect(service.updateSale(userId, payload)).rejects.toThrow(
+                    DomainException,
+                );
+
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when the pass belongs to the same season as the match', () => {
+            beforeEach(() => {
+                salesDbService.getOneSale.mockResolvedValue(saleFixture(futureMatchDate));
+                matchesDbService.getOneMatch.mockResolvedValue(
+                    matchFixture(new Date('2024-09-15')),
+                );
+                seasonPassesDbService.findById.mockResolvedValue(passFixture());
+            });
+
+            it('writes the allocations through to the db layer', async () => {
+                const allocations = [
+                    { seasonPassId: passId, nbTickets: 2 as TicketCount },
+                ];
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        sold: false,
+                        allocations,
+                    } as UpdateSaleDto),
+                ).resolves.toBeUndefined();
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ saleId, userId, allocations }),
+                );
             });
         });
     });

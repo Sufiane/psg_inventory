@@ -11,7 +11,11 @@ import {
     SeasonInvestment,
     TimePeriodAccounting,
 } from './types/time-period-accounting.type';
-import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
+import {
+    getCurrentSeasonDate,
+    getSeasonWindow,
+    seasonStartYearFromDate,
+} from '../../shared/utils/season.utils';
 import { statusConverter } from './utils/status-converter.util';
 import type { AccountingStatus } from './types/accounting-status.type';
 import { RedisService } from '../../redis/redis.service';
@@ -21,12 +25,6 @@ import { IAccountingService } from './interfaces/accounting.service.interface';
 import { Amortization, AmortizationMatchRow } from './types/amortization.type';
 import { LeadTime } from './types/lead-time.type';
 import { SoldLeadTime } from '../../db/accounting/types/sold-lead-time.type';
-
-function seasonStartYearFromDate(date: Date): SeasonYear {
-    return (
-        date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear()
-    ) as SeasonYear;
-}
 
 @Injectable()
 export class AccountingService implements IAccountingService {
@@ -48,10 +46,7 @@ export class AccountingService implements IAccountingService {
         userId: UserId,
         seasonStartYear: SeasonYear,
     ): Promise<TimePeriodAccounting> {
-        const dates = {
-            start: new Date(seasonStartYear, 7, 1),
-            end: new Date(seasonStartYear + 1, 6, 31),
-        };
+        const dates = getSeasonWindow(seasonStartYear, 'inclusive');
 
         return this.getSeason(userId, dates, seasonStartYear);
     }
@@ -214,10 +209,7 @@ export class AccountingService implements IAccountingService {
             CACHE_KEYS.amortization(userId, seasonStartYear),
             ONE_DAY_TTL,
             async () => {
-                const dates = {
-                    start: new Date(seasonStartYear, 7, 1),
-                    end: new Date(seasonStartYear + 1, 6, 31),
-                };
+                const dates = getSeasonWindow(seasonStartYear, 'inclusive');
 
                 const [passes, matchRows] = await Promise.all([
                     this.seasonPassesDbService.findBySeason(userId, seasonStartYear),

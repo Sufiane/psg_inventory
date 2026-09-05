@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Accounting } from '$lib/types';
     import { money, signedMoney, competitionLabel, shortDate } from '$lib/format';
+    import { seasonStartYearFromDate } from '$lib/season';
 
     let {
         title,
@@ -49,7 +50,7 @@
     function seasonOf(iso: string | Date): number {
         const date = typeof iso === 'string' ? new Date(iso) : iso;
 
-        return date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear();
+        return seasonStartYearFromDate(date);
     }
 </script>
 

@@ -9,6 +9,7 @@
     import AmortizationCardSkeleton from '$lib/ui/AmortizationCardSkeleton.svelte';
     import LeadTimeStrip from '$lib/ui/LeadTimeStrip.svelte';
     import { signedMoney } from '$lib/format';
+    import { seasonStartYearFromDate } from '$lib/season';
 
     let { data }: { data: PageData } = $props();
 
@@ -161,9 +162,7 @@
         {@const amortYear =
             tab === 'season' && data.year
                 ? data.year
-                : new Date().getMonth() < 7
-                  ? new Date().getFullYear() - 1
-                  : new Date().getFullYear()}
+                : seasonStartYearFromDate(new Date())}
         {#await data.amortization}
             <AmortizationCardSkeleton />
         {:then amortization}

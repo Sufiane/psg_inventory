@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import { seasonStartYearFromDate } from '$lib/season';
 import type { SaleDetail, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
@@ -11,7 +12,17 @@ export const load: PageServerLoad = async (event) => {
         api<SeasonPass[]>(event, '/season-passes'),
     ]);
 
-    return { sale, passes };
+    const saleSeason = seasonStartYearFromDate(new Date(sale.Match.date));
+    const allocatedPassIds = new Set(
+        (sale.Allocations ?? []).map((allocation) => allocation.seasonPassId),
+    );
+    // Keep any pass already allocated to this sale visible, even if its season
+    // disagrees — hiding it would silently drop those tickets on the next save.
+    const visiblePasses = passes.filter(
+        (pass) => pass.seasonStartYear === saleSeason || allocatedPassIds.has(pass.id),
+    );
+
+    return { sale, passes: visiblePasses };
 };
 
 export const actions: Actions = {

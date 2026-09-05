@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
 import type { MatchId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { getSeasonBucket } from '../../shared/utils/season.utils';
-import { add } from 'date-fns';
+import { getSeasonWindow, getSeasonBucket } from '../../shared/utils/season.utils';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
 import { Match } from '../../db/matches/types/match.type';
@@ -19,16 +19,12 @@ export class MatchesService implements IMatchesService {
         seasonStartYear: string,
         withResult: boolean = false,
     ): Promise<Match[]> {
-        const startSeasonDate = new Date(`${seasonStartYear}-08-01`);
-        const endSeasonDate = add(startSeasonDate, { years: 1 });
-
-        return this.matchsDbService.getMatches(
-            {
-                from: startSeasonDate,
-                to: endSeasonDate,
-            },
-            withResult,
+        const { start: from, end: to } = getSeasonWindow(
+            Number(seasonStartYear) as SeasonYear,
+            'exclusive',
         );
+
+        return this.matchsDbService.getMatches({ from, to }, withResult);
     }
 
     async getCurrentSeason(withResult: boolean = false): Promise<FormattedMatch[]> {

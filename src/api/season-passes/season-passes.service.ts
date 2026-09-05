@@ -5,16 +5,11 @@ import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
+import { seasonStartYearFromDate } from '../../shared/utils/season.utils';
 import { SeasonPass } from './types/season-pass.type';
 import { CreateSeasonPassDto } from './dto/create-season-pass.dto';
 import { UpdateSeasonPassDto } from './dto/update-season-pass.dto';
 import { ISeasonPassesService } from './interfaces/season-passes.service.interface';
-
-function seasonStartYearFromDate(date: Date): SeasonYear {
-    return (
-        date.getMonth() < 7 ? date.getFullYear() - 1 : date.getFullYear()
-    ) as SeasonYear;
-}
 
 @Injectable()
 export class SeasonPassesService implements ISeasonPassesService {

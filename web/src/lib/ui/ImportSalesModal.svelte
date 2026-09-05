@@ -4,6 +4,7 @@
     import { previewImport } from '$lib/api/sales-import';
     import type { SeasonPass } from '$lib/types';
     import type { PreviewResponse } from '$lib/types/sales-import';
+    import { seasonStartYearFromDate } from '$lib/season';
 
     type Props = {
         open: boolean;
@@ -36,9 +37,7 @@
     });
 
     function currentSeasonYear(): number {
-        const now = new Date();
-
-        return now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear();
+        return seasonStartYearFromDate(new Date());
     }
 
     const passesByYear = $derived.by(() => {

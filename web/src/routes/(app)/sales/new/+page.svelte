@@ -2,10 +2,36 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { competitionLabel, dateTime } from '$lib/format';
+    import { seasonStartYearFromDate } from '$lib/season';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submitting = $state(false);
+    let selectedMatchId = $state(data.presetMatchId ?? '');
+
+    // SvelteKit reuses this component across same-route navigations (e.g. a
+    // link to /sales/new?matchId=B while already on /sales/new?matchId=A) —
+    // only `data` swaps, so re-seed the selection whenever the preset changes.
+    $effect(() => {
+        selectedMatchId = data.presetMatchId ?? '';
+    });
+
+    let selectedMatch = $derived(
+        data.matches.find((match) => match.id === selectedMatchId) ?? null,
+    );
+    let selectedSeason = $derived(
+        selectedMatch === null
+            ? null
+            : seasonStartYearFromDate(new Date(selectedMatch.date)),
+    );
+    let seasonLabel = $derived(
+        selectedSeason === null ? '' : `${selectedSeason}/${selectedSeason + 1}`,
+    );
+    let visiblePasses = $derived(
+        selectedSeason === null
+            ? []
+            : data.passes.filter((pass) => pass.seasonStartYear === selectedSeason),
+    );
 </script>
 
 <a
@@ -33,11 +59,12 @@
         <select
             name="matchId"
             required
+            bind:value={selectedMatchId}
             class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
         >
             <option value="">Select a match…</option>
             {#each data.matches as match (match.id)}
-                <option value={match.id} selected={data.presetMatchId === match.id}>
+                <option value={match.id}>
                     {dateTime(match.date)}, {match.atHome ? 'vs' : '@'} {match.opponent}
                     ({competitionLabel(match.competition)})
                 </option>
@@ -48,16 +75,20 @@
     <fieldset class="rounded border border-line p-3 space-y-2">
         <legend class="text-sm text-ink-muted px-1">Tickets per pass</legend>
 
-        {#if data.passes.length === 0}
+        {#if selectedMatch === null}
+            <p class="text-xs text-ink-faint">
+                Pick a match first — only passes from that match's season can be used.
+            </p>
+        {:else if visiblePasses.length === 0}
             <p class="text-xs text-negative-strong">
-                No season pass yet — <a
+                No season pass for {seasonLabel} — <a
                     href="/season"
                     class="text-primary hover:text-primary-hover hover:underline"
                     >create one</a
-                > before logging sales.
+                > before logging this sale.
             </p>
         {:else}
-            {#each data.passes as pass (pass.id)}
+            {#each visiblePasses as pass (pass.id)}
                 <label class="flex items-center justify-between gap-3">
                     <span class="text-sm text-ink-muted truncate">
                         {pass.seasonStartYear} · {pass.label}

@@ -1,11 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import type { Amortization, TimePeriodAccounting } from '$lib/types';
+import { seasonStartYearFromDate } from '$lib/season';
 
 function currentSeasonStartYear(): number {
-    const now = new Date();
-
-    return now.getMonth() < 7 ? now.getFullYear() - 1 : now.getFullYear();
+    return seasonStartYearFromDate(new Date());
 }
 
 export const load: PageServerLoad = (event) => {

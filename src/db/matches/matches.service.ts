@@ -11,6 +11,7 @@ import type { SeasonYear } from '@psg/shared/time';
 import { matchQuery } from './matches.query';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
+import { getSeasonWindow } from '../../shared/utils/season.utils';
 import { IMatchesDbService } from './matches.db.interface';
 
 @Injectable()
@@ -24,14 +25,14 @@ export class MatchesService implements IMatchesDbService {
         dates: { from: Date; to?: Date },
         withResult: boolean = false,
     ): Promise<Match[]> {
-        const where: { date: { gte: Date; lte?: Date } } = {
+        const where: { date: { gte: Date; lt?: Date } } = {
             date: {
                 gte: dates.from,
             },
         };
 
         if (dates.to) {
-            where.date.lte = dates.to;
+            where.date.lt = dates.to;
         }
 
         const result = await this.redisService.get(
@@ -50,8 +51,7 @@ export class MatchesService implements IMatchesDbService {
     }
 
     async getHomeMatchesForSeason(seasonStartYear: SeasonYear): Promise<Match[]> {
-        const from = new Date(seasonStartYear, 7, 1);
-        const to = new Date(seasonStartYear + 1, 7, 1);
+        const { start: from, end: to } = getSeasonWindow(seasonStartYear, 'exclusive');
 
         return this.prisma.matches.findMany({
             ...matchQuery(false),

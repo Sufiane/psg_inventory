@@ -234,6 +234,41 @@ describe('SalesImportService', () => {
                 code: ErrorCode.IMPORT_ROWS_INVALID,
             });
         });
+
+        describe('when a row resolves by date but carries a foreign client-supplied matchId', () => {
+            const foreignMatchId = '44444444-4444-4444-4444-444444444444';
+
+            beforeEach(() => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+            });
+
+            it('commits using the server-resolved matchId, not the client-supplied one', async () => {
+                const tampered: CommitRequestDto = {
+                    ...validDto,
+                    rows: [
+                        {
+                            ...validDto.rows[0]!,
+                            matchId: foreignMatchId,
+                        },
+                    ],
+                };
+
+                await service.commit(userId, tampered);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [expect.objectContaining({ matchId })],
+                    }),
+                );
+                expect(importDb.bulkCreate).not.toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [expect.objectContaining({ matchId: foreignMatchId })],
+                    }),
+                );
+            });
+        });
     });
 
     describe('revert', () => {

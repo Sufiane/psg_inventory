@@ -23,7 +23,13 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { SeasonYear } from '@psg/shared/time';
 
-jest.mock('../../shared/utils/season.utils');
+// Only getCurrentSeasonDate needs mocking (to control "now") — seasonStartYearFromDate
+// and getSeasonWindow must stay real so getGivenSeason/getCurrentSeason assertions
+// exercise the actual UTC boundary math.
+jest.mock('../../shared/utils/season.utils', () => ({
+    ...jest.requireActual('../../shared/utils/season.utils'),
+    getCurrentSeasonDate: jest.fn(),
+}));
 const getCurrentSeasonDateMocked = jest.mocked(getCurrentSeasonDate);
 
 jest.mock('./utils/format-aggregate.util');
@@ -136,8 +142,8 @@ describe('AccountingService', () => {
             expect(getSeasonSpy).toHaveBeenCalledWith(
                 userId,
                 {
-                    start: new Date(seasonStartYear, 7, 1),
-                    end: new Date(seasonStartYear + 1, 6, 31),
+                    start: new Date(Date.UTC(seasonStartYear, 7, 1)),
+                    end: new Date(Date.UTC(seasonStartYear + 1, 6, 31)),
                 },
                 seasonStartYear,
             );
