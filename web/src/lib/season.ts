@@ -11,3 +11,21 @@ export function seasonStartYearFromDate(date: Date): SeasonYear {
         date.getUTCMonth() < AUGUST ? date.getUTCFullYear() - 1 : date.getUTCFullYear()
     ) as SeasonYear;
 }
+
+export function seasonLabel(year: SeasonYear): string {
+    return `${year}/${year + 1}`;
+}
+
+/**
+ * `seasonLabel(seasonStartYearFromDate(...))` for a match date, handling the
+ * "no match picked yet" case call sites already test for separately.
+ */
+export function seasonLabelFromDate(date: Date | string | null | undefined): string {
+    if (date == null) {
+        return '';
+    }
+
+    return seasonLabel(
+        seasonStartYearFromDate(date instanceof Date ? date : new Date(date)),
+    );
+}

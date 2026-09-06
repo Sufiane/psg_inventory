@@ -12,7 +12,10 @@
         money,
         signedMoney,
     } from '$lib/format';
+    import { passesForMatch, passesForSale } from '$lib/sale-passes';
+    import { seasonLabel, seasonLabelFromDate, seasonStartYearFromDate } from '$lib/season';
     import type { SaleListItem } from '$lib/types';
+    import type { SeasonYear } from '@psg/shared/time';
     import Spinner from '$lib/ui/Spinner.svelte';
     import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
     import { invalidateAll } from '$app/navigation';
@@ -43,8 +46,24 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+    // Season years, not calendar years: between January and July the calendar
+    // year names a season that has not started, and picking it now yields an
+    // empty sales list and an empty match list.
+    const currentSeason = seasonStartYearFromDate(new Date());
+
+    // Union in `data.year` when a bookmarked/typed `?year=` falls outside the
+    // usual six-season window — otherwise no <option> matches it, the browser
+    // silently falls back to "Current", and the dropdown lies about which
+    // season is actually loaded.
+    let years = $derived.by(() => {
+        const base = Array.from({ length: 6 }, (_, i) => currentSeason - i);
+
+        if (data.year !== null && !base.includes(data.year)) {
+            return [...base, data.year].sort((first, second) => second - first);
+        }
+
+        return base;
+    });
 
     type SortKey = 'nbTickets' | 'listedPrice' | 'invest' | 'profit';
     type SortDir = 'asc' | 'desc';
@@ -147,6 +166,10 @@
         editMatchDate ? editMatchDate.getTime() < Date.now() : false,
     );
 
+    let editVisiblePasses = $derived(
+        editSale === null ? [] : passesForSale(data.passes, editSale),
+    );
+
     function urlWithEdit(targetId: string | null): string {
         const params = new URLSearchParams(page.url.searchParams);
 
@@ -163,11 +186,24 @@
 
     let submitting = $state<'update' | 'delete' | 'flip' | 'create' | null>(null);
 
-    let firstFieldEl = $state<HTMLInputElement | null>(null);
+    let firstFieldEl = $state<HTMLInputElement | HTMLAnchorElement | null>(null);
     let newPanelFirstEl = $state<HTMLSelectElement | null>(null);
 
-    let isNew = $derived(data.isNew && !editId);
+    // Whether the selected season can take a new sale — computed server-side
+    // in load() (see +page.server.ts for why: the backend's current-season
+    // bucketing can roll over to next year's season before the calendar year
+    // does, so a plain `data.year === currentSeason` check would wrongly
+    // block a future season the backend is already serving).
+    let isNew = $derived(data.isNew && !editId && data.canCreate);
     let importOpen = $state(false);
+
+    let newSaleMatchId = $state('');
+
+    let newSaleMatch = $derived(
+        data.matches.find((match) => match.id === newSaleMatchId) ?? null,
+    );
+    let newSaleSeasonLabel = $derived(seasonLabelFromDate(newSaleMatch?.date));
+    let newSaleVisiblePasses = $derived(passesForMatch(data.passes, newSaleMatch?.date));
 
     async function onImportCommitted(): Promise<void> {
         importOpen = false;
@@ -182,7 +218,10 @@
         if (editId && editSale && editSale.id === editId) {
             void tick().then(() => {
                 firstFieldEl?.focus();
-                firstFieldEl?.select();
+
+                if (firstFieldEl instanceof HTMLInputElement) {
+                    firstFieldEl.select();
+                }
             });
         }
     });
@@ -193,6 +232,14 @@
             void tick().then(() => {
                 newPanelFirstEl?.focus();
             });
+        }
+    });
+
+    // The panel is a snippet inside the page, not a fresh component — without
+    // this, reopening it inherits the previous pick and its filtered list.
+    $effect(() => {
+        if (!isNew) {
+            newSaleMatchId = '';
         }
     });
 
@@ -487,40 +534,51 @@
                     <legend class="text-xs text-ink-muted px-1">
                         Tickets per pass
                     </legend>
-                    {#each data.passes as pass, idx (pass.id)}
-                        {@const current =
-                            editSale.Allocations?.find(
-                                (alloc) => alloc.seasonPassId === pass.id,
-                            )?.nbTickets ?? 0}
-                        <label class="flex items-center justify-between gap-3">
-                            <span class="text-sm text-ink-muted truncate">
-                                {pass.seasonStartYear} · {pass.label}
-                                <span class="text-ink-faint"
-                                    >({pass.category} · {pass.row}/{pass.seat})</span
-                                >
-                            </span>
-                            {#if idx === 0}
-                                <input
-                                    bind:this={firstFieldEl}
-                                    type="number"
-                                    name={`alloc_${pass.id}`}
-                                    min="0"
-                                    step="1"
-                                    value={current}
-                                    class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
-                                />
-                            {:else}
-                                <input
-                                    type="number"
-                                    name={`alloc_${pass.id}`}
-                                    min="0"
-                                    step="1"
-                                    value={current}
-                                    class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
-                                />
-                            {/if}
-                        </label>
-                    {/each}
+                    {#if editVisiblePasses.length === 0}
+                        <p class="text-xs text-negative-strong">
+                            No season pass for this sale's season — <a
+                                bind:this={firstFieldEl}
+                                href="/season"
+                                class="text-primary hover:text-primary-hover hover:underline"
+                                >create one</a
+                            > to change its allocations.
+                        </p>
+                    {:else}
+                        {#each editVisiblePasses as pass, idx (pass.id)}
+                            {@const current =
+                                editSale.Allocations?.find(
+                                    (alloc) => alloc.seasonPassId === pass.id,
+                                )?.nbTickets ?? 0}
+                            <label class="flex items-center justify-between gap-3">
+                                <span class="text-sm text-ink-muted truncate">
+                                    {pass.seasonStartYear} · {pass.label}
+                                    <span class="text-ink-faint"
+                                        >({pass.category} · {pass.row}/{pass.seat})</span
+                                    >
+                                </span>
+                                {#if idx === 0}
+                                    <input
+                                        bind:this={firstFieldEl}
+                                        type="number"
+                                        name={`alloc_${pass.id}`}
+                                        min="0"
+                                        step="1"
+                                        value={current}
+                                        class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
+                                    />
+                                {:else}
+                                    <input
+                                        type="number"
+                                        name={`alloc_${pass.id}`}
+                                        min="0"
+                                        step="1"
+                                        value={current}
+                                        class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
+                                    />
+                                {/if}
+                            </label>
+                        {/each}
+                    {/if}
                 </fieldset>
 
                 <label class="block">
@@ -626,6 +684,7 @@
                 <span class="text-xs text-ink-muted">Match</span>
                 <select
                     bind:this={newPanelFirstEl}
+                    bind:value={newSaleMatchId}
                     name="matchId"
                     required
                     class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
@@ -643,16 +702,21 @@
 
             <fieldset class="sm:col-span-2 rounded border border-line p-3 space-y-2">
                 <legend class="text-xs text-ink-muted px-1">Tickets per pass</legend>
-                {#if data.passes.length === 0}
+                {#if newSaleMatch === null}
+                    <p class="text-xs text-ink-faint">
+                        Pick a match first — only passes from that match's season can be
+                        used.
+                    </p>
+                {:else if newSaleVisiblePasses.length === 0}
                     <p class="text-xs text-negative-strong">
-                        No season pass yet — <a
+                        No season pass for {newSaleSeasonLabel} — <a
                             href="/season"
                             class="text-primary hover:text-primary-hover hover:underline"
                             >create one</a
-                        > before logging sales.
+                        > before logging this sale.
                     </p>
                 {:else}
-                    {#each data.passes as pass (pass.id)}
+                    {#each newSaleVisiblePasses as pass (pass.id)}
                         <label class="flex items-center justify-between gap-3">
                             <span class="text-sm text-ink-muted truncate">
                                 {pass.seasonStartYear} · {pass.label}
@@ -737,7 +801,9 @@
             >
                 <option value="">Current</option>
                 {#each years as year (year)}
-                    <option value={year} selected={data.year === year}>{year}</option>
+                    <option value={year} selected={data.year === year}
+                        >{seasonLabel(year as SeasonYear)}</option
+                    >
                 {/each}
             </select>
         </form>
@@ -750,12 +816,19 @@
             >
                 Import CSV
             </button>
-            <a
-                href={urlWithNew(true)}
-                class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
-            >
-                + New sale
-            </a>
+            {#if data.canCreate}
+                <a
+                    href={urlWithNew(true)}
+                    class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
+                >
+                    + New sale
+                </a>
+            {:else}
+                <span class="text-sm text-ink-faint">
+                    Can't add new sales for a past season here — use Import CSV
+                    instead.
+                </span>
+            {/if}
         {/if}
     </div>
 </div>

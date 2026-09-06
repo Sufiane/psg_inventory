@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import { seasonStartYearFromDate } from '$lib/season';
 import type { FormattedMatch, SaleDetail, SaleListItem, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
@@ -9,10 +10,13 @@ export const load: PageServerLoad = async (event) => {
     const year = yearParam ? Number.parseInt(yearParam, 10) : null;
     const editId = event.url.searchParams.get('edit');
     const isNew = event.url.searchParams.get('new') !== null;
-    const path =
-        year && Number.isFinite(year) ? `/sales/season/${year}` : '/sales/current-season';
+    // `?year=` is a seasonStartYear, so it maps straight onto the
+    // `/season/:seasonStartYear` routes for both sales and matches.
+    const seasonYear = year && Number.isFinite(year) ? year : null;
+    const salesPath =
+        seasonYear !== null ? `/sales/season/${seasonYear}` : '/sales/current-season';
 
-    const sales = await api<SaleListItem[]>(event, path);
+    const sales = await api<SaleListItem[]>(event, salesPath);
 
     let editSale: SaleDetail | null = null;
 
@@ -24,15 +28,30 @@ export const load: PageServerLoad = async (event) => {
         }
     }
 
+    // New sales can only be logged against the current season or a season the
+    // backend is already serving matches for — the kickoff guard on
+    // updateSale means a past-season sale could never be marked SOLD, so the
+    // UI never offers one. Computed here (not as `seasonYear === currentSeason`
+    // on the client) because the backend's current-season bucketing
+    // (`getCurrentSeason`, buckets on `earliestUpcoming ?? now`) can roll over
+    // to next year's season before the calendar year does — a future
+    // `seasonYear` can already be a season the backend is actively serving.
+    const canCreate =
+        seasonYear === null || seasonYear >= seasonStartYearFromDate(new Date());
+
     let matches: FormattedMatch[] = [];
+    // Unfiltered on purpose: ImportSalesModal groups this list by season and
+    // renders a "Previous seasons" section, and the inline new-sale panel
+    // filters it client-side by whatever match is picked. Both consumers need
+    // every season present.
     const passes = await api<SeasonPass[]>(event, '/season-passes');
 
-    if (isNew && !editId) {
+    if (isNew && !editId && canCreate) {
         // /matches/current-season already returns matches earliest-first.
         matches = await api<FormattedMatch[]>(event, '/matches/current-season');
     }
 
-    return { sales, year, editSale, matches, isNew, passes };
+    return { sales, year: seasonYear, editSale, matches, isNew, passes, canCreate };
 };
 
 function readPayload(form: FormData): {

@@ -2,7 +2,8 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { competitionLabel, dateTime } from '$lib/format';
-    import { seasonStartYearFromDate } from '$lib/season';
+    import { passesForMatch } from '$lib/sale-passes';
+    import { seasonLabelFromDate } from '$lib/season';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -19,19 +20,8 @@
     let selectedMatch = $derived(
         data.matches.find((match) => match.id === selectedMatchId) ?? null,
     );
-    let selectedSeason = $derived(
-        selectedMatch === null
-            ? null
-            : seasonStartYearFromDate(new Date(selectedMatch.date)),
-    );
-    let seasonLabel = $derived(
-        selectedSeason === null ? '' : `${selectedSeason}/${selectedSeason + 1}`,
-    );
-    let visiblePasses = $derived(
-        selectedSeason === null
-            ? []
-            : data.passes.filter((pass) => pass.seasonStartYear === selectedSeason),
-    );
+    let selectedSeasonLabel = $derived(seasonLabelFromDate(selectedMatch?.date));
+    let visiblePasses = $derived(passesForMatch(data.passes, selectedMatch?.date));
 </script>
 
 <a
@@ -81,7 +71,7 @@
             </p>
         {:else if visiblePasses.length === 0}
             <p class="text-xs text-negative-strong">
-                No season pass for {seasonLabel} — <a
+                No season pass for {selectedSeasonLabel} — <a
                     href="/season"
                     class="text-primary hover:text-primary-hover hover:underline"
                     >create one</a
