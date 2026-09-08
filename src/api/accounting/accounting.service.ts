@@ -82,14 +82,21 @@ export class AccountingService implements IAccountingService {
             return null;
         }
 
+        const scope = {
+            status: statusConverter(status),
+            userId,
+            matchDateFrom: date.start,
+            ...(date.end ? { matchDateTo: date.end } : {}),
+        };
+
         const [lowestMatch, highestMatch] = await Promise.all([
             this.salesDbService.getOneByWithFullMatch({
                 profit: aggregate._min.profit,
-                status: statusConverter(status),
+                ...scope,
             }),
             this.salesDbService.getOneByWithFullMatch({
                 profit: aggregate._max.profit,
-                status: statusConverter(status),
+                ...scope,
             }),
         ]);
 

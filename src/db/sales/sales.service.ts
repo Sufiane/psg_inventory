@@ -16,6 +16,7 @@ import { Sale } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 import { ISalesDbService, SaleAllocationInput } from './sales.db.interface';
+import { buildInclusiveDateRangeFilter } from '../shared/date-range.util';
 
 function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
     return allocations.reduce(
@@ -273,7 +274,12 @@ export class SalesService implements ISalesDbService {
         invest?: Invest;
         nbTickets?: TicketCount;
         status?: SaleStatus;
+        userId: UserId;
+        matchDateFrom: Date;
+        matchDateTo?: Date;
     }): Promise<SaleWithFullMatch> {
+        const { matchDateFrom, matchDateTo, ...saleFields } = query;
+
         return this.prisma.sales.findFirstOrThrow({
             include: {
                 Match: {
@@ -282,7 +288,12 @@ export class SalesService implements ISalesDbService {
                     },
                 },
             },
-            where: query,
+            where: {
+                ...saleFields,
+                Match: {
+                    date: buildInclusiveDateRangeFilter(matchDateFrom, matchDateTo),
+                },
+            },
             orderBy: {
                 Match: {
                     date: 'asc',

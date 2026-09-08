@@ -8,6 +8,7 @@ import { Injectable } from '@nestjs/common';
 import { IAccountingDbService } from './accounting.db.interface';
 import { MatchRealizedProfit } from './types/match-realized-profit.type';
 import { SoldLeadTime } from './types/sold-lead-time.type';
+import { buildInclusiveDateRangeFilter } from '../shared/date-range.util';
 
 @Injectable()
 export class AccountingService implements IAccountingDbService {
@@ -26,12 +27,7 @@ export class AccountingService implements IAccountingDbService {
             listedPrice: true,
         };
 
-        const matchDateFilter = Object.assign(
-            {
-                gte: from,
-            },
-            to ? { lte: to } : {},
-        );
+        const matchDateFilter = buildInclusiveDateRangeFilter(from, to);
 
         const dbResult = await this.prisma.sales.aggregate({
             _sum: fields,
@@ -113,7 +109,7 @@ export class AccountingService implements IAccountingDbService {
         from: Date,
         to?: Date,
     ): Promise<SoldLeadTime[]> {
-        const matchDateFilter = Object.assign({ gte: from }, to ? { lte: to } : {});
+        const matchDateFilter = buildInclusiveDateRangeFilter(from, to);
 
         const rows = await this.prisma.sales.findMany({
             where: {

@@ -208,69 +208,114 @@ describe('AccountingService', () => {
         });
 
         describe('when there is an aggregate found', () => {
-            it('should return the aggregated accounting', async () => {
-                const aggregate = {
-                    _min: { profit: 1 },
-                    _max: { profit: 1 },
-                } as AccountingAggregate;
+            const aggregate = {
+                _min: { profit: 1 },
+                _max: { profit: 1 },
+            } as AccountingAggregate;
+            const userId = 'userId' as UserId;
+            const status = 'realized';
+            const lowestMatch = {
+                Match: { Opponent: { name: 'opponentLowest' } },
+            } as SaleWithFullMatch;
+            const highestMatch = {
+                Match: { Opponent: { name: 'opponentHighest' } },
+            } as SaleWithFullMatch;
+            const formatResult = {} as FormattedAggregate;
+
+            beforeEach(() => {
                 accountingDbService.getAccounting.mockResolvedValueOnce(aggregate);
-
-                const userId = 'userId' as UserId;
-                const status = 'realized';
-                const date: { start: Date; end?: Date } = {
-                    start: new Date('2022-02-02'),
-                };
-
-                const highestMatch = {
-                    Match: { Opponent: { name: 'opponentHighest' } },
-                } as SaleWithFullMatch;
-                const lowestMatch = {
-                    Match: { Opponent: { name: 'opponentLowest' } },
-                } as SaleWithFullMatch;
                 salesDbService.getOneByWithFullMatch
                     .mockResolvedValueOnce(lowestMatch)
                     .mockResolvedValueOnce(highestMatch);
-
-                const formatResult = {} as FormattedAggregate;
                 formatAggregateMocked.mockReturnValueOnce(formatResult);
+            });
 
-                await expect(
-                    service.getAccounting(userId, status, date),
-                ).resolves.toEqual(formatResult);
-                expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
-                expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
-                    userId,
-                    SaleStatus.SOLD,
-                    date.start,
-                    date.end,
-                );
-                expect(salesDbService.getOneByWithFullMatch).toHaveBeenCalledTimes(2);
-                expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(1, {
-                    profit: aggregate._min.profit,
-                    status: SaleStatus.SOLD,
-                });
-                expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(2, {
-                    profit: aggregate._max.profit,
-                    status: SaleStatus.SOLD,
-                });
-                expect(formatAggregateMocked).toHaveBeenCalledTimes(1);
-                expect(formatAggregateMocked).toHaveBeenCalledWith({
-                    sum: aggregate._sum,
-                    avg: aggregate._avg,
-                    min: {
-                        ...aggregate._min,
-                        match: {
-                            ...lowestMatch.Match,
-                            opponent: lowestMatch.Match.Opponent.name,
+            describe('when the period has no end date', () => {
+                it('returns the aggregated accounting', async () => {
+                    const date: { start: Date; end?: Date } = {
+                        start: new Date('2022-02-02'),
+                    };
+
+                    await expect(
+                        service.getAccounting(userId, status, date),
+                    ).resolves.toEqual(formatResult);
+                    expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
+                    expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
+                        userId,
+                        SaleStatus.SOLD,
+                        date.start,
+                        date.end,
+                    );
+                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenCalledTimes(2);
+                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
+                        1,
+                        {
+                            profit: aggregate._min.profit,
+                            status: SaleStatus.SOLD,
+                            userId,
+                            matchDateFrom: date.start,
                         },
-                    },
-                    max: {
-                        ...aggregate._max,
-                        match: {
-                            ...highestMatch.Match,
-                            opponent: highestMatch.Match.Opponent.name,
+                    );
+                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
+                        2,
+                        {
+                            profit: aggregate._max.profit,
+                            status: SaleStatus.SOLD,
+                            userId,
+                            matchDateFrom: date.start,
                         },
-                    },
+                    );
+                    expect(formatAggregateMocked).toHaveBeenCalledTimes(1);
+                    expect(formatAggregateMocked).toHaveBeenCalledWith({
+                        sum: aggregate._sum,
+                        avg: aggregate._avg,
+                        min: {
+                            ...aggregate._min,
+                            match: {
+                                ...lowestMatch.Match,
+                                opponent: lowestMatch.Match.Opponent.name,
+                            },
+                        },
+                        max: {
+                            ...aggregate._max,
+                            match: {
+                                ...highestMatch.Match,
+                                opponent: highestMatch.Match.Opponent.name,
+                            },
+                        },
+                    });
+                });
+            });
+
+            describe('when the period has an end date', () => {
+                it('includes matchDateTo in the extreme-sale lookup scope', async () => {
+                    const date: { start: Date; end?: Date } = {
+                        start: new Date('2026-07-01'),
+                        end: new Date('2027-06-30'),
+                    };
+
+                    await service.getAccounting(userId, status, date);
+
+                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
+                        1,
+                        {
+                            profit: aggregate._min.profit,
+                            status: SaleStatus.SOLD,
+                            userId,
+                            matchDateFrom: date.start,
+                            matchDateTo: date.end,
+                        },
+                    );
+                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
+                        2,
+                        {
+                            profit: aggregate._max.profit,
+                            status: SaleStatus.SOLD,
+                            userId,
+                            matchDateFrom: date.start,
+                            matchDateTo: date.end,
+                        },
+                    );
                 });
             });
         });

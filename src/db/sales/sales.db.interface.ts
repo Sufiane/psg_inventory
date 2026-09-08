@@ -43,6 +43,9 @@ export abstract class ISalesDbService {
         invest?: Invest;
         nbTickets?: TicketCount;
         status?: SaleStatus;
+        userId: UserId;
+        matchDateFrom: Date;
+        matchDateTo?: Date;
     }): Promise<SaleWithFullMatch>;
     abstract cancelMany(): Promise<void>;
     abstract getOldestMatchSale(userId: UserId): Promise<OldestMatchSale>;
