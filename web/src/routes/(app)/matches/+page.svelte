@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import { competitionLabel, dateTime } from '$lib/format';
+    import type { FormattedMatch } from '$lib/types';
 
     let { data }: { data: PageData } = $props();
 
@@ -12,24 +13,42 @@
         { value: 'home', label: 'Home' },
         { value: 'away', label: 'Away' },
     ] as const;
-
-    let upcoming = $derived.by(() => {
-        const now = Date.now();
-
-        return data.matches.filter((match) => new Date(match.date).getTime() >= now);
-    });
-
-    let past = $derived.by(() => {
-        const now = Date.now();
-
-        return data.matches
-            .filter((match) => new Date(match.date).getTime() < now)
-            .sort(
-                (left, right) =>
-                    new Date(right.date).getTime() - new Date(left.date).getTime(),
-            );
-    });
 </script>
+
+{#snippet pastList()}
+    <ul class="bg-surface rounded-lg border border-line divide-y divide-line">
+        {#each data.past as match (match.id)}
+            {@render matchRow(match)}
+        {/each}
+    </ul>
+{/snippet}
+
+{#snippet matchRow(match: FormattedMatch)}
+    <li class="px-4 py-3 flex items-center gap-3 text-sm">
+        <span class="w-32 shrink-0 text-ink-muted">{dateTime(match.date)}</span>
+        <span class="flex-1 min-w-0 text-ink truncate">
+            {match.atHome ? 'vs' : '@'}
+            <strong>{match.opponent}</strong>
+        </span>
+        <span class="text-ink-faint text-xs w-32 shrink-0"
+            >{competitionLabel(match.competition)}</span
+        >
+        {#if match.result?.score && !match.result.score.includes('null')}
+            <span
+                class="font-mono text-xs shrink-0 {match.result.isWin
+                    ? 'text-positive'
+                    : 'text-negative'}"
+            >
+                {match.result.score}
+            </span>
+        {/if}
+        <a
+            href="/matches/{match.id}"
+            class="text-primary font-medium hover:text-primary-hover hover:underline shrink-0"
+            >View</a
+        >
+    </li>
+{/snippet}
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Matches</h1>
@@ -72,106 +91,82 @@
         </div>
 
         <div class="flex items-center gap-2">
-                <label class="text-sm text-ink-muted" for="competition">Competition</label>
-                <select
-                    id="competition"
-                    name="competition"
-                    class="rounded border border-line-strong bg-surface text-ink-muted px-2 py-1 text-sm hover:text-ink hover:border-ink transition-colors"
-                    onchange={(event) => event.currentTarget.form?.requestSubmit()}
-                >
-                    <option value="all" selected={data.competition === 'all'}>All</option>
-                    {#each data.competitions as comp (comp)}
-                        <option value={comp} selected={data.competition === comp}>
-                            {competitionLabel(comp)}
-                        </option>
-                    {/each}
+            <label class="text-sm text-ink-muted" for="competition">Competition</label>
+            <select
+                id="competition"
+                name="competition"
+                class="rounded border border-line-strong bg-surface text-ink-muted px-2 py-1 text-sm hover:text-ink hover:border-ink transition-colors"
+                onchange={(event) => event.currentTarget.form?.requestSubmit()}
+            >
+                <option value="all" selected={data.competition === 'all'}>All</option>
+                {#each data.competitions as comp (comp)}
+                    <option value={comp} selected={data.competition === comp}>
+                        {competitionLabel(comp)}
+                    </option>
+                {/each}
             </select>
         </div>
     </form>
 </div>
 
-{#if data.matches.length === 0}
-    <p class="text-ink-faint text-sm">No matches match these filters.</p>
+{#if data.totalCount === 0}
+    <p class="text-ink-faint text-sm">No matches for this season yet.</p>
+{:else if data.filteredCount === 0}
+    <p class="text-ink-faint text-sm">
+        No matches match these filters.
+        <a
+            href="?{data.year !== null ? `year=${data.year}` : ''}"
+            class="text-primary font-medium hover:text-primary-hover hover:underline"
+            >Clear filters</a
+        >
+    </p>
 {:else}
-    {#if upcoming.length > 0}
-        <ul class="bg-surface rounded-lg border border-line divide-y divide-line mb-4">
-            {#each upcoming as match (match.id)}
-                <li class="px-4 py-3 flex items-center gap-3 text-sm">
-                    <span class="w-32 shrink-0 text-ink-muted">{dateTime(match.date)}</span>
-                    <span class="flex-1 min-w-0 text-ink truncate">
-                        {match.atHome ? 'vs' : '@'}
-                        <strong>{match.opponent}</strong>
-                    </span>
-                    <span class="text-ink-faint text-xs w-32 shrink-0"
-                        >{competitionLabel(match.competition)}</span
-                    >
-                    {#if match.result?.score && !match.result.score.includes('null')}
-                        <span
-                            class="font-mono text-xs shrink-0 {match.result.isWin
-                                ? 'text-positive'
-                                : 'text-negative'}"
-                        >
-                            {match.result.score}
-                        </span>
-                    {/if}
-                    <a
-                        href="/matches/{match.id}"
-                        class="text-primary font-medium hover:text-primary-hover hover:underline shrink-0"
-                        >View</a
-                    >
-                </li>
-            {/each}
-        </ul>
-    {:else}
-        <p class="text-ink-faint text-sm mb-4">No upcoming matches.</p>
-    {/if}
-
-    {#if past.length > 0}
-        <details class="group">
-            <summary
-                class="cursor-pointer list-none inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink py-2 transition-colors"
-            >
-                <span
-                    aria-hidden="true"
-                    class="inline-block transition-transform duration-150 group-open:rotate-90"
-                    >&rsaquo;</span
-                >
-                Show {past.length}
-                {past.length === 1 ? 'past match' : 'past matches'}
-            </summary>
-
+    {#if !data.isPastSeason}
+        {#if data.upcoming.length > 0}
             <ul
-                class="mt-2 bg-surface rounded-lg border border-line divide-y divide-line"
+                class="bg-surface rounded-lg border border-line divide-y divide-line mb-4"
             >
-                {#each past as match (match.id)}
-                    <li class="px-4 py-3 flex items-center gap-3 text-sm">
-                        <span class="w-32 shrink-0 text-ink-muted"
-                            >{dateTime(match.date)}</span
-                        >
-                        <span class="flex-1 min-w-0 text-ink truncate">
-                            {match.atHome ? 'vs' : '@'}
-                            <strong>{match.opponent}</strong>
-                        </span>
-                        <span class="text-ink-faint text-xs w-32 shrink-0"
-                            >{competitionLabel(match.competition)}</span
-                        >
-                        {#if match.result?.score && !match.result.score.includes('null')}
-                            <span
-                                class="font-mono text-xs shrink-0 {match.result.isWin
-                                    ? 'text-positive'
-                                    : 'text-negative'}"
-                            >
-                                {match.result.score}
-                            </span>
-                        {/if}
-                        <a
-                            href="/matches/{match.id}"
-                            class="text-primary font-medium hover:text-primary-hover hover:underline shrink-0"
-                            >View</a
-                        >
-                    </li>
+                {#each data.upcoming as match (match.id)}
+                    {@render matchRow(match)}
                 {/each}
             </ul>
-        </details>
+        {:else if data.totalUpcomingCount === 0}
+            <p class="text-ink-faint text-sm mb-4">
+                No upcoming matches left this season.
+            </p>
+        {:else}
+            <p class="text-ink-faint text-sm mb-4">
+                No upcoming matches match your filters.
+                <a
+                    href="?{data.year !== null ? `year=${data.year}` : ''}"
+                    class="text-primary font-medium hover:text-primary-hover hover:underline"
+                    >Clear filters</a
+                >
+            </p>
+        {/if}
+    {/if}
+
+    {#if data.past.length > 0}
+        {#if data.isPastSeason}
+            {@render pastList()}
+        {:else}
+            <details class="group">
+                <summary
+                    class="cursor-pointer list-none inline-flex items-center gap-2 text-sm text-ink-muted hover:text-ink py-2 transition-colors"
+                >
+                    <span
+                        aria-hidden="true"
+                        class="inline-block transition-transform duration-150 group-open:rotate-90"
+                        >&rsaquo;</span
+                    >
+                    Show {data.past.length}
+                    {data.past.length === 1 ? 'past match' : 'past matches'}
+                </summary>
+
+                <div class="mt-2">
+                    {@render pastList()}
+                </div>
+            </details>
+        {/if}
     {/if}
 {/if}

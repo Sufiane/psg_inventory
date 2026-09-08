@@ -19,9 +19,12 @@ export default {
         `ask:user:id:${userId}:hour:${hourBucket}` as CacheKey<number>,
     invalidateAccounting: (userId: string): CacheKeyPattern =>
         `accounting:user:id:${userId}:*` as CacheKeyPattern,
-    invalidateMatches: (from?: Date): CacheKeyPattern =>
-        (from ? `matches:start:${from.toISOString()}:*` : 'matches:*') as CacheKeyPattern,
-    match: (matchId: string): CacheKey<Match> => `match:id:${matchId}` as CacheKey<Match>,
+    // Cache keys are built from the query *window* start (a season boundary),
+    // never from a match's own kickoff, so there is no correct narrower
+    // pattern to offer. createMatch and loadMatches both flush the namespace.
+    invalidateMatches: (): CacheKeyPattern => 'matches:*' as CacheKeyPattern,
+    match: (matchId: string, withResult: boolean = false): CacheKey<Match> =>
+        `match:id:${matchId}:${withResult}` as CacheKey<Match>,
     matches: (from: Date, to?: Date, withResult: boolean = false): CacheKey<Match[]> =>
         `matches:start:${from.toISOString()}:end:${to?.toISOString()}:withResult:${withResult}` as CacheKey<
             Match[]

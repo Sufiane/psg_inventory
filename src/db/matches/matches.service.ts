@@ -63,19 +63,9 @@ export class MatchesService implements IMatchesDbService {
         }) as Promise<Match[]>;
     }
 
-    async getEarliestUpcomingMatchDate(): Promise<Date | null> {
-        const match = await this.prisma.matches.findFirst({
-            select: { date: true },
-            where: { date: { gte: new Date() } },
-            orderBy: { date: 'asc' },
-        });
-
-        return match?.date ?? null;
-    }
-
     async getOneMatch(id: MatchId, withResult: boolean = false): Promise<Match | null> {
         return this.redisService.get(
-            CACHE_KEYS.match(id),
+            CACHE_KEYS.match(id, withResult),
             ONE_HOUR_TTL,
             () =>
                 this.prisma.matches.findUnique({
@@ -88,6 +78,38 @@ export class MatchesService implements IMatchesDbService {
     }
 
     async loadMatches(matches: FormattedMatch[]): Promise<void> {
+        // syncMatches mutates this array in place rather than returning one,
+        // because if a mid-loop transaction throws, its return value never
+        // runs — this array is the only way the `finally` block below still
+        // sees the ids that committed before the throw.
+        const updatedMatchIds: string[] = [];
+
+        try {
+            await this.syncMatches(matches, updatedMatchIds);
+        } finally {
+            // Runs even if a mid-loop transaction throws, so matches
+            // committed by earlier iterations never serve stale cache data
+            // for the rest of the TTL.
+            await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
+
+            for (const matchId of updatedMatchIds) {
+                // Direct deletes of the 2 known key shapes instead of a
+                // pattern scan per match id — invalidatePattern's MATCH
+                // option only filters what SCAN returns, it still walks the
+                // entire keyspace, so N updated matches used to mean N
+                // full-keyspace scans.
+                await this.redisService.invalidate(CACHE_KEYS.match(matchId, true));
+                await this.redisService.invalidate(CACHE_KEYS.match(matchId, false));
+            }
+        }
+    }
+
+    // updatedMatchIds is an out-parameter, not a return value — see the
+    // comment at the call site in loadMatches for why.
+    private async syncMatches(
+        matches: FormattedMatch[],
+        updatedMatchIds: string[],
+    ): Promise<void> {
         for (const match of matches) {
             await this.prisma.$transaction(async (tx) => {
                 const { id: opponentId } = await tx.opponents.upsert({
@@ -152,6 +174,8 @@ export class MatchesService implements IMatchesDbService {
                         },
                     });
 
+                    updatedMatchIds.push(existing.id);
+
                     return;
                 }
 
@@ -172,8 +196,6 @@ export class MatchesService implements IMatchesDbService {
                 });
             });
         }
-
-        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
     }
 
     async createMatch(payload: {
@@ -222,8 +244,6 @@ export class MatchesService implements IMatchesDbService {
             throw e;
         }
 
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateMatches(new Date(payload.date)),
-        );
+        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
     }
 }

@@ -1,18 +1,23 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
+import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
 import type { FormattedMatch, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
-    // /matches/current-season already returns matches earliest-first.
-    const [matches, passes] = await Promise.all([
+    const [allMatches, passes] = await Promise.all([
         api<FormattedMatch[]>(event, '/matches/current-season'),
         api<SeasonPass[]>(event, '/season-passes'),
     ]);
     const presetMatchId = event.url.searchParams.get('matchId');
+    // The endpoint returns the whole calendar season, earliest-first, matches
+    // already played included. A sale can only ever be logged against a match
+    // that has not kicked off (updateSale's kickoff guard), so the picker only
+    // ever offers `upcoming`.
+    const { upcoming } = splitByKickoff(allMatches, new Date());
 
-    return { matches, presetMatchId, passes };
+    return { matches: upcoming, presetMatchId, passes };
 };
 
 export const actions: Actions = {
