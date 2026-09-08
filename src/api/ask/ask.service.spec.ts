@@ -325,17 +325,13 @@ describe('AskService', () => {
             jest.useRealTimers();
         });
 
-        // getCurrentSeason(true) resolves to future-fixtures-only (from
-        // "now" forward), so `played` in the context is structurally always
-        // empty. getSeasonMatches bounds by the season's start date instead,
-        // covering matches that have already been played.
-        it('fetches matches bounded by the season start, not by now', async () => {
+        it('fetches matches for the same season year it fetches amortization for', async () => {
             await service.ask(USER_ID, 'anything');
 
-            expect(matches.getSeasonMatches).toHaveBeenCalledWith('2025', true);
+            expect(matches.getSeasonMatches).toHaveBeenCalledWith(2025, true);
         });
 
-        it('does not use getCurrentSeason, which excludes already-played matches', async () => {
+        it('does not use getCurrentSeason, keeping the ask window pinned to an explicit year', async () => {
             await service.ask(USER_ID, 'anything');
 
             expect(matches.getCurrentSeason).not.toHaveBeenCalled();

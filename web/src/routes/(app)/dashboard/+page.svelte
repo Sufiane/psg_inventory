@@ -9,6 +9,7 @@
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
     import { competitionLabel, dateTime, signedMoney } from '$lib/format';
+    import { splitByKickoff } from '$lib/matches';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -213,15 +214,25 @@
             {/each}
         </ul>
     {:then matches}
-        {@const upcoming = matches
-            .filter((match) => new Date(match.date) >= new Date())
-            .slice(0, 5)}
-        {#if upcoming.length === 0}
+        {@const upcoming = splitByKickoff(matches, new Date()).upcoming.slice(0, 5)}
+        {#if matches.length === 0}
             <p
                 in:fade={{ duration: 120, easing: cubicOut }}
                 class="text-ink-faint text-sm"
             >
-                No upcoming matches.
+                No fixtures for this season yet.
+            </p>
+        {:else if upcoming.length === 0}
+            <p
+                in:fade={{ duration: 120, easing: cubicOut }}
+                class="text-ink-faint text-sm"
+            >
+                No upcoming matches left this season.
+                <a
+                    href="/matches"
+                    class="text-primary font-medium hover:text-primary-hover hover:underline"
+                    >See the season's results</a
+                >
             </p>
         {:else}
             <ul

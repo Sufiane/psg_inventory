@@ -5,7 +5,10 @@ import type { SeasonYear } from '@psg/shared/time';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { getSeasonWindow, getSeasonBucket } from '../../shared/utils/season.utils';
+import {
+    getSeasonWindow,
+    seasonStartYearFromDate,
+} from '../../shared/utils/season.utils';
 import { formatMatch } from './formatters/format-match.formatter';
 import { FormattedMatch } from './types/formatted-match.type';
 import { Match } from '../../db/matches/types/match.type';
@@ -16,29 +19,21 @@ export class MatchesService implements IMatchesService {
     constructor(private readonly matchsDbService: IMatchesDbService) {}
 
     getSeasonMatches(
-        seasonStartYear: string,
+        seasonStartYear: SeasonYear,
         withResult: boolean = false,
     ): Promise<Match[]> {
-        const { start: from, end: to } = getSeasonWindow(
-            Number(seasonStartYear) as SeasonYear,
-            'exclusive',
-        );
+        const { start: from, end: to } = getSeasonWindow(seasonStartYear, 'exclusive');
 
         return this.matchsDbService.getMatches({ from, to }, withResult);
     }
 
     async getCurrentSeason(withResult: boolean = false): Promise<FormattedMatch[]> {
-        const now = new Date();
-        const earliestUpcoming =
-            await this.matchsDbService.getEarliestUpcomingMatchDate();
-        const season = getSeasonBucket(earliestUpcoming ?? now);
-
-        const dbResponse = await this.matchsDbService.getMatches(
-            { from: now, to: season.end },
+        const matches = await this.getSeasonMatches(
+            seasonStartYearFromDate(new Date()),
             withResult,
         );
 
-        return dbResponse.map((match) => formatMatch(match, withResult));
+        return matches.map((match) => formatMatch(match, withResult));
     }
 
     async getMatch(matchId: MatchId, withResult: boolean = false) {

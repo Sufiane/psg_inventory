@@ -187,13 +187,10 @@
     let submitting = $state<'update' | 'delete' | 'flip' | 'create' | null>(null);
 
     let firstFieldEl = $state<HTMLInputElement | HTMLAnchorElement | null>(null);
-    let newPanelFirstEl = $state<HTMLSelectElement | null>(null);
+    let newPanelFirstEl = $state<HTMLSelectElement | HTMLButtonElement | null>(null);
 
-    // Whether the selected season can take a new sale — computed server-side
-    // in load() (see +page.server.ts for why: the backend's current-season
-    // bucketing can roll over to next year's season before the calendar year
-    // does, so a plain `data.year === currentSeason` check would wrongly
-    // block a future season the backend is already serving).
+    // `canCreate` is computed server-side against the sanitized season year
+    // (see +page.server.ts) — the panel only opens for the current season.
     let isNew = $derived(data.isNew && !editId && data.canCreate);
     let importOpen = $state(false);
 
@@ -680,25 +677,39 @@
             class="grid sm:grid-cols-2 gap-3"
             use:enhance={trackCreate}
         >
-            <label class="block sm:col-span-2">
-                <span class="text-xs text-ink-muted">Match</span>
-                <select
-                    bind:this={newPanelFirstEl}
-                    bind:value={newSaleMatchId}
-                    name="matchId"
-                    required
-                    class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
-                >
-                    <option value="">Select a match…</option>
-                    {#each data.matches as match (match.id)}
-                        <option value={match.id}>
-                            {dateTime(match.date)}, {match.atHome ? 'vs' : '@'}
-                            {match.opponent}
-                            ({competitionLabel(match.competition)})
-                        </option>
-                    {/each}
-                </select>
-            </label>
+            {#if data.matches.length === 0}
+                <p class="sm:col-span-2 text-xs text-ink-faint">
+                    No upcoming matches — nothing to log a sale against right now.
+                    <button
+                        bind:this={newPanelFirstEl}
+                        type="button"
+                        onclick={() => (importOpen = true)}
+                        class="text-primary font-medium hover:text-primary-hover hover:underline"
+                    >
+                        Use Import CSV instead.
+                    </button>
+                </p>
+            {:else}
+                <label class="block sm:col-span-2">
+                    <span class="text-xs text-ink-muted">Match</span>
+                    <select
+                        bind:this={newPanelFirstEl}
+                        bind:value={newSaleMatchId}
+                        name="matchId"
+                        required
+                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                    >
+                        <option value="">Select a match…</option>
+                        {#each data.matches as match (match.id)}
+                            <option value={match.id}>
+                                {dateTime(match.date)}, {match.atHome ? 'vs' : '@'}
+                                {match.opponent}
+                                ({competitionLabel(match.competition)})
+                            </option>
+                        {/each}
+                    </select>
+                </label>
+            {/if}
 
             <fieldset class="sm:col-span-2 rounded border border-line p-3 space-y-2">
                 <legend class="text-xs text-ink-muted px-1">Tickets per pass</legend>
@@ -772,7 +783,7 @@
             <div class="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
                 <button
                     type="submit"
-                    disabled={submitting !== null}
+                    disabled={submitting !== null || data.matches.length === 0}
                     class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                 >
                     {#if submitting === 'create'}
@@ -825,7 +836,7 @@
                 </a>
             {:else}
                 <span class="text-sm text-ink-faint">
-                    Can't add new sales for a past season here — use Import CSV
+                    Can't add new sales for this season here — use Import CSV
                     instead.
                 </span>
             {/if}

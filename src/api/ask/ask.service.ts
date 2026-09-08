@@ -68,12 +68,10 @@ export class AskService implements IAskService {
             this.accountingService.getCurrentSeason(userId),
             this.accountingService.getAllTime(userId),
             this.accountingService.getAmortization(userId, seasonStartYear),
-            // getCurrentSeason(true) resolves to future fixtures only (from
-            // "now" forward), so the played/upcoming split downstream would
-            // always see an empty `played` array. getSeasonMatches is bounded
-            // by the season's start date instead, covering matches that have
-            // already been played this season.
-            this.matchesService.getSeasonMatches(String(seasonStartYear), true),
+            // Pinned to the same seasonStartYear as getAmortization above, so
+            // the match list and the amortization figures cannot disagree
+            // about which season the answer is about.
+            this.matchesService.getSeasonMatches(seasonStartYear, true),
         ]);
 
         const matches = seasonMatches.map((match) => formatMatch(match, true));

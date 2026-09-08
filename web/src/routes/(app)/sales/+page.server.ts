@@ -1,18 +1,17 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
+import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
-import { seasonStartYearFromDate } from '$lib/season';
+import { parseSeasonYearParam, seasonStartYearFromDate } from '$lib/season';
 import type { FormattedMatch, SaleDetail, SaleListItem, SeasonPass } from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
-    const yearParam = event.url.searchParams.get('year');
-    const year = yearParam ? Number.parseInt(yearParam, 10) : null;
     const editId = event.url.searchParams.get('edit');
     const isNew = event.url.searchParams.get('new') !== null;
     // `?year=` is a seasonStartYear, so it maps straight onto the
     // `/season/:seasonStartYear` routes for both sales and matches.
-    const seasonYear = year && Number.isFinite(year) ? year : null;
+    const seasonYear = parseSeasonYearParam(event.url);
     const salesPath =
         seasonYear !== null ? `/sales/season/${seasonYear}` : '/sales/current-season';
 
@@ -28,16 +27,15 @@ export const load: PageServerLoad = async (event) => {
         }
     }
 
-    // New sales can only be logged against the current season or a season the
-    // backend is already serving matches for — the kickoff guard on
-    // updateSale means a past-season sale could never be marked SOLD, so the
-    // UI never offers one. Computed here (not as `seasonYear === currentSeason`
-    // on the client) because the backend's current-season bucketing
-    // (`getCurrentSeason`, buckets on `earliestUpcoming ?? now`) can roll over
-    // to next year's season before the calendar year does — a future
-    // `seasonYear` can already be a season the backend is actively serving.
+    // New sales are only ever logged against the current season: updateSale's
+    // kickoff guard means a past-season sale could never be marked SOLD, and a
+    // future season has no fixtures to offer. `/matches/current-season` derives
+    // its season from seasonStartYearFromDate(new Date()) — the same function
+    // on the same clock as this line — so an exact match is the honest test.
+    // Computed server-side so it runs against the sanitized `seasonYear` rather
+    // than the raw `?year=` param.
     const canCreate =
-        seasonYear === null || seasonYear >= seasonStartYearFromDate(new Date());
+        seasonYear === null || seasonYear === seasonStartYearFromDate(new Date());
 
     let matches: FormattedMatch[] = [];
     // Unfiltered on purpose: ImportSalesModal groups this list by season and
@@ -47,8 +45,11 @@ export const load: PageServerLoad = async (event) => {
     const passes = await api<SeasonPass[]>(event, '/season-passes');
 
     if (isNew && !editId && canCreate) {
-        // /matches/current-season already returns matches earliest-first.
-        matches = await api<FormattedMatch[]>(event, '/matches/current-season');
+        // The whole calendar season comes back, earliest-first, played matches
+        // included — the picker only offers the ones still to kick off.
+        const allMatches = await api<FormattedMatch[]>(event, '/matches/current-season');
+
+        matches = splitByKickoff(allMatches, new Date()).upcoming;
     }
 
     return { sales, year: seasonYear, editSale, matches, isNew, passes, canCreate };

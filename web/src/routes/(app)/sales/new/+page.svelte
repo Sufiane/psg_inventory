@@ -44,23 +44,35 @@
         };
     }}
 >
-    <label class="block">
-        <span class="text-sm text-ink-muted">Match</span>
-        <select
-            name="matchId"
-            required
-            bind:value={selectedMatchId}
-            class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-        >
-            <option value="">Select a match…</option>
-            {#each data.matches as match (match.id)}
-                <option value={match.id}>
-                    {dateTime(match.date)}, {match.atHome ? 'vs' : '@'} {match.opponent}
-                    ({competitionLabel(match.competition)})
-                </option>
-            {/each}
-        </select>
-    </label>
+    {#if data.matches.length === 0}
+        <p class="text-sm text-ink-faint">
+            No upcoming matches — nothing to log a sale against right now.
+            <a
+                href="/sales"
+                class="text-primary font-medium hover:text-primary-hover hover:underline"
+                >Back to sales</a
+            >
+        </p>
+    {:else}
+        <label class="block">
+            <span class="text-sm text-ink-muted">Match</span>
+            <select
+                name="matchId"
+                required
+                bind:value={selectedMatchId}
+                class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+            >
+                <option value="">Select a match…</option>
+                {#each data.matches as match (match.id)}
+                    <option value={match.id}>
+                        {dateTime(match.date)}, {match.atHome ? 'vs' : '@'}
+                        {match.opponent}
+                        ({competitionLabel(match.competition)})
+                    </option>
+                {/each}
+            </select>
+        </label>
+    {/if}
 
     <fieldset class="rounded border border-line p-3 space-y-2">
         <legend class="text-sm text-ink-muted px-1">Tickets per pass</legend>
@@ -128,7 +140,7 @@
 
     <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || data.matches.length === 0}
         class="rounded bg-primary text-surface px-4 py-2 font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
     >
         {#if submitting}
