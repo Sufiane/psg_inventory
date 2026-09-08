@@ -8,6 +8,8 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submitting = $state(false);
+    // svelte-ignore state_referenced_locally -- intentional seed; the
+    // $effect below re-syncs `selectedMatchId` whenever `data` changes later.
     let selectedMatchId = $state(data.presetMatchId ?? '');
 
     // SvelteKit reuses this component across same-route navigations (e.g. a

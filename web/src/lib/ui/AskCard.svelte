@@ -16,8 +16,15 @@
     } = $props();
 
     let pending = $state(false);
+    // svelte-ignore state_referenced_locally -- intentional seed; the
+    // $effect below re-syncs `value` whenever `question` changes later
+    // (AskCard is reused across same-route navigations, so it does).
     let value = $state(question);
     let formEl: HTMLFormElement | undefined;
+
+    $effect(() => {
+        value = question;
+    });
 
     const EXAMPLES = [
         'How is the current season going?',
