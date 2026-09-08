@@ -28,7 +28,7 @@ Track ticket listings, monitor financial performance, and fetch live match data 
 ## Prerequisites
 
 - Node.js >= 18
-- PostgreSQL — free tier available on [Aiven](https://aiven.io)
+- Docker (for the local PostgreSQL used in dev/test — see [Local Database](#local-database))
 - Redis — free tier available on [Render](https://render.com)
 
 ## Installation
@@ -39,12 +39,29 @@ cd psg_inventory
 npm install
 ```
 
-Copy `.env.example` to `.env` and fill in the values (see [Environment Variables](#environment-variables)), 
-then run migrations:
+Copy `.env.example` to `.env` and fill in the values (see [Environment Variables](#environment-variables)),
+start the local database, then run migrations:
 
 ```bash
-npx prisma migrate dev
+npm run local:db:up
+npm run local:db:migrate
 ```
+
+## Local Database
+
+Local dev and tests run against a disposable PostgreSQL container defined in
+[`docker-compose.yml`](docker-compose.yml) — never against the production database.
+
+```bash
+npm run local:db:up      # start the local db (docker compose)
+npm run local:db:migrate # apply migrations (npx prisma migrate deploy)
+npm run local:db:seed    # seed demo accounts (see Demo Accounts below)
+npm run local:db:down    # stop it
+```
+
+`DATABASE_URL` in `.env.example` already points at this container. The production connection
+string (Aiven, via Railway) only belongs in the deployed environment's config — never in a
+local `.env`, since any `prisma migrate`/seed run acts on whichever `DATABASE_URL` is active.
 
 ## Environment Variables
 

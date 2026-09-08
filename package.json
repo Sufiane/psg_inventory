@@ -26,7 +26,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "local:db:up": "docker compose up -d db",
+    "local:db:down": "docker compose down",
+    "local:db:migrate": "npx prisma migrate deploy",
+    "local:db:seed": "npx ts-node scripts/seed-demo.ts"
   },
   "dependencies": {
     "@google/genai": "2.19.0",
