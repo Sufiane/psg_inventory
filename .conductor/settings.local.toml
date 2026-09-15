@@ -1,0 +1,101 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+run_mode = "concurrent"
+
+# Port budget inside this workspace's block of ten:
+#   +0 API   +1 web   +2 Postgres   +3 Redis
+setup = """
+set -euo pipefail
+
+npm ci
+npm --prefix web ci
+
+api_port="${CONDUCTOR_PORT:-7777}"
+web_port="$(( ${CONDUCTOR_PORT:-5173} + 1 ))"
+postgres_port="$(( ${CONDUCTOR_PORT:-5430} + 2 ))"
+redis_port="$(( ${CONDUCTOR_PORT:-6376} + 3 ))"
+
+slug="$(printf '%s' "${CONDUCTOR_WORKSPACE_NAME:-local}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"
+project="psg-${slug:-local}"
+
+# Rebuild .env from whichever base exists, keeping every key the base already
+# carries (real API keys copied in from the repo root survive) and replacing only
+# the ones that have to be unique per workspace.
+base=".env.example"
+
+if [ -f .env ]; then
+  base=".env"
+fi
+
+{
+  grep -Ev '^(COMPOSE_PROJECT_NAME|POSTGRES_PORT|REDIS_PORT|DATABASE_URL|REDIS_URL|PORT)=' "$base" || true
+  echo ""
+  echo "# --- Written by Conductor setup: this workspace's own stack and ports ---"
+  echo "COMPOSE_PROJECT_NAME=${project}"
+  echo "POSTGRES_PORT=${postgres_port}"
+  echo "REDIS_PORT=${redis_port}"
+  echo "DATABASE_URL=postgresql://postgres:postgres@localhost:${postgres_port}/psg_inventory"
+  echo "REDIS_URL=redis://localhost:${redis_port}"
+  echo "PORT=${api_port}"
+} > .env.conductor.tmp
+
+mv .env.conductor.tmp .env
+
+echo "BACKEND_URL=http://localhost:${api_port}" > web/.env
+
+if [ "${CONDUCTOR_IS_LOCAL:-0}" != "1" ]; then
+  exit 0
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker is not running - skipped the local stack. Start Docker, then: npm run local:db:up && npm run local:db:migrate && npm run local:db:seed"
+  exit 0
+fi
+
+npm run local:db:up
+npm run local:db:migrate
+
+# Each workspace starts on an empty volume, so seed the demo logins. Match data
+# still needs an admin Football Data sync; the seed warns and carries on without it.
+npm run local:db:seed || echo "Seeding failed - the database is up and migrated, run 'npm run local:db:seed' by hand to investigate."
+
+echo "Workspace stack '${project}' ready: API ${api_port}, web ${web_port}, Postgres ${postgres_port}, Redis ${redis_port}."
+"""
+
+# Destroys this workspace's Postgres and Redis volumes. Scoped by COMPOSE_PROJECT_NAME
+# in .env, so it cannot touch another workspace's stack.
+archive = """
+set -euo pipefail
+
+if [ "${CONDUCTOR_IS_LOCAL:-0}" = "1" ] && [ -f .env ] && docker info >/dev/null 2>&1; then
+  npm run local:db:destroy
+fi
+"""
+
+[scripts.run.api]
+command = "npm run start:dev"
+available_in = [ "local" ]
+default = true
+icon = "server"
+
+[scripts.run.web]
+command = "npm run dev -- --port $((CONDUCTOR_PORT + 1)) --strictPort"
+available_in = [ "local" ]
+icon = "monitor"
+
+[scripts.run.web.options]
+cwd = "web"
+
+[scripts.run.test]
+command = "npm run test:watch"
+icon = "test-tube"
+
+[scripts.run.checks]
+command = "npm run typecheck && npm run lint && npm run lint:deps && npm test && (cd web && npm run check)"
+icon = "circle-check"
+
+[scripts.run.db]
+command = "npm run local:db:up && npm run local:db:migrate && npm run local:db:seed"
+available_in = [ "local" ]
+icon = "database"

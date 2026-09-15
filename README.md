@@ -27,9 +27,8 @@ Track ticket listings, monitor financial performance, and fetch live match data 
 
 ## Prerequisites
 
-- Node.js >= 18
-- Docker (for the local PostgreSQL used in dev/test — see [Local Database](#local-database))
-- Redis — free tier available on [Render](https://render.com)
+- Node.js >= 22.12
+- Docker (runs the local PostgreSQL *and* Redis used in dev/test — see [Local Stack](#local-stack))
 
 ## Installation
 
@@ -40,28 +39,46 @@ npm install
 ```
 
 Copy `.env.example` to `.env` and fill in the values (see [Environment Variables](#environment-variables)),
-start the local database, then run migrations:
+start the local stack, then run migrations and seed the demo accounts:
 
 ```bash
 npm run local:db:up
 npm run local:db:migrate
+npm run local:db:seed
 ```
 
-## Local Database
+## Local Stack
 
-Local dev and tests run against a disposable PostgreSQL container defined in
+Local dev and tests run against disposable PostgreSQL and Redis containers defined in
 [`docker-compose.yml`](docker-compose.yml) — never against the production database.
 
 ```bash
-npm run local:db:up      # start the local db (docker compose)
-npm run local:db:migrate # apply migrations (npx prisma migrate deploy)
+npm run local:db:up      # start postgres + redis, wait for both to be healthy
+npm run local:db:migrate # apply migrations (prisma migrate deploy)
 npm run local:db:seed    # seed demo accounts (see Demo Accounts below)
-npm run local:db:down    # stop it
+npm run local:db:down    # stop the containers, keep the data
+npm run local:db:destroy # stop the containers and delete their volumes
 ```
 
-`DATABASE_URL` in `.env.example` already points at this container. The production connection
-string (Aiven, via Railway) only belongs in the deployed environment's config — never in a
+`DATABASE_URL` and `REDIS_URL` in `.env.example` already point at these containers. The production
+connection string (Aiven, via Railway) only belongs in the deployed environment's config — never in a
 local `.env`, since any `prisma migrate`/seed run acts on whichever `DATABASE_URL` is active.
+
+### Running several checkouts at once
+
+The compose file takes its project name and host ports from `.env`, so each checkout can own a
+private stack instead of sharing one:
+
+| Variable | Purpose |
+|---|---|
+| `COMPOSE_PROJECT_NAME` | Namespaces the containers and volumes |
+| `POSTGRES_PORT` | Host port for PostgreSQL (container side stays 5432) |
+| `REDIS_PORT` | Host port for Redis (container side stays 6379) |
+
+Give each checkout a distinct project name and port pair, and keep `DATABASE_URL` / `REDIS_URL` in
+step with them. In Conductor this is automatic: `.conductor/settings.local.toml` derives all of it
+from `CONDUCTOR_WORKSPACE_NAME` and `CONDUCTOR_PORT`, and the archive script destroys only that
+workspace's own containers and volumes.
 
 ## Environment Variables
 
@@ -88,7 +105,7 @@ The server starts on port **7777** by default.
 
 ## Demo Accounts
 
-Seeded by `npx ts-node scripts/seed-demo.ts` (re-running wipes & re-seeds these two users only).
+Seeded by `npm run local:db:seed` (re-running wipes & re-seeds these two users only).
 
 | Email | Password | Setup |
 |---|---|---|
