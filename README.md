@@ -107,10 +107,15 @@ The server starts on port **7777** by default.
 
 Seeded by `npm run local:db:seed` (re-running wipes & re-seeds these two users only).
 
+The seed also generates a synthetic fixture list — home and away matches across the current and
+previous season, with results on the ones already played — so a fresh database is usable without a
+Football Data API key. Seasons are derived from today's date, not hardcoded. A season that already
+holds real synced matches is left untouched.
+
 | Email | Password | Setup |
 |---|---|---|
-| `demo1@psg.fr` | `demo1234` | 1 season pass current season (2025), 1 season pass previous season (2024), sales on each |
-| `demo2@psg.fr` | `demo1234` | 2 season passes same current season (2025), each sale allocated across both passes |
+| `demo1@psg.fr` | `demo1234` | 1 season pass current season, 1 season pass previous season, sales on each |
+| `demo2@psg.fr` | `demo1234` | 2 season passes same current season, each sale allocated across both passes |
 
 ## Tests
 

@@ -56,8 +56,8 @@ fi
 npm run local:db:up
 npm run local:db:migrate
 
-# Each workspace starts on an empty volume, so seed the demo logins. Match data
-# still needs an admin Football Data sync; the seed warns and carries on without it.
+# Each workspace starts on an empty volume, so seed synthetic fixtures, the demo
+# logins, and their sales. No Football Data API key needed.
 npm run local:db:seed || echo "Seeding failed - the database is up and migrated, run 'npm run local:db:seed' by hand to investigate."
 
 echo "Workspace stack '${project}' ready: API ${api_port}, web ${web_port}, Postgres ${postgres_port}, Redis ${redis_port}."
