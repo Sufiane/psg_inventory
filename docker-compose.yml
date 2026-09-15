@@ -1,14 +1,16 @@
+# No container_name / fixed host ports here on purpose: Conductor runs one stack
+# per workspace, isolated by COMPOSE_PROJECT_NAME and the *_PORT vars in .env.
+# Hardcoding either makes parallel workspaces collide on the same containers.
 services:
   db:
     image: postgres:16.4
-    container_name: psg-inventory-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: psg_inventory
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - psg-inventory-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -17,5 +19,19 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - psg-inventory-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   psg-inventory-db-data:
+  psg-inventory-redis-data:
