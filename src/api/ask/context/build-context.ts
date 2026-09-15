@@ -97,6 +97,7 @@ function toPeriod(period: TimePeriodAccounting): AskPeriod {
         realized,
         unrealized: toAccounting(period.unrealized),
         pending: toAccounting(period.pending),
+        gifted: toAccounting(period.gifted),
         seasonPasses: period.seasonInvestments.map((pass) => ({
             label: pass.label,
             category: pass.category,

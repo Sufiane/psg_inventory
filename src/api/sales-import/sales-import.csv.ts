@@ -3,7 +3,9 @@ import type { Invest, ListedPrice } from '@psg/shared/money';
 import type { TicketCount } from '@psg/shared/counts';
 import type { IsoDateString } from '@psg/shared/time';
 
-export const SALE_ROW_STATUSES = ['PENDING', 'SOLD', 'CANCELLED'] as const;
+// `recipient` being required on GIFTED rows is enforced in the resolver, not
+// here — this stays a parser (spec D10).
+export const SALE_ROW_STATUSES = ['PENDING', 'SOLD', 'CANCELLED', 'GIFTED'] as const;
 export type SaleRowStatus = (typeof SALE_ROW_STATUSES)[number];
 
 export type RawImportRow = {
@@ -15,6 +17,7 @@ export type RawImportRow = {
     status: SaleRowStatus;
     invest: Invest;
     soldAt: IsoDateString | null;
+    recipient: string | null;
 };
 
 export type CsvParseResult =
@@ -30,7 +33,7 @@ const REQUIRED_COLUMNS = [
     'nbTickets',
     'status',
 ] as const;
-const OPTIONAL_COLUMNS = ['invest', 'soldAt'] as const;
+const OPTIONAL_COLUMNS = ['invest', 'soldAt', 'recipient'] as const;
 const ALL_KNOWN_COLUMNS = new Set<string>([...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS]);
 
 // `cast` does real conversion, not just a type-level assertion — e.g. `Number(trimmed)`
@@ -113,6 +116,7 @@ export function parseImportCsv(buffer: Buffer): CsvParseResult {
                 parseOptionalCell(raw.invest, (value) => Number(value) as Invest) ??
                 (0 as Invest),
             soldAt: parseOptionalCell(raw.soldAt, (value) => value as IsoDateString),
+            recipient: parseOptionalCell(raw.recipient, (value) => value),
         });
     }
 

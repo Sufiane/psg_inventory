@@ -30,7 +30,8 @@
     "local:db:up": "docker compose up -d db",
     "local:db:down": "docker compose down",
     "local:db:migrate": "npx prisma migrate deploy",
-    "local:db:seed": "npx ts-node scripts/seed-demo.ts"
+    "local:db:seed": "npx ts-node scripts/seed-demo.ts",
+    "ungift": "npx ts-node scripts/ungift-sale.ts"
   },
   "dependencies": {
     "@google/genai": "2.19.0",

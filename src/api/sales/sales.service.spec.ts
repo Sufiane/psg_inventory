@@ -9,7 +9,10 @@ import { MatchesService } from '../../db/matches/matches.service';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { SeasonPassesService as SeasonPassesDbService } from '../../db/season-passes/season-passes.service';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
+import { RecipientsService as RecipientsDbService } from '../../db/recipients/recipients.service';
+import { IRecipientsDbService } from '../../db/recipients/recipients.db.interface';
 import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { Sale } from '../../db/sales/type/sale.type';
@@ -18,7 +21,7 @@ import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import type { TicketCount } from '@psg/shared/counts';
-import type { MatchId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { MatchId, RecipientId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
 
 describe('SalesService', () => {
@@ -26,6 +29,7 @@ describe('SalesService', () => {
     let salesDbService: DeepMockProxy<SalesDbService>;
     let matchesDbService: DeepMockProxy<MatchesService>;
     let seasonPassesDbService: DeepMockProxy<SeasonPassesDbService>;
+    let recipientsDbService: DeepMockProxy<RecipientsDbService>;
     let redisService: DeepMockProxy<RedisService>;
 
     const userId = 'user-uuid' as UserId;
@@ -33,7 +37,11 @@ describe('SalesService', () => {
     const matchId = 'match-uuid' as MatchId;
     const passId = 'pass-uuid' as SeasonPassId;
 
-    function saleFixture(matchDate: Date, status: SaleStatus = SaleStatus.PENDING): Sale {
+    function saleFixture(
+        matchDate: Date,
+        status: SaleStatus = SaleStatus.PENDING,
+        gift: Sale['Gift'] = null,
+    ): Sale {
         return {
             id: saleId,
             userId,
@@ -47,12 +55,28 @@ describe('SalesService', () => {
             updatedAt: new Date(),
             soldAt: null,
             cancelledAt: null,
+            Gift: gift,
             Match: {
                 date: matchDate,
                 Opponent: { id: 'opp', name: 'Marseille' },
             },
             Allocations: [],
         } as unknown as Sale;
+    }
+
+    function giftFixture(
+        overrides: Partial<{
+            giftedAt: Date;
+            recipientId: RecipientId;
+            Recipient: { id: RecipientId; name: string };
+        }> = {},
+    ): NonNullable<Sale['Gift']> {
+        return {
+            giftedAt: new Date('2026-03-01T12:00:00.000Z'),
+            recipientId: 'r9' as RecipientId,
+            Recipient: { id: 'r9' as RecipientId, name: 'Marc' },
+            ...overrides,
+        } as NonNullable<Sale['Gift']>;
     }
 
     function matchFixture(date: Date): Match {
@@ -90,14 +114,28 @@ describe('SalesService', () => {
                     provide: ISeasonPassesDbService,
                     useValue: mockDeep<SeasonPassesDbService>(),
                 },
+                {
+                    provide: IRecipientsDbService,
+                    useValue: mockDeep<RecipientsDbService>(),
+                },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
             ],
         }).compile();
 
         service = module.get(SalesService);
         salesDbService = module.get(ISalesDbService);
+        // Harmless defaults so tests that route through giftSale / updateGift
+        // but don't care about the resolved recipient don't have to configure
+        // it themselves. Tests that do care override with mockResolvedValueOnce.
+        salesDbService.giftSale.mockResolvedValue({
+            recipientId: 'r-default' as RecipientId,
+        });
+        salesDbService.updateGift.mockResolvedValue({
+            recipientId: 'r-default' as RecipientId,
+        });
         matchesDbService = module.get(IMatchesDbService);
         seasonPassesDbService = module.get(ISeasonPassesDbService);
+        recipientsDbService = module.get(IRecipientsDbService);
         redisService = module.get(RedisService);
 
         module.useLogger(false);
@@ -117,6 +155,66 @@ describe('SalesService', () => {
             });
 
             jest.useRealTimers();
+        });
+    });
+
+    describe('reading a sale', () => {
+        describe('when the sale has a gift', () => {
+            it('serves giftedAt and Recipient flattened onto the sale', async () => {
+                const giftedAt = new Date('2026-03-01T12:00:00.000Z');
+
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date('2026-03-02T20:00:00.000Z'),
+                        SaleStatus.GIFTED,
+                        giftFixture({
+                            giftedAt,
+                            recipientId: 'r1' as RecipientId,
+                            Recipient: { id: 'r1' as RecipientId, name: 'Marc' },
+                        }),
+                    ),
+                );
+
+                const result = await service.getSale(userId, saleId);
+
+                expect(result.giftedAt).toEqual(giftedAt);
+                expect(result.Recipient).toEqual({ id: 'r1', name: 'Marc' });
+                expect('Gift' in result).toBe(false);
+            });
+        });
+
+        describe('when the sale has no gift', () => {
+            it('serves null for both fields', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date('2026-03-02T20:00:00.000Z')),
+                );
+
+                const result = await service.getSale(userId, saleId);
+
+                expect(result.giftedAt).toBeNull();
+                expect(result.Recipient).toBeNull();
+            });
+        });
+
+        describe('when listing sales', () => {
+            it('flattens the gift on every row', async () => {
+                salesDbService.getSales.mockResolvedValueOnce([
+                    saleFixture(
+                        new Date('2026-03-02T20:00:00.000Z'),
+                        SaleStatus.GIFTED,
+                        giftFixture({
+                            giftedAt: new Date('2026-03-01T12:00:00.000Z'),
+                            recipientId: 'r1' as RecipientId,
+                            Recipient: { id: 'r1' as RecipientId, name: 'Marc' },
+                        }),
+                    ),
+                ]);
+
+                const [sale] = await service.getSales(userId);
+
+                expect(sale?.Recipient).toEqual({ id: 'r1', name: 'Marc' });
+                expect('Gift' in (sale ?? {})).toBe(false);
+            });
         });
     });
 
@@ -161,6 +259,902 @@ describe('SalesService', () => {
 
             await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
                 code: ErrorCode.SALE_NOT_FOUND,
+            });
+        });
+    });
+
+    describe('updateSale status transitions', () => {
+        describe('when the target is SOLD and the match has kicked off', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000)),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'SOLD',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({ code: ErrorCode.SALE_AFTER_KICKOFF });
+            });
+        });
+
+        describe('when the target is GIFTED from PENDING and the match has kicked off', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000), SaleStatus.PENDING),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientName: 'Marc',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({ code: ErrorCode.SALE_AFTER_KICKOFF });
+            });
+        });
+
+        describe('when the sale is already GIFTED and the match has kicked off', () => {
+            // The recipient-update exemption (spec D5 / D9). Correcting who
+            // received an already-gifted ticket is not a decision that has to
+            // precede the match, so this stays allowed after kickoff. Do not
+            // "simplify" the guard to key on the target alone — this is the
+            // test that catches it.
+            it('allows the recipient to be corrected', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() - 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'recipient-0' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r1' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateGift).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientName: 'Marc' } }),
+                );
+            });
+
+            it('allows an existing recipient to be replaced', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() - 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'recipient-1' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r2' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Sofia',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateGift).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientName: 'Sofia' } }),
+                );
+            });
+        });
+
+        describe('when no status is sent at all and the match has kicked off', () => {
+            it('allows the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() - 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture(),
+                    ),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    listedPrice: 150,
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ listedPrice: 150 }),
+                );
+            });
+        });
+
+        describe('when the sale is SOLD and the target is GIFTED', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.SOLD),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientName: 'Marc',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_INVALID_STATUS_TRANSITION,
+                });
+            });
+        });
+
+        describe('when the sale is CANCELLED and the target is GIFTED', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.CANCELLED),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientName: 'Marc',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_INVALID_STATUS_TRANSITION,
+                });
+            });
+        });
+
+        describe('when the sale is GIFTED and the target is PENDING', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture(),
+                    ),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'PENDING',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_INVALID_STATUS_TRANSITION,
+                });
+            });
+        });
+
+        describe('when the sale is GIFTED and the target is SOLD', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture(),
+                    ),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'SOLD',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_INVALID_STATUS_TRANSITION,
+                });
+            });
+        });
+
+        describe('when the sale is PENDING and the target is GIFTED before kickoff', () => {
+            it('allows the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.PENDING),
+                );
+                salesDbService.giftSale.mockResolvedValueOnce({
+                    recipientId: 'r1' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.giftSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientName: 'Marc' } }),
+                );
+            });
+        });
+
+        describe('when the sale is SOLD and the target is PENDING after kickoff', () => {
+            it('allows the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000), SaleStatus.SOLD),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'PENDING',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ status: 'PENDING' }),
+                );
+            });
+        });
+
+        describe('when the sale is CANCELLED and the target is PENDING after kickoff', () => {
+            it('allows the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000), SaleStatus.CANCELLED),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'PENDING',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ status: 'PENDING' }),
+                );
+            });
+        });
+
+        describe('when the target is GIFTED with no recipient', () => {
+            it('rejects the update', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_GIFT_RECIPIENT_REQUIRED,
+                });
+            });
+
+            it('does not write the sale', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                    } as UpdateSaleDto),
+                ).rejects.toThrow(DomainException);
+
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when the sale is already GIFTED and the status is resubmitted unchanged with no recipient in the request', () => {
+            beforeEach(() => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r9' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValue({
+                    recipientId: 'r9' as RecipientId,
+                });
+            });
+
+            it('does not throw', async () => {
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        listedPrice: 150 as ListedPrice,
+                    } as UpdateSaleDto),
+                ).resolves.toBeUndefined();
+            });
+
+            it('does not look up or create a recipient', async () => {
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    listedPrice: 150 as ListedPrice,
+                } as UpdateSaleDto);
+
+                expect(recipientsDbService.findByNameForUser).not.toHaveBeenCalled();
+                expect(recipientsDbService.create).not.toHaveBeenCalled();
+            });
+
+            it('updates the other fields without sending a recipient patch', async () => {
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    listedPrice: 150 as ListedPrice,
+                } as UpdateSaleDto);
+
+                const callArg = salesDbService.updateGift.mock.calls[0]![0];
+
+                expect(callArg).toMatchObject({ listedPrice: 150 });
+                expect(callArg).not.toHaveProperty('recipient');
+            });
+        });
+
+        describe('when the sale is already GIFTED and a new recipient is supplied', () => {
+            it('resolves and updates the recipient', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r9' as RecipientId }),
+                    ),
+                );
+                recipientsDbService.findByIdForUser.mockResolvedValueOnce({
+                    id: 'r10' as RecipientId,
+                    userId,
+                    name: 'Ana',
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientId: 'r10' as RecipientId,
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateGift).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientId: 'r10' } }),
+                );
+            });
+        });
+
+        describe('when recipientId is sent for an existing recipient owned by the user', () => {
+            it('uses the id directly, without a name lookup', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+                recipientsDbService.findByIdForUser.mockResolvedValueOnce({
+                    id: 'r5' as RecipientId,
+                    userId,
+                    name: 'Marc',
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientId: 'r5' as RecipientId,
+                } as UpdateSaleDto);
+
+                expect(recipientsDbService.findByIdForUser).toHaveBeenCalledWith(
+                    'r5',
+                    userId,
+                );
+                expect(recipientsDbService.findByNameForUser).not.toHaveBeenCalled();
+                expect(salesDbService.giftSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientId: 'r5' } }),
+                );
+            });
+        });
+
+        describe('when recipientId is sent for a recipient that does not belong to the user', () => {
+            beforeEach(() => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+                recipientsDbService.findByIdForUser.mockResolvedValueOnce(null);
+            });
+
+            it('rejects the update instead of writing another user’s recipient', async () => {
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientId: 'someone-elses-recipient' as RecipientId,
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_GIFT_RECIPIENT_NOT_FOUND,
+                });
+            });
+
+            it('does not write the sale', async () => {
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientId: 'someone-elses-recipient' as RecipientId,
+                    } as UpdateSaleDto),
+                ).rejects.toThrow(DomainException);
+
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+            });
+        });
+
+        // Resolve-or-create by name (existing vs. new) is a db-layer concern
+        // now — it runs inside the sale-write transaction so a failed write
+        // can't orphan a newly-created recipient (finding 6). See
+        // src/db/sales/sales.service.spec.ts for that resolution behavior;
+        // this layer's job is only to pass the normalized name through.
+        describe('when a recipient name is given', () => {
+            it('trims and collapses whitespace before sending it to the db layer', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: '  Chloé   Dupont  ',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.giftSale).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        recipient: { recipientName: 'Chloé Dupont' },
+                    }),
+                );
+            });
+
+            it('does not resolve it itself', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                expect(recipientsDbService.findByNameForUser).not.toHaveBeenCalled();
+                expect(recipientsDbService.create).not.toHaveBeenCalled();
+            });
+        });
+
+        // GIFTED -> PENDING used to be a legal exit and clear the recipient;
+        // D5's revision made GIFTED terminal, so this is now covered by
+        // "when the sale is GIFTED and the target is PENDING" above, which
+        // asserts SALE_INVALID_STATUS_TRANSITION instead. The sanctioned exit
+        // is scripts/ungift-sale.ts — see "ungiftSale" below.
+
+        describe('when only the deprecated sold flag is sent', () => {
+            it('still maps to SOLD', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await service.updateSale(userId, { saleId, sold: true } as UpdateSaleDto);
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ status: 'SOLD' }),
+                );
+            });
+        });
+
+        describe('when both status and the deprecated sold flag are sent', () => {
+            it('lets status win', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    sold: true,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                // Reachable only because target resolved to GIFTED, not SOLD —
+                // that is what proves status won over the deprecated alias.
+                expect(salesDbService.giftSale).toHaveBeenCalled();
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('routing a write to the db layer', () => {
+        // The mirror of the already-GIFTED no-status case: a recipient sent
+        // for a sale that is neither gifted nor becoming gifted used to
+        // return 200 having written nothing.
+        describe('when a recipient is sent for a sale that is not and is not becoming GIFTED', () => {
+            it('rejects instead of silently dropping the recipient', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() + 86_400_000), SaleStatus.PENDING),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        recipientName: 'Marc',
+                    } as UpdateSaleDto),
+                ).rejects.toThrow(DomainException);
+
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+                expect(salesDbService.updateGift).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when a PENDING sale is gifted before kickoff', () => {
+            it('calls giftSale and never the generic update', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() + 86_400_000)),
+                );
+                salesDbService.giftSale.mockResolvedValueOnce({
+                    recipientId: 'r1' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.giftSale).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        saleId,
+                        userId,
+                        recipient: { recipientName: 'Marc' },
+                    }),
+                );
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when an already-GIFTED sale gets a new recipient after kickoff', () => {
+            it('calls updateGift and sends no status', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date(Date.now() - 86_400_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r1' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r2' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Ana',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateGift).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientName: 'Ana' } }),
+                );
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+            });
+
+            it('invalidates the recipients cache when the recipient changed', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date(Date.now() - 86_400_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r1' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r2' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Ana',
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when an already-GIFTED sale gets a new recipient and no status field is sent at all', () => {
+            it('routes to updateGift and updates the recipient, not the plain field patch', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date(Date.now() - 86_400_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({
+                            recipientId: 'r1' as RecipientId,
+                            Recipient: { id: 'r1' as RecipientId, name: 'Marc' },
+                        }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r2' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    recipientName: 'NewName',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateGift).toHaveBeenCalledWith(
+                    expect.objectContaining({ recipient: { recipientName: 'NewName' } }),
+                );
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
+                // Proves the recipient actually changed, not just that some
+                // code path ran: the resolved id moved from r1 to r2, so the
+                // giftCount-ordered recipients cache must be invalidated.
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when a PENDING sale is marked SOLD', () => {
+            it('calls the generic update with the narrowed status', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() + 86_400_000)),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'SOLD',
+                } as UpdateSaleDto);
+
+                expect(salesDbService.updateSale).toHaveBeenCalledWith(
+                    expect.objectContaining({ status: 'SOLD' }),
+                );
+                expect(salesDbService.giftSale).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('ungiftSale', () => {
+        describe('when the sale is GIFTED', () => {
+            it('delegates to the db layer and clears the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date(Date.now() - 86_400_000),
+                        SaleStatus.GIFTED,
+                        giftFixture(),
+                    ),
+                );
+
+                await service.ungiftSale(userId, saleId);
+
+                expect(salesDbService.ungiftSale).toHaveBeenCalledWith(userId, saleId);
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the sale is not GIFTED', () => {
+            it('rejects with SALE_INVALID_STATUS_TRANSITION', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() - 86_400_000)),
+                );
+
+                await expect(service.ungiftSale(userId, saleId)).rejects.toThrow(
+                    DomainException,
+                );
+                expect(salesDbService.ungiftSale).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when the sale does not exist', () => {
+            it('rejects with SALE_NOT_FOUND', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(null);
+
+                await expect(service.ungiftSale(userId, saleId)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+            });
+        });
+    });
+
+    describe('updateSale recipients cache invalidation', () => {
+        describe('when the sale enters GIFTED', () => {
+            it('invalidates the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+                salesDbService.giftSale.mockResolvedValueOnce({
+                    recipientId: 'r1' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the sale stays GIFTED and is reassigned to a different recipient by name', () => {
+            it('invalidates the recipients cache using the id the db layer resolved', async () => {
+                // The recipient a `recipientName` patch settles on is only
+                // known through the db layer's return value (it resolves
+                // inside its own transaction — finding 6), so this proves
+                // that return value actually drives the invalidation
+                // decision, not just the GIFTED-entry short-circuit.
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r9' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r10' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Ana',
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the recipient changes while the sale stays GIFTED', () => {
+            it('invalidates the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r9' as RecipientId }),
+                    ),
+                );
+                recipientsDbService.findByIdForUser.mockResolvedValueOnce({
+                    id: 'r10' as RecipientId,
+                    userId,
+                    name: 'Ana',
+                });
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r10' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientId: 'r10' as RecipientId,
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the sale stays GIFTED with no recipient change', () => {
+            it('does not invalidate the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'r9' as RecipientId }),
+                    ),
+                );
+                salesDbService.updateGift.mockResolvedValueOnce({
+                    recipientId: 'r9' as RecipientId,
+                });
+
+                await service.updateSale(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    listedPrice: 150 as ListedPrice,
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the update does not touch status at all', () => {
+            it('does not invalidate the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000)),
+                );
+
+                await service.updateSale(userId, {
+                    saleId,
+                    listedPrice: 150 as ListedPrice,
+                } as UpdateSaleDto);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+    });
+
+    describe('deleteSale', () => {
+        describe('when the sale does not exist or does not belong to the user', () => {
+            it('throws SALE_NOT_FOUND instead of calling the db layer', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(null);
+
+                await expect(service.deleteSale(userId, saleId)).rejects.toThrow(
+                    DomainException,
+                );
+                expect(salesDbService.deleteSale).not.toHaveBeenCalled();
+            });
+        });
+
+        it('always invalidates the accounting cache', async () => {
+            salesDbService.getOneSale.mockResolvedValue(
+                saleFixture(new Date(Date.now() + 60_000), SaleStatus.PENDING),
+            );
+
+            await service.deleteSale(userId, saleId);
+
+            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                CACHE_KEYS.invalidateAccounting(userId),
+            );
+        });
+
+        describe('when the deleted sale was GIFTED', () => {
+            it('invalidates the recipients cache too, so the combobox giftCount does not go stale', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(
+                        new Date(Date.now() + 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture(),
+                    ),
+                );
+
+                await service.deleteSale(userId, saleId);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the deleted sale was PENDING', () => {
+            it('does not invalidate the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.PENDING),
+                );
+
+                await service.deleteSale(userId, saleId);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the deleted sale was SOLD', () => {
+            it('does not invalidate the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.SOLD),
+                );
+
+                await service.deleteSale(userId, saleId);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when the deleted sale was CANCELLED', () => {
+            it('does not invalidate the recipients cache', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.CANCELLED),
+                );
+
+                await service.deleteSale(userId, saleId);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
             });
         });
     });

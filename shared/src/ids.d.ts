@@ -8,3 +8,4 @@ export type OpponentId = Brand<string, 'OpponentId'>;
 export type MatchResultId = Brand<string, 'MatchResultId'>;
 export type SaleHistoryId = Brand<string, 'SaleHistoryId'>;
 export type SalePassAllocationId = Brand<string, 'SalePassAllocationId'>;
+export type RecipientId = Brand<string, 'RecipientId'>;

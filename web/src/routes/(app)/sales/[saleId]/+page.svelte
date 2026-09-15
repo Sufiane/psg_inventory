@@ -2,6 +2,7 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { dateTime, signedMoney } from '$lib/format';
+    import type { SaleStatus } from '$lib/types';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -10,12 +11,13 @@
     let isPastMatch = $derived(matchDate.getTime() < Date.now());
     let submitting = $state<'update' | 'delete' | null>(null);
 
-    function profitTone(
-        status: 'SOLD' | 'PENDING' | 'CANCELLED',
-        profit: number,
-    ): string {
+    function profitTone(status: SaleStatus, profit: number): string {
         if (status === 'CANCELLED') {
             return 'text-sunk';
+        }
+
+        if (status === 'GIFTED') {
+            return 'text-gift';
         }
 
         if (status === 'PENDING') {
@@ -96,6 +98,10 @@
     <span class="font-mono {profitTone(sale.status, sale.profit)}">
         {signedMoney(sale.profit)}
     </span>
+    {#if sale.status === 'GIFTED'}
+        <span class="text-ink-muted">Recipient</span>
+        <span class="text-ink">{sale.Recipient?.name ?? '—'}</span>
+    {/if}
 </div>
 
 <form
@@ -174,14 +180,43 @@
         />
     </label>
 
-    <label class="flex items-center gap-2">
-        <input
-            type="checkbox"
-            name="sold"
-            checked={sale.status === 'SOLD'}
-            class="rounded border-line-strong"
-        />
-        <span class="text-sm text-ink">Mark as sold</span>
+    <label class="block">
+        <span class="text-sm text-ink-muted">Status</span>
+        {#if sale.status === 'CANCELLED' || sale.status === 'GIFTED'}
+            <!-- Neither status is a target this generic form may set: CANCELLED
+                 is cron-owned, and GIFTED needs a recipient, which only the
+                 sales-list edit panel collects. A <select> here always submits
+                 a value, so offering one for either would silently flip it on
+                 the next save (this is exactly the bug that used to un-cancel
+                 a CANCELLED sale) — the status field is omitted entirely
+                 instead, same as the sales-list page does for CANCELLED. -->
+            <p
+                class="mt-1 w-full rounded border border-line-strong bg-surface-subtle text-ink px-3 py-2 text-sm"
+            >
+                {sale.status}
+                <span class="text-ink-faint">
+                    —
+                    {sale.status === 'CANCELLED'
+                        ? 'managed automatically; saving here leaves it unchanged.'
+                        : 'a gift is final; the recipient can still be changed from the sales list.'}
+                </span>
+            </p>
+        {:else}
+            <!-- The <select> always submits a value, even when the user
+                 never touched it — so the server needs to tell "resubmitted
+                 unchanged" from "deliberately changed". `currentStatus`
+                 carries the status this page loaded with; read-payload.ts
+                 only forwards `status` when it differs from this. -->
+            <input type="hidden" name="currentStatus" value={sale.status} />
+            <select
+                name="status"
+                value={sale.status}
+                class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+            >
+                <option value="PENDING">PENDING</option>
+                <option value="SOLD">SOLD</option>
+            </select>
+        {/if}
     </label>
 
     {#if form?.message}

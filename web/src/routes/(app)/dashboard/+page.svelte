@@ -8,7 +8,7 @@
     import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
-    import { competitionLabel, dateTime, signedMoney } from '$lib/format';
+    import { competitionLabel, dateTime, money, signedMoney } from '$lib/format';
     import { splitByKickoff } from '$lib/matches';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -173,8 +173,11 @@
         <div in:fade={{ duration: 120, easing: cubicOut }}>
             <AccountingCard
                 title="Unrealized"
-                subtitle="Cancelled, won't settle."
+                subtitle="Cancelled, or given away."
                 data={accounting.unrealized}
+                footnote={accounting.gifted
+                    ? `of which gifted ${money(accounting.gifted.totalProfit)}`
+                    : undefined}
                 variant="compact"
                 tone="sunk"
             />

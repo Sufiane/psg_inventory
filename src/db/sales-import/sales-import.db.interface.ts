@@ -8,6 +8,11 @@ export type BulkSaleAllocationInput = {
     nbTickets: TicketCount;
 };
 
+export type BulkSaleGiftInput = {
+    recipientName: string;
+    giftedAt: Date;
+};
+
 export type BulkSaleInput = {
     matchId: MatchId;
     listedPrice: ListedPrice;
@@ -16,6 +21,7 @@ export type BulkSaleInput = {
     nbTickets: TicketCount;
     status: SaleStatus;
     soldAt: Date | null;
+    gift: BulkSaleGiftInput | null;
     allocations: BulkSaleAllocationInput[];
 };
 

@@ -15,6 +15,7 @@ export type TimePeriodAccounting = {
     realized: Accounting | null;
     unrealized: Accounting | null;
     pending: Accounting | null;
+    gifted: Accounting | null;
     seasonInvestments: SeasonInvestment[];
     totalSeasonInvestment: number;
     leadTime: LeadTime | null;

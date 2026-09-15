@@ -14,7 +14,7 @@
     } from '$lib/format';
     import { passesForMatch, passesForSale } from '$lib/sale-passes';
     import { seasonLabel, seasonLabelFromDate, seasonStartYearFromDate } from '$lib/season';
-    import type { SaleListItem } from '$lib/types';
+    import type { SaleListItem, SaleStatus } from '$lib/types';
     import type { SeasonYear } from '@psg/shared/time';
     import Spinner from '$lib/ui/Spinner.svelte';
     import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
@@ -118,7 +118,7 @@
         return sortDir === 'asc' ? '↑' : '↓';
     }
 
-    function statusPill(status: 'SOLD' | 'PENDING' | 'CANCELLED'): string {
+    function statusPill(status: SaleStatus): string {
         switch (status) {
             case 'SOLD':
                 return 'bg-positive/15 text-positive-strong';
@@ -126,15 +126,18 @@
                 return 'bg-warning/15 text-warning-strong';
             case 'CANCELLED':
                 return 'bg-sunk/15 text-sunk-strong';
+            case 'GIFTED':
+                return 'bg-gift/15 text-gift-strong';
         }
     }
 
-    function profitTone(
-        status: 'SOLD' | 'PENDING' | 'CANCELLED',
-        profit: number,
-    ): string {
+    function profitTone(status: SaleStatus, profit: number): string {
         if (status === 'CANCELLED') {
             return 'text-sunk';
+        }
+
+        if (status === 'GIFTED') {
+            return 'text-gift';
         }
 
         if (status === 'PENDING') {
@@ -460,7 +463,7 @@
                             use:enhance={trackFlip}
                         >
                             <input type="hidden" name="saleId" value={editSale.id} />
-                            <input type="hidden" name="sold" value="false" />
+                            <input type="hidden" name="status" value="PENDING" />
                             <button
                                 type="submit"
                                 disabled={submitting !== null}
@@ -474,7 +477,7 @@
                             </button>
                         </form>
                     </div>
-                {:else}
+                {:else if editSale.status !== 'GIFTED'}
                     <form
                         method="POST"
                         action="?/update"
@@ -482,7 +485,7 @@
                         use:enhance={trackFlip}
                     >
                         <input type="hidden" name="saleId" value={editSale.id} />
-                        <input type="hidden" name="sold" value="true" />
+                        <input type="hidden" name="status" value="SOLD" />
 
                         <button
                             type="submit"
@@ -506,12 +509,108 @@
                                 : 'Adds this sale to realized profit on the dashboard.'}
                         </p>
                     </form>
+                {:else}
+                    <p class="text-sm text-ink">
+                        <span class="font-medium text-gift-strong">Gifted</span>
+                        <span class="text-ink-muted">·</span>
+                        <span class="text-ink-muted">
+                            a gifted sale is final — changing the status back needs a
+                            manual fix. The recipient can still be changed below.
+                        </span>
+                    </p>
+                {/if}
+
+                <!-- D5: GIFTED is reachable only from PENDING and is terminal,
+                     and *entering* it is kickoff-guarded like SOLD. So the
+                     entry case (a PENDING sale) is offered before kickoff only.
+                     An already-GIFTED sale keeps the form at any time: that
+                     request updates the recipient, moves no status, and is
+                     exempt from the guard on purpose — recording *who*
+                     received a ticket is not a decision that has to precede
+                     the match (D5). A SOLD or CANCELLED sale is never offered
+                     the form: the server would refuse it, and an affordance
+                     that always fails is worse than none. -->
+                {#if editSale.status === 'GIFTED' || (editSale.status === 'PENDING' && !isPastMatch)}
+                    <form
+                        method="POST"
+                        action="?/update"
+                        class="space-y-2 border-t border-line pt-2"
+                        use:enhance={trackFlip}
+                    >
+                        <input type="hidden" name="saleId" value={editSale.id} />
+                        <!-- This form's intent is unambiguous: it always either starts a
+                             gift or updates an existing gift's recipient. `intent="gift"`
+                             is what gates the "recipient required" check server-side —
+                             not `status === 'GIFTED'` alone, since the edit-numbers form
+                             below can carry that same status for an unrelated reason. -->
+                        <input type="hidden" name="intent" value="gift" />
+                        <input type="hidden" name="status" value="GIFTED" />
+                        <input type="hidden" name="previousStatus" value={editSale.status} />
+
+                        {#if editSale.status === 'GIFTED'}
+                            <p class="text-sm text-ink">
+                                <span class="font-medium text-gift-strong">Gifted</span>
+                                <span class="text-ink-muted">·</span>
+                                <span class="text-ink-muted">Given to</span>
+                                <span class="text-ink">{editSale.Recipient?.name ?? '—'}</span>
+                            </p>
+                        {/if}
+
+                        <label class="block">
+                            <span class="text-xs text-ink-muted">
+                                {editSale.status === 'GIFTED' ? 'Recipient' : 'Given to'}
+                            </span>
+                            <input
+                                type="text"
+                                name="recipientName"
+                                list="recipient-options"
+                                required={editSale.status !== 'GIFTED'}
+                                autocomplete="off"
+                                maxlength="120"
+                                placeholder={editSale.status === 'GIFTED'
+                                    ? (editSale.Recipient?.name ?? 'Name')
+                                    : 'Name'}
+                                class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
+                            />
+                        </label>
+
+                        <button
+                            type="submit"
+                            disabled={submitting !== null}
+                            class="w-full rounded border border-gift text-gift-strong px-4 py-2 font-medium hover:bg-gift/10 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
+                        >
+                            {#if submitting === 'flip'}
+                                <Spinner size="1em" />
+                            {/if}
+                            {editSale.status === 'GIFTED' ? 'Update recipient' : 'Mark gifted'}
+                        </button>
+
+                        {#if editSale.status === 'GIFTED'}
+                            <p class="text-xs text-ink-faint">
+                                Leave blank to keep the current recipient.
+                            </p>
+                        {:else}
+                            <p class="text-xs text-ink-faint">
+                                Records this ticket as given away. Stays out of realized
+                                profit.
+                            </p>
+                            <p class="text-xs text-ink-faint">
+                                Who received it? Type a new name to add them.
+                            </p>
+                        {/if}
+                    </form>
                 {/if}
             </div>
 
-            <!-- Edit numbers form. Status changes go through the block above; the
-                 hidden sold input preserves current status so a save here doesn't
-                 accidentally flip the sale. -->
+            <!-- Edit numbers form. This form's intent is editing price/invest/
+                 allocations — it is never trying to change status or the
+                 recipient, so it says nothing about either: no `status` field
+                 at all (UpdateSaleDto.status is optional, and the api leaves
+                 status untouched when it's absent), no `recipientName`. That
+                 also means this form works unmodified for a CANCELLED sale,
+                 which isn't a valid `status` target — there used to be a
+                 special case for that; omitting the field entirely made it
+                 unnecessary. -->
             <form
                 method="POST"
                 action="?/update"
@@ -519,11 +618,7 @@
                 use:enhance={trackSubmit}
             >
                 <input type="hidden" name="saleId" value={editSale.id} />
-                <input
-                    type="hidden"
-                    name="sold"
-                    value={editSale.status === 'SOLD' ? 'true' : 'false'}
-                />
+                <input type="hidden" name="intent" value="edit-numbers" />
 
                 <fieldset
                     class="sm:col-span-2 rounded border border-line p-3 space-y-2"
@@ -797,6 +892,12 @@
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
+
+<datalist id="recipient-options">
+    {#each data.recipients as recipient (recipient.id)}
+        <option value={recipient.name}></option>
+    {/each}
+</datalist>
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Sales</h1>

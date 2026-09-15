@@ -16,7 +16,7 @@ export class AccountingService implements IAccountingDbService {
 
     async getAccounting(
         userId: UserId,
-        status: SaleStatus,
+        statuses: SaleStatus[],
         from: Date,
         to?: Date,
     ): Promise<AccountingAggregate | null> {
@@ -36,7 +36,7 @@ export class AccountingService implements IAccountingDbService {
             _max: omit(fields, ['invest']),
             where: {
                 userId,
-                status,
+                status: { in: statuses },
                 Match: {
                     date: matchDateFilter,
                 },

@@ -88,6 +88,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                gifted: null,
                 seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
@@ -124,6 +125,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                gifted: null,
                 seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
@@ -156,6 +158,7 @@ describe('AccountingService', () => {
                 realized: null,
                 unrealized: null,
                 pending: null,
+                gifted: null,
                 seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,
@@ -200,7 +203,7 @@ describe('AccountingService', () => {
                 expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
                 expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
                     userId,
-                    SaleStatus.SOLD,
+                    [SaleStatus.SOLD],
                     date.start,
                     date.end,
                 );
@@ -242,7 +245,7 @@ describe('AccountingService', () => {
                     expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
                     expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
                         userId,
-                        SaleStatus.SOLD,
+                        [SaleStatus.SOLD],
                         date.start,
                         date.end,
                     );
@@ -251,7 +254,7 @@ describe('AccountingService', () => {
                         1,
                         {
                             profit: aggregate._min.profit,
-                            status: SaleStatus.SOLD,
+                            statuses: [SaleStatus.SOLD],
                             userId,
                             matchDateFrom: date.start,
                         },
@@ -260,7 +263,7 @@ describe('AccountingService', () => {
                         2,
                         {
                             profit: aggregate._max.profit,
-                            status: SaleStatus.SOLD,
+                            statuses: [SaleStatus.SOLD],
                             userId,
                             matchDateFrom: date.start,
                         },
@@ -300,7 +303,7 @@ describe('AccountingService', () => {
                         1,
                         {
                             profit: aggregate._min.profit,
-                            status: SaleStatus.SOLD,
+                            statuses: [SaleStatus.SOLD],
                             userId,
                             matchDateFrom: date.start,
                             matchDateTo: date.end,
@@ -310,7 +313,7 @@ describe('AccountingService', () => {
                         2,
                         {
                             profit: aggregate._max.profit,
-                            status: SaleStatus.SOLD,
+                            statuses: [SaleStatus.SOLD],
                             userId,
                             matchDateFrom: date.start,
                             matchDateTo: date.end,
@@ -358,15 +361,18 @@ describe('AccountingService', () => {
                 const realized = {} as Accounting;
                 const unrealized = {} as Accounting;
                 const pending = {} as Accounting;
+                const gifted = {} as Accounting;
                 getAccountingSpy
                     .mockResolvedValueOnce(realized)
                     .mockResolvedValueOnce(unrealized)
-                    .mockResolvedValueOnce(pending);
+                    .mockResolvedValueOnce(pending)
+                    .mockResolvedValueOnce(gifted);
 
                 const expectedResult: TimePeriodAccounting = {
                     realized,
                     unrealized,
                     pending,
+                    gifted,
                     seasonInvestments: [],
                     totalSeasonInvestment: 0,
                     leadTime: null,
@@ -381,6 +387,34 @@ describe('AccountingService', () => {
                     24 * 60 * 60,
                     expect.any(Function),
                 );
+            });
+        });
+
+        describe('when the period has gifted sales', () => {
+            it('returns the gifted sub-bucket alongside unrealized', async () => {
+                seasonPassesDbService.findBySeason.mockResolvedValueOnce([]);
+                accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
+
+                const userId = 'userId' as UserId;
+                const dates: { start: Date; end?: Date } = {
+                    start: new Date('2025-08-01'),
+                    end: new Date('2026-07-31'),
+                };
+                const realized = {} as Accounting;
+                const unrealized = {} as Accounting;
+                const pending = {} as Accounting;
+                const gifted = {} as Accounting;
+
+                jest.spyOn(service, 'getAccounting')
+                    .mockResolvedValueOnce(realized)
+                    .mockResolvedValueOnce(unrealized)
+                    .mockResolvedValueOnce(pending)
+                    .mockResolvedValueOnce(gifted);
+
+                const result = await service.getSeason(userId, dates, 2025 as SeasonYear);
+
+                expect(result.gifted).toBe(gifted);
+                expect(result.unrealized).toBe(unrealized);
             });
         });
     });

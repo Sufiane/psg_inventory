@@ -3,7 +3,8 @@ import type { TicketCount } from '@psg/shared/counts';
 import type { IsoDateString } from '@psg/shared/time';
 import type { Match } from '../../db/matches/types/match.type';
 import type { DraftRowDto, DraftRowStatus } from './dto/draft-row.dto';
-import type { RawImportRow } from './sales-import.csv';
+import type { RawImportRow, SaleRowStatus } from './sales-import.csv';
+import { normalizeRecipientName } from '../../shared/utils/recipient-name.util';
 import { DATE_ONLY_REGEX } from './utils/date-only.util';
 
 export type ResolveInput = {
@@ -74,10 +75,16 @@ function isInvalidRow(raw: RawImportRow): boolean {
     return false;
 }
 
-// A sale can't be marked SOLD after the match has kicked off — same rule the
-// api layer enforces for the normal sell flow (sales.service.ts). soldAt is a
-// date-only field here, so the check is day-level: sold the same day as the
-// match is allowed (kickoff time within the day is unknown), later days aren't.
+// A sale can't be marked SOLD or GIFTED after the match has kicked off — same
+// rule the api layer enforces for the manual flow (sales.service.ts), and the
+// same rule for both statuses since the D5 revision of 2026-09-12. soldAt is a
+// date-only field here, so the check is day-level: sold or gifted the same day
+// as the match is allowed (kickoff time within the day is unknown), later days
+// aren't. The guard applies to PENDING and CANCELLED rows too — soldAt is a
+// free-standing optional column, not exclusive to SOLD — so there is no
+// per-status branch at all. This is about *when the gift happened*; attaching a
+// recipient to an imported gift afterwards is a separate claim and is not
+// guarded (D10). See docs/specs/2026-09-11-gifted-sale-status-design.md, D5/D10.
 function resolveSoldAtStatus(
     raw: { soldAt: IsoDateString | null },
     match: Match | null,
@@ -87,6 +94,25 @@ function resolveSoldAtStatus(
     }
 
     return raw.soldAt > isoDate(match.date) ? 'error:sold-after-kickoff' : null;
+}
+
+// Value-level, not structural: a match-missing or allocation error means the
+// row maps to nothing, so those take precedence. Recipient and kickoff are
+// both about the row's own values, and a row that trips both must report the
+// same one every time — the position in the chain is arbitrary but it must
+// be identical here and in validateCommitRows, or a preview and its commit
+// disagree on which error a tampered/edited row shows (spec D10).
+function resolveGiftRecipientStatus(raw: {
+    status: SaleRowStatus;
+    recipient: string | null;
+}): DraftRowStatus | null {
+    if (raw.status !== 'GIFTED') {
+        return null;
+    }
+
+    return normalizeRecipientName(raw.recipient ?? '').length === 0
+        ? 'error:gift-recipient-missing'
+        : null;
 }
 
 function resolveMatch(
@@ -179,6 +205,7 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
             invest: row.invest as Invest,
             status: row.status,
             soldAt: (row.soldAt ?? null) as IsoDateString | null,
+            recipient: (row.recipient ?? null) as string | null,
         };
         let rowStatus: DraftRowStatus = 'ok';
         let matchId: string | undefined;
@@ -202,6 +229,7 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
                 const allValid = row.allocations.every((allocation) =>
                     selected.has(allocation.seasonPassId),
                 );
+                const giftRecipientStatus = resolveGiftRecipientStatus(raw);
                 const soldAtStatus = resolveSoldAtStatus(raw, match);
 
                 if (
@@ -210,6 +238,8 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
                     !allValid
                 ) {
                     rowStatus = 'error:unallocated';
+                } else if (giftRecipientStatus != null) {
+                    rowStatus = giftRecipientStatus;
                 } else if (soldAtStatus != null) {
                     rowStatus = soldAtStatus;
                 } else if (matchStatus != null) {
@@ -252,6 +282,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
                 invest: raw.invest,
                 status: raw.status,
                 ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
+                ...(raw.recipient != null ? { recipient: raw.recipient } : {}),
                 allocations: [],
                 rowStatus: 'error:invalid-cell',
             });
@@ -261,6 +292,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
 
         const { match, status: matchStatus } = resolveMatch(raw, byDate);
         const allocationResult = buildAllocations(raw.nbTickets, input.selectedPassIds);
+        const giftRecipientStatus = resolveGiftRecipientStatus(raw);
         const soldAtStatus = resolveSoldAtStatus(raw, match);
 
         let finalStatus: DraftRowStatus = 'ok';
@@ -269,6 +301,8 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
             finalStatus = matchStatus;
         } else if (allocationResult.status?.startsWith('error:')) {
             finalStatus = allocationResult.status;
+        } else if (giftRecipientStatus != null) {
+            finalStatus = giftRecipientStatus;
         } else if (soldAtStatus != null) {
             finalStatus = soldAtStatus;
         } else if (matchStatus != null) {
@@ -296,6 +330,7 @@ export function resolveDraftRows(input: ResolveInput): ResolveOutput {
             invest: raw.invest,
             status: raw.status,
             ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
+            ...(raw.recipient != null ? { recipient: raw.recipient } : {}),
             ...(match != null ? { matchId: match.id } : {}),
             allocations: allocationResult.allocations,
             rowStatus: finalStatus,

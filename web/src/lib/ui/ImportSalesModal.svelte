@@ -247,9 +247,12 @@
                 <p class="text-sm text-ink-muted">
                     Upload a CSV with columns:
                     <code class="text-xs">
-                        date, opponent, listedPrice, nbTickets, status, invest, soldAt
+                        date, opponent, listedPrice, nbTickets, status, invest, soldAt,
+                        recipient
                     </code>
-                    (invest, soldAt optional — soldAt only applies to SOLD rows).
+                    (invest, soldAt, recipient optional — soldAt applies to SOLD and
+                    GIFTED rows, and a GIFTED row without it is dated to the match;
+                    recipient is required on GIFTED rows).
                 </p>
 
                 <input

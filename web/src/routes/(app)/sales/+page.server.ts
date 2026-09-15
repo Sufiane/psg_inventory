@@ -4,7 +4,14 @@ import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
 import { parseSeasonYearParam, seasonStartYearFromDate } from '$lib/season';
-import type { FormattedMatch, SaleDetail, SaleListItem, SeasonPass } from '$lib/types';
+import { readPayload } from './read-payload';
+import type {
+    FormattedMatch,
+    RecipientListItem,
+    SaleDetail,
+    SaleListItem,
+    SeasonPass,
+} from '$lib/types';
 
 export const load: PageServerLoad = async (event) => {
     const editId = event.url.searchParams.get('edit');
@@ -18,12 +25,25 @@ export const load: PageServerLoad = async (event) => {
     const sales = await api<SaleListItem[]>(event, salesPath);
 
     let editSale: SaleDetail | null = null;
+    let recipients: RecipientListItem[] = [];
 
+    // Both panel-specific to the edit drawer: `/recipients` only feeds the
+    // gift-recipient combobox rendered inside it, so there's no reason to pay
+    // for that call — or let a failure of it take down the whole page — on
+    // every list view. Fetched together so a slow/failing recipients call
+    // can't block loading the sale itself, and vice versa.
     if (editId && !isNew) {
-        try {
-            editSale = await api<SaleDetail>(event, `/sales/${editId}`);
-        } catch {
-            editSale = null;
+        const [saleResult, recipientsResult] = await Promise.allSettled([
+            api<SaleDetail>(event, `/sales/${editId}`),
+            api<RecipientListItem[]>(event, '/recipients'),
+        ]);
+
+        if (saleResult.status === 'fulfilled') {
+            editSale = saleResult.value;
+        }
+
+        if (recipientsResult.status === 'fulfilled') {
+            recipients = recipientsResult.value;
         }
     }
 
@@ -52,54 +72,17 @@ export const load: PageServerLoad = async (event) => {
         matches = splitByKickoff(allMatches, new Date()).upcoming;
     }
 
-    return { sales, year: seasonYear, editSale, matches, isNew, passes, canCreate };
+    return {
+        sales,
+        year: seasonYear,
+        editSale,
+        matches,
+        isNew,
+        passes,
+        recipients,
+        canCreate,
+    };
 };
-
-function readPayload(form: FormData): {
-    payload?: Record<string, unknown>;
-    error?: string;
-} {
-    const saleId = form.get('saleId');
-
-    if (typeof saleId !== 'string' || saleId.length === 0) {
-        return { error: 'Missing sale id.' };
-    }
-
-    const sold = form.get('sold') === 'on' || form.get('sold') === 'true';
-    const payload: Record<string, unknown> = { saleId, sold };
-
-    const allocations = parseAllocationsFromForm(form);
-
-    if (allocations.length > 0) {
-        payload.allocations = allocations;
-    }
-
-    const listedPriceRaw = form.get('listedPrice');
-
-    if (typeof listedPriceRaw === 'string' && listedPriceRaw.length > 0) {
-        const value = Number(listedPriceRaw);
-
-        if (!Number.isFinite(value) || value < 1) {
-            return { error: 'Listed price must be at least 1.' };
-        }
-
-        payload.listedPrice = value;
-    }
-
-    const investRaw = form.get('invest');
-
-    if (typeof investRaw === 'string' && investRaw.length > 0) {
-        const value = Number(investRaw);
-
-        if (!Number.isFinite(value) || value < 0) {
-            return { error: 'Invest must be 0 or more.' };
-        }
-
-        payload.invest = value;
-    }
-
-    return { payload };
-}
 
 export const actions: Actions = {
     update: async (event) => {

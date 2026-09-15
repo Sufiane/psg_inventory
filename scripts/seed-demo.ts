@@ -30,6 +30,7 @@ async function upsertUser(seed: DemoSeed): Promise<string> {
         });
         await prisma.sales.deleteMany({ where: { userId: existing.id } });
         await prisma.seasonPasses.deleteMany({ where: { userId: existing.id } });
+        await prisma.recipients.deleteMany({ where: { userId: existing.id } });
         await prisma.users.update({
             where: { id: existing.id },
             data: {
@@ -76,6 +77,7 @@ async function addSale(params: {
     invest: number;
     status: SaleStatus;
     soldAt: Date | null;
+    gift: { recipientId: string; giftedAt: Date } | null;
     allocations: { seasonPassId: string; nbTickets: number }[];
 }): Promise<void> {
     const nbTickets = params.allocations.reduce(
@@ -83,7 +85,7 @@ async function addSale(params: {
         0,
     );
 
-    await prisma.sales.create({
+    const created = await prisma.sales.create({
         data: {
             userId: params.userId,
             matchId: params.matchId,
@@ -100,7 +102,19 @@ async function addSale(params: {
                 })),
             },
         },
+        select: { id: true },
     });
+
+    if (params.gift != null) {
+        await prisma.gifts.create({
+            data: {
+                saleId: created.id,
+                saleStatus: SaleStatus.GIFTED,
+                recipientId: params.gift.recipientId,
+                giftedAt: params.gift.giftedAt,
+            },
+        });
+    }
 }
 
 async function seedDemo1(): Promise<void> {
@@ -135,7 +149,11 @@ async function seedDemo1(): Promise<void> {
         },
     });
 
-    const currentMatches = await matchesInSeason(2025, 12);
+    const recipient = await prisma.recipients.create({
+        data: { userId, name: 'Marc' },
+    });
+
+    const currentMatches = await matchesInSeason(2025, 14);
     const previousMatches = await matchesInSeason(2024, 10);
 
     if (currentMatches.length === 0 || previousMatches.length === 0) {
@@ -167,6 +185,8 @@ async function seedDemo1(): Promise<void> {
         { listedPrice: 260, status: SaleStatus.SOLD, soldAgo: 3 },
         { listedPrice: 280, status: SaleStatus.PENDING, soldAgo: null },
         { listedPrice: 220, status: SaleStatus.CANCELLED, soldAgo: null },
+        { listedPrice: 200, status: SaleStatus.GIFTED, soldAgo: null },
+        { listedPrice: 180, status: SaleStatus.GIFTED, soldAgo: null },
     ];
 
     const currentLimit = Math.min(currentMatches.length, currentPlans.length);
@@ -189,6 +209,10 @@ async function seedDemo1(): Promise<void> {
                 plan.soldAgo == null
                     ? null
                     : new Date(Date.now() - plan.soldAgo * 86_400_000),
+            gift:
+                plan.status === SaleStatus.GIFTED
+                    ? { recipientId: recipient.id, giftedAt: new Date() }
+                    : null,
             allocations: [{ seasonPassId: currentPass.id, nbTickets: 1 }],
         });
     }
@@ -222,6 +246,7 @@ async function seedDemo1(): Promise<void> {
             invest: 0,
             status: SaleStatus.SOLD,
             soldAt: new Date(2025, 1, 10 + i),
+            gift: null,
             allocations: [{ seasonPassId: previousPass.id, nbTickets: 1 }],
         });
     }
@@ -313,6 +338,7 @@ async function seedDemo2(): Promise<void> {
                 plan.soldAgo == null
                     ? null
                     : new Date(Date.now() - plan.soldAgo * 86_400_000),
+            gift: null,
             allocations: [
                 { seasonPassId: passA.id, nbTickets: 1 },
                 { seasonPassId: passB.id, nbTickets: 1 },

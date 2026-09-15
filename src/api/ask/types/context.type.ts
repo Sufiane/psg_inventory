@@ -47,6 +47,7 @@ export type AskPeriod = {
     realized: AskAccounting | null;
     unrealized: AskAccounting | null;
     pending: AskAccounting | null;
+    gifted: AskAccounting | null;
     seasonPasses: AskSeasonPass[];
     totalSeasonInvestment: TotalInvestment;
     // Bottom-line profit for this period: realized.totalProfit minus

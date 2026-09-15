@@ -26,6 +26,7 @@ const period = {
         lowest: null,
     },
     unrealized: null,
+    gifted: null,
     pending: {
         totalSales: 2,
         totalProfit: 40,
