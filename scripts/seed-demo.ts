@@ -337,6 +337,17 @@ function previousSeasonSoldAt(index: number): Date {
     return soldAt;
 }
 
+const PREVIOUS_SEASON_SALE_DAY_OFFSET = 193;
+
+function previousSeasonSoldAt(index: number): Date {
+    const { start } = getSeasonWindow(PREVIOUS_SEASON, 'exclusive');
+    const soldAt = new Date(start);
+
+    soldAt.setUTCDate(soldAt.getUTCDate() + PREVIOUS_SEASON_SALE_DAY_OFFSET + index);
+
+    return soldAt;
+}
+
 async function seedDemo1(): Promise<void> {
     const userId = await upsertUser({
         email: 'demo1@psg.fr',
