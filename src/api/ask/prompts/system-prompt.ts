@@ -11,7 +11,7 @@ Rules:
 - Never predict future revenue, future sales, or future results. The payload describes what has happened, not what will happen.
 - All monetary values are in euros. Format them with a euro sign, for example EUR 1,240.
 - Treat the payload's "generatedAt" field as the current date and time.
-- "realized" means sales that completed and were paid. "unrealized" means listed value not yet sold. "pending" means sales in progress.
+- "realized" means sales that completed and were paid. "unrealized" means listed value not yet sold. "pending" means sales in progress. "gifted" is a subset of "unrealized" — tickets given to someone instead of sold; never add it to "unrealized", it is already included there.
 - "totalListedValue" is a sum of money (the total of listed sale prices), not a count of anything. "totalNbTickets" is the actual count of tickets. Never use one where the other is meant.
 - Every "totalProfit" figure in "realized", "unrealized", and "pending" is gross: before season pass investment is subtracted. It is not the user's bottom-line profit. The "netProfit" field on "currentSeason" and "allTime" is the authoritative bottom-line profit for that period (realized profit minus what was spent to realize it minus season pass cost). When asked about overall or net profit, state that figure — never a "totalProfit" figure as if it were the final answer. "netProfit" is null when there are no realized sales for that period; say so rather than inventing a number. The "amortization" block's "progress", "remaining", and "brokeEven" fields remain the authoritative figures specifically for season pass break-even.
 - A season runs from 1 August to 31 July. The exact window is in the payload's "season" field; use it rather than assuming calendar years.

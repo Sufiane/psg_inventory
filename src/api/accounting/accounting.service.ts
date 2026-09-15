@@ -83,7 +83,7 @@ export class AccountingService implements IAccountingService {
         }
 
         const scope = {
-            status: statusConverter(status),
+            statuses: statusConverter(status),
             userId,
             matchDateFrom: date.start,
             ...(date.end ? { matchDateTo: date.end } : {}),
@@ -136,6 +136,7 @@ export class AccountingService implements IAccountingService {
                     realizedAccounting,
                     unrealizedAccounting,
                     pendingAccounting,
+                    giftedAccounting,
                     seasonPasses,
                     allPasses,
                     leadTimes,
@@ -143,6 +144,7 @@ export class AccountingService implements IAccountingService {
                     this.getAccounting(userId, 'realized', dates),
                     this.getAccounting(userId, 'unrealized', dates),
                     this.getAccounting(userId, 'pending', dates),
+                    this.getAccounting(userId, 'gifted', dates),
                     seasonStartYear !== null
                         ? this.seasonPassesDbService.findBySeason(userId, seasonStartYear)
                         : Promise.resolve([]),
@@ -187,6 +189,7 @@ export class AccountingService implements IAccountingService {
                     realized: realizedAccounting,
                     unrealized: unrealizedAccounting,
                     pending: pendingAccounting,
+                    gifted: giftedAccounting,
                     seasonInvestments,
                     totalSeasonInvestment,
                     leadTime: computeLeadTime(leadTimes),
@@ -201,6 +204,7 @@ export class AccountingService implements IAccountingService {
                 realized: null,
                 pending: null,
                 unrealized: null,
+                gifted: null,
                 seasonInvestments: [],
                 totalSeasonInvestment: 0,
                 leadTime: null,

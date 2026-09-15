@@ -18,6 +18,7 @@ import { SeasonPassesModule } from './api/season-passes/season-passes.module';
 import { HealthModule } from './api/health/health.module';
 import { ObserveModule } from './observe';
 import { AskModule } from './api/ask/ask.module';
+import { RecipientsModule } from './api/recipients/recipients.module';
 
 @Module({
     imports: [
@@ -67,6 +68,7 @@ import { AskModule } from './api/ask/ask.module';
         SeasonPassesModule,
         HealthModule,
         AskModule,
+        RecipientsModule,
     ],
     providers: [
         {

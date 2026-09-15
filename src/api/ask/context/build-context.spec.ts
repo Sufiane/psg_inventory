@@ -8,6 +8,7 @@ const emptyPeriod = {
     realized: null,
     unrealized: null,
     pending: null,
+    gifted: null,
     seasonInvestments: [],
     totalSeasonInvestment: 0,
     leadTime: null,
@@ -44,6 +45,7 @@ const populatedPeriod = {
     },
     unrealized: null,
     pending: null,
+    gifted: null,
     seasonInvestments: [
         {
             id: 'pass-1',

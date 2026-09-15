@@ -53,7 +53,18 @@ export type FormattedMatch = {
     result?: { isWin?: boolean; score?: MatchScore };
 };
 
-export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED';
+export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED' | 'GIFTED';
+
+export type SaleRecipient = {
+    id: string;
+    name: string;
+};
+
+export type RecipientListItem = {
+    id: string;
+    name: string;
+    giftCount: number;
+};
 
 export type SaleAllocation = {
     id?: SeasonPassId;
@@ -73,6 +84,8 @@ export type SaleListItem = {
     createdAt?: string;
     soldAt?: string | null;
     cancelledAt?: string | null;
+    giftedAt?: string | null;
+    Recipient?: SaleRecipient | null;
     Allocations?: SaleAllocation[];
 };
 
@@ -88,6 +101,8 @@ export type SaleDetail = {
     createdAt?: string;
     soldAt?: string | null;
     cancelledAt?: string | null;
+    giftedAt?: string | null;
+    Recipient?: SaleRecipient | null;
     Match: {
         date: string;
         Opponent: { id: OpponentId; name: OpponentName };
@@ -141,6 +156,8 @@ export type TimePeriodAccounting = {
     realized: Accounting | null;
     unrealized: Accounting | null;
     pending: Accounting | null;
+    // Subset of `unrealized` — render as a breakdown line, never as its own total.
+    gifted: Accounting | null;
     seasonInvestments: SeasonInvestment[];
     totalSeasonInvestment: SeasonPassPrice;
     leadTime: LeadTime | null;

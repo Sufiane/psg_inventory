@@ -7,7 +7,7 @@ import { SoldLeadTime } from './types/sold-lead-time.type';
 export abstract class IAccountingDbService {
     abstract getAccounting(
         userId: UserId,
-        status: SaleStatus,
+        statuses: SaleStatus[],
         from: Date,
         to?: Date,
     ): Promise<AccountingAggregate | null>;

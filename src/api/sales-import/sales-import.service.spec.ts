@@ -7,6 +7,8 @@ import { SeasonPassesService } from '../../db/season-passes/season-passes.servic
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import { SalesImportService as SalesImportDbService } from '../../db/sales-import/sales-import.service';
 import { ISalesImportDbService } from '../../db/sales-import/sales-import.db.interface';
+import { RedisService } from '../../redis/redis.service';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
@@ -20,6 +22,7 @@ describe('SalesImportService', () => {
     let matchesDb: DeepMockProxy<MatchesService>;
     let passesDb: DeepMockProxy<SeasonPassesService>;
     let importDb: DeepMockProxy<SalesImportDbService>;
+    let redisService: DeepMockProxy<RedisService>;
 
     const userId = 'user-1' as UserId;
     const passAId = '11111111-1111-1111-1111-111111111111';
@@ -58,6 +61,7 @@ describe('SalesImportService', () => {
         matchesDb = mockDeep<MatchesService>();
         passesDb = mockDeep<SeasonPassesService>();
         importDb = mockDeep<SalesImportDbService>();
+        redisService = mockDeep<RedisService>();
 
         const moduleRef = await Test.createTestingModule({
             providers: [
@@ -65,6 +69,7 @@ describe('SalesImportService', () => {
                 { provide: IMatchesDbService, useValue: matchesDb },
                 { provide: ISeasonPassesDbService, useValue: passesDb },
                 { provide: ISalesImportDbService, useValue: importDb },
+                { provide: RedisService, useValue: redisService },
             ],
         }).compile();
 
@@ -159,6 +164,35 @@ describe('SalesImportService', () => {
             expect(importDb.bulkCreate).toHaveBeenCalledTimes(1);
         });
 
+        describe('when sales are created', () => {
+            it('invalidates the accounting and recipients caches', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                await service.commit(userId, validDto);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateAccounting(userId),
+                );
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when no sales are created', () => {
+            it('does not invalidate any cache', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(0);
+
+                await service.commit(userId, validDto);
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            });
+        });
+
         it('passes a provided soldAt through to bulkCreate for SOLD rows', async () => {
             passesDb.findById.mockResolvedValue(passFixture({}));
             matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
@@ -200,6 +234,119 @@ describe('SalesImportService', () => {
                 expect(importDb.bulkCreate).toHaveBeenCalledWith(
                     expect.objectContaining({
                         sales: [expect.objectContaining({ soldAt: null })],
+                    }),
+                );
+            });
+
+            it('sends no gift payload', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                const pending: CommitRequestDto = {
+                    ...validDto,
+                    rows: [
+                        { ...validDto.rows[0]!, status: 'PENDING', soldAt: '2025-09-10' },
+                    ],
+                };
+
+                await service.commit(userId, pending);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [expect.objectContaining({ gift: null })],
+                    }),
+                );
+            });
+        });
+
+        describe('when the row is GIFTED', () => {
+            it('sets gift.giftedAt to the provided date at noon UTC and gift.recipientName to the row recipient', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                const gifted: CommitRequestDto = {
+                    ...validDto,
+                    rows: [
+                        {
+                            ...validDto.rows[0]!,
+                            status: 'GIFTED',
+                            soldAt: '2025-09-10',
+                            recipient: 'Marc',
+                        },
+                    ],
+                };
+
+                await service.commit(userId, gifted);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [
+                            expect.objectContaining({
+                                gift: {
+                                    recipientName: 'Marc',
+                                    giftedAt: new Date('2025-09-10T12:00:00.000Z'),
+                                },
+                                soldAt: null,
+                            }),
+                        ],
+                    }),
+                );
+            });
+
+            it('falls back to the match date when no date was provided', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                const gifted: CommitRequestDto = {
+                    ...validDto,
+                    rows: [{ ...validDto.rows[0]!, status: 'GIFTED', recipient: 'Marc' }],
+                };
+
+                await service.commit(userId, gifted);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [
+                            expect.objectContaining({
+                                gift: expect.objectContaining({
+                                    giftedAt: matchFixture().date,
+                                }),
+                            }),
+                        ],
+                    }),
+                );
+            });
+
+            it('normalizes ragged whitespace in the recipient name', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+                importDb.bulkCreate.mockResolvedValue(1);
+
+                const gifted: CommitRequestDto = {
+                    ...validDto,
+                    rows: [
+                        {
+                            ...validDto.rows[0]!,
+                            status: 'GIFTED',
+                            recipient: '  Marc   Dupont ',
+                        },
+                    ],
+                };
+
+                await service.commit(userId, gifted);
+
+                expect(importDb.bulkCreate).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        sales: [
+                            expect.objectContaining({
+                                gift: expect.objectContaining({
+                                    recipientName: 'Marc Dupont',
+                                }),
+                            }),
+                        ],
                     }),
                 );
             });
@@ -286,6 +433,31 @@ describe('SalesImportService', () => {
             const result = await service.revert(userId, 'unknown');
 
             expect(result).toEqual({ deleted: 0 });
+        });
+
+        describe('when sales are deleted', () => {
+            it('invalidates the accounting and recipients caches', async () => {
+                importDb.deleteBatch.mockResolvedValue(3);
+
+                await service.revert(userId, 'batch-1');
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateAccounting(userId),
+                );
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+        });
+
+        describe('when nothing matches', () => {
+            it('does not invalidate any cache', async () => {
+                importDb.deleteBatch.mockResolvedValue(0);
+
+                await service.revert(userId, 'unknown');
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            });
         });
     });
 });

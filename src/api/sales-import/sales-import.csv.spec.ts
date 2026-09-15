@@ -19,6 +19,7 @@ describe('parseImportCsv', () => {
                     status: 'SOLD',
                     invest: 80,
                     soldAt: null,
+                    recipient: null,
                 },
             ]);
         }
@@ -68,6 +69,21 @@ describe('parseImportCsv', () => {
         }
     });
 
+    describe('when a row is GIFTED', () => {
+        it('parses the status', () => {
+            const csv = Buffer.from(
+                'date,opponent,listedPrice,nbTickets,status\n2026-03-01,Lyon,120,1,GIFTED\n',
+            );
+
+            const result = parseImportCsv(csv);
+
+            expect(result).toMatchObject({
+                kind: 'ok',
+                rows: [expect.objectContaining({ status: 'GIFTED' })],
+            });
+        });
+    });
+
     it('reports a missing required column', () => {
         const csv = 'date,opponent,listedPrice,status\n2025-09-14,Marseille,120,SOLD\n';
         const result = parseImportCsv(Buffer.from(csv));
@@ -107,5 +123,55 @@ describe('parseImportCsv', () => {
         if (result.kind === 'error') {
             expect(result.error).toBe('empty');
         }
+    });
+
+    describe('recipient column', () => {
+        it('parses a recipient value onto the row', () => {
+            const csv =
+                'date,opponent,listedPrice,nbTickets,status,recipient\n2025-09-14,Marseille,120,1,GIFTED,Marc\n';
+            const result = parseImportCsv(Buffer.from(csv));
+
+            expect(result.kind).toBe('ok');
+
+            if (result.kind === 'ok') {
+                expect(result.rows[0]!.recipient).toBe('Marc');
+            }
+        });
+
+        describe('when the recipient cell is blank', () => {
+            it('yields null', () => {
+                const csv =
+                    'date,opponent,listedPrice,nbTickets,status,recipient\n2025-09-14,Marseille,120,1,GIFTED,\n';
+                const result = parseImportCsv(Buffer.from(csv));
+
+                expect(result.kind).toBe('ok');
+
+                if (result.kind === 'ok') {
+                    expect(result.rows[0]!.recipient).toBeNull();
+                }
+            });
+        });
+
+        describe('when the header is absent', () => {
+            it('yields null for every row', () => {
+                const csv =
+                    'date,opponent,listedPrice,nbTickets,status\n2025-09-14,Marseille,120,1,SOLD\n';
+                const result = parseImportCsv(Buffer.from(csv));
+
+                expect(result.kind).toBe('ok');
+
+                if (result.kind === 'ok') {
+                    expect(result.rows[0]!.recipient).toBeNull();
+                }
+            });
+        });
+
+        it('does not report recipient as an unknown column', () => {
+            const csv =
+                'date,opponent,listedPrice,nbTickets,status,recipient\n2025-09-14,Marseille,120,1,GIFTED,Marc\n';
+            const result = parseImportCsv(Buffer.from(csv));
+
+            expect(result.kind).toBe('ok');
+        });
     });
 });

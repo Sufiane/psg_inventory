@@ -7,6 +7,7 @@
         title,
         data,
         subtitle,
+        footnote,
         showSeason = false,
         showDate = false,
         variant = 'full',
@@ -15,6 +16,7 @@
         title: string;
         data: Accounting | null;
         subtitle?: string;
+        footnote?: string;
         showSeason?: boolean;
         showDate?: boolean;
         variant?: 'full' | 'compact';
@@ -84,6 +86,10 @@
                 <span class="font-mono">{money(data.totalSales)}</span> listed value
             </p>
         {/if}
+
+        {#if footnote}
+            <p class="mt-2 text-xs text-gift">{footnote}</p>
+        {/if}
     </section>
 {:else}
     <section class="bg-surface rounded-lg border border-line p-5">
@@ -144,6 +150,10 @@
                     </div>
                 </div>
             {/if}
+        {/if}
+
+        {#if footnote}
+            <p class="mt-2 text-xs text-gift">{footnote}</p>
         {/if}
     </section>
 {/if}

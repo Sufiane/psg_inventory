@@ -8,7 +8,7 @@
     import AmortizationCard from '$lib/ui/AmortizationCard.svelte';
     import AmortizationCardSkeleton from '$lib/ui/AmortizationCardSkeleton.svelte';
     import LeadTimeStrip from '$lib/ui/LeadTimeStrip.svelte';
-    import { signedMoney } from '$lib/format';
+    import { money, signedMoney } from '$lib/format';
     import { seasonStartYearFromDate } from '$lib/season';
 
     let { data }: { data: PageData } = $props();
@@ -192,8 +192,11 @@
     <div class="grid sm:grid-cols-2 gap-4">
         <AccountingCard
             title="Unrealized"
-            subtitle="Cancelled, won't settle."
+            subtitle="Cancelled, or given away."
             data={accounting.unrealized}
+            footnote={accounting.gifted
+                ? `of which gifted ${money(accounting.gifted.totalProfit)}`
+                : undefined}
             {showSeason}
             variant="compact"
             tone="sunk"

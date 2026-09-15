@@ -7,6 +7,7 @@ import {
     IsString,
     IsUUID,
     Matches,
+    MaxLength,
     Min,
     ValidateNested,
 } from 'class-validator';
@@ -23,6 +24,7 @@ export const DRAFT_ROW_STATUSES = [
     'error:unallocated',
     'error:invalid-cell',
     'error:sold-after-kickoff',
+    'error:gift-recipient-missing',
 ] as const;
 
 export type DraftRowStatus = (typeof DRAFT_ROW_STATUSES)[number];
@@ -58,6 +60,13 @@ export class DraftRowDto {
     @IsString()
     @Matches(DATE_ONLY_REGEX)
     soldAt?: string;
+
+    @IsOptional()
+    @IsString()
+    // Matches UpdateSaleDto.recipientName: both land in the indexed
+    // recipients.name, where an oversized value fails mid-import transaction.
+    @MaxLength(120)
+    recipient?: string;
 
     @IsOptional()
     @IsUUID('4')

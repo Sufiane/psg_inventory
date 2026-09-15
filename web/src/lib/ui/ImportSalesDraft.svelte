@@ -65,8 +65,27 @@
             .filter((pass): pass is SeasonPass => pass != null);
     }
 
+    // Deliberate duplicate of resolveGiftRecipientStatus in
+    // src/api/sales-import/sales-import.resolver.ts — the only import rule the
+    // client can check without match/pass data. Keep the two in step.
+    function resolveRowStatus(row: DraftRow): DraftRow['rowStatus'] {
+        if (row.status === 'GIFTED' && (row.recipient ?? '').trim().length === 0) {
+            return 'error:gift-recipient-missing';
+        }
+
+        return 'ok';
+    }
+
     function updateRow(index: number, patch: Partial<DraftRow>): void {
-        rows = rows.map((row, i) => (i === index ? { ...row, ...patch, rowStatus: 'ok' } : row));
+        rows = rows.map((row, i) => {
+            if (i !== index) {
+                return row;
+            }
+
+            const next = { ...row, ...patch };
+
+            return { ...next, rowStatus: resolveRowStatus(next) };
+        });
     }
 
     function updateAllocation(rowIndex: number, passId: SeasonPassId, count: number): void {
@@ -81,7 +100,9 @@
                     ? [...existing, { seasonPassId: passId, nbTickets: count as TicketCount }]
                     : existing;
 
-            return { ...row, allocations: next, rowStatus: 'ok' };
+            const patched = { ...row, allocations: next };
+
+            return { ...patched, rowStatus: resolveRowStatus(patched) };
         });
     }
 
@@ -210,7 +231,8 @@
                         <th class="p-2">Tickets</th>
                         <th class="p-2">Invest</th>
                         <th class="p-2">Sale status</th>
-                        <th class="p-2">Sold at</th>
+                        <th class="p-2">Recipient</th>
+                        <th class="p-2">Sold / gifted at</th>
                         <th class="p-2">Allocations</th>
                         <th class="p-2"></th>
                     </tr>
@@ -304,13 +326,32 @@
                                     <option>PENDING</option>
                                     <option>SOLD</option>
                                     <option>CANCELLED</option>
+                                    <option>GIFTED</option>
                                 </select>
+                            </td>
+                            <td class="p-2">
+                                <input
+                                    type="text"
+                                    value={row.recipient ?? ''}
+                                    disabled={row.status !== 'GIFTED'}
+                                    placeholder="Name"
+                                    onchange={(event) =>
+                                        updateRow(index, {
+                                            recipient:
+                                                (event.currentTarget as HTMLInputElement).value ||
+                                                undefined,
+                                        })}
+                                    class="w-28 rounded border border-line-strong bg-surface px-1 disabled:opacity-50"
+                                />
                             </td>
                             <td class="p-2">
                                 <input
                                     type="date"
                                     value={row.soldAt ?? ''}
-                                    disabled={row.status !== 'SOLD'}
+                                    disabled={row.status !== 'SOLD' && row.status !== 'GIFTED'}
+                                    title={row.status === 'GIFTED'
+                                        ? 'Leave blank to use the match date.'
+                                        : undefined}
                                     onchange={(event) =>
                                         updateRow(index, {
                                             soldAt: ((event.currentTarget as HTMLInputElement)

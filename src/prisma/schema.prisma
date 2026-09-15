@@ -26,6 +26,7 @@ model Users {
   password     String
   Sales        Sales[]
   SeasonPasses SeasonPasses[]
+  Recipients   Recipients[]
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt() @map("updated_at")
   role         Roles          @default(USER)
@@ -107,6 +108,58 @@ enum SaleStatus {
   PENDING
   SOLD
   CANCELLED
+  GIFTED
+}
+
+model Recipients {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  User      Users    @relation(fields: [userId], references: [id])
+  Gifts     Gifts[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt() @map("updated_at")
+
+  @@unique([userId, name])
+  @@map("recipients")
+}
+
+// A sale is gifted when, and is meant to be gifted only when, it has a row
+// here. The database only enforces one direction of that: a gift row cannot
+// attach to a non-GIFTED sale, and a GIFTED sale cannot change status while
+// its gift row exists (the composite foreign key below). The reverse — that a
+// GIFTED sale always has a gift row — is NOT database-enforced; it holds
+// because giftSale is the only code that can produce a GIFTED sale and it
+// always writes both in one transaction (spec D15, layer 2). A trigger to
+// close that direction too was considered and deliberately rejected (see
+// D15's "Rejected alternative") — revisit only if a second writer with direct
+// table access shows up. `saleStatus` is not data: it is always 'GIFTED'
+// (pinned by a CHECK constraint the migration adds by hand) and exists solely
+// so the foreign key below can be composite. Deleting the column deletes the
+// guarantee — see docs/specs/2026-09-11-gifted-sale-status-design.md D14/D15.
+//
+// WARNING: `prisma db push` does not model CHECK constraints. Running it
+// against this table would silently drop `gifts_sale_status_check` while
+// leaving the foreign key intact, degrading this guarantee without warning.
+// Always go through `prisma migrate` here.
+model Gifts {
+  id          String      @id @default(uuid())
+  saleId      String      @unique @map("sale_id")
+  saleStatus  SaleStatus  @map("sale_status")
+  recipientId String      @map("recipient_id")
+  giftedAt    DateTime    @map("gifted_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt() @map("updated_at")
+  Sale        Sales       @relation(fields: [saleId, saleStatus], references: [id, status], onDelete: Cascade, onUpdate: Restrict)
+  // ON DELETE RESTRICT, not SET NULL: recipient_id is NOT NULL so SET NULL is
+  // not expressible, and CASCADE would delete the gift row itself, silently
+  // un-gifting its sale behind the composite foreign key's back (spec D9/D14,
+  // 2026-09-15 revision). Deleting a recipient that still has gifts must fail.
+  Recipient   Recipients  @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, saleStatus])
+  @@index([recipientId])
+  @@map("gifts")
 }
 
 model Sales {
@@ -127,7 +180,11 @@ model Sales {
   Allocations SalePassAllocations[]
   Match       Matches         @relation(fields: [matchId], references: [id])
   User        Users           @relation(fields: [userId], references: [id])
+  Gift        Gifts?
 
+  // The composite target of the gifts foreign key. `id` alone is already the
+  // primary key; this pair lets a gift row pin the sale's status (D15).
+  @@unique([id, status])
   @@index([userId, importBatchId])
   @@map("sales")
 }

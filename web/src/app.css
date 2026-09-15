@@ -38,6 +38,13 @@
     --color-sunk: oklch(0.45 0.07 320);
     --color-sunk-strong: oklch(0.38 0.08 320);
 
+    /* gift: tickets given away rather than sold. Not a loss (sunk), not
+       in-flight (warning), not cash (positive) — its own hue at 210.
+       Measured ≥4.5:1 against --color-surface in both themes (light
+       5.56:1 / 7.26:1, dark 8.48:1 / 11.21:1). */
+    --color-gift: oklch(0.5 0.1 210);
+    --color-gift-strong: oklch(0.43 0.11 210);
+
     /* Drenched brand surface for the marketing hero. Held in both modes
        (brand identity wins over dark-mode auto-flip) so the violet stays
        the brand's voice rather than a lavender lift when the OS is dark.
@@ -77,6 +84,8 @@
     --color-warning-strong: oklch(0.8 0.17 70);
     --color-sunk: oklch(0.7 0.14 320);
     --color-sunk-strong: oklch(0.78 0.15 320);
+    --color-gift: oklch(0.74 0.11 210);
+    --color-gift-strong: oklch(0.82 0.12 210);
 }
 
 :root[data-theme='dark'] .skeleton {
@@ -117,6 +126,9 @@
 
         --color-sunk: oklch(0.7 0.14 320);
         --color-sunk-strong: oklch(0.78 0.15 320);
+
+        --color-gift: oklch(0.74 0.11 210);
+        --color-gift-strong: oklch(0.82 0.12 210);
     }
 
     :root:not([data-theme='light']) .skeleton {
