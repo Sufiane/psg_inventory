@@ -13,8 +13,8 @@
   },
   "scripts": {
     "build": "nest build",
-    "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\" --max-warnings 0",
+    "lint:fix": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\" --fix",
     "lint:deps": "depcruise src --config",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
