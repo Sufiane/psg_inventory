@@ -25,10 +25,12 @@ module.exports = {
         {
             name: 'no-prisma-service-outside-db',
             comment:
-                "PrismaService is the db layer's own handle on the ORM. Api services, controllers and their modules reach the database through a db token, never by importing PrismaService.",
+                "PrismaService is the db layer's own handle on the ORM. Api services, controllers and their modules reach the database through a db token, never by importing PrismaService. PrismaModule is listed too: importing it hands PrismaService to every provider in the importing module, which is the same leak by another route.",
             severity: 'error',
             from: { pathNot: ['^src/db/', '\\.db\\.ts$'] },
-            to: { path: '^src/db/prisma\\.service\\.ts$' },
+            to: {
+                path: ['^src/db/prisma\\.service\\.ts$', '^src/db/prisma\\.module\\.ts$'],
+            },
         },
         {
             name: 'no-api-from-db',
