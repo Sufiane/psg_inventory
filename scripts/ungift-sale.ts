@@ -3,10 +3,8 @@ import { NestFactory } from '@nestjs/core';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
 import { AppModule } from '../src/app.module';
-import {
-    ISalesService,
-    SaleResponse,
-} from '../src/api/sales/interfaces/sales.service.interface';
+import { ISalesService } from '../src/api/sales/interfaces/sales.service.interface';
+import type { Sale } from '../src/db/sales/type/sale.type';
 import { DomainException } from '../src/common/exceptions/domain.exception';
 import { ErrorCode } from '../src/common/exceptions/error-codes.enum';
 
@@ -67,7 +65,7 @@ async function main(): Promise<void> {
         // Loaded — and printed — before the delete, so the terminal scrollback
         // is the record even if nobody was watching. This is no longer the only
         // safety net: the --yes flag below is the actual gate on the decision.
-        const sale: SaleResponse = await salesService
+        const sale: Sale = await salesService
             .getSale(userId as UserId, saleId as SaleId)
             .catch((error: unknown) => {
                 if (
@@ -88,10 +86,8 @@ async function main(): Promise<void> {
         console.log(
             `  match: ${sale.Match.Opponent.name} on ${sale.Match.date.toISOString().slice(0, 10)}`,
         );
-        console.log(`  recipient: ${sale.Recipient?.name ?? '(none)'}`);
-        console.log(
-            `  giftedAt: ${sale.giftedAt != null ? sale.giftedAt.toISOString() : '(none)'}`,
-        );
+        console.log(`  recipient: ${sale.Gift?.Recipient.name ?? '(none)'}`);
+        console.log(`  giftedAt: ${sale.Gift?.giftedAt.toISOString() ?? '(none)'}`);
 
         if (!confirmed) {
             console.error(

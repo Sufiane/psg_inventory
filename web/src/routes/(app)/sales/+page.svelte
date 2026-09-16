@@ -547,12 +547,12 @@
                         <input type="hidden" name="status" value="GIFTED" />
                         <input type="hidden" name="previousStatus" value={editSale.status} />
 
-                        {#if editSale.status === 'GIFTED'}
+                        {#if editSale.Gift}
                             <p class="text-sm text-ink">
                                 <span class="font-medium text-gift-strong">Gifted</span>
                                 <span class="text-ink-muted">·</span>
                                 <span class="text-ink-muted">Given to</span>
-                                <span class="text-ink">{editSale.Recipient?.name ?? '—'}</span>
+                                <span class="text-ink">{editSale.Gift.Recipient.name}</span>
                             </p>
                         {/if}
 
@@ -567,9 +567,7 @@
                                 required={editSale.status !== 'GIFTED'}
                                 autocomplete="off"
                                 maxlength="120"
-                                placeholder={editSale.status === 'GIFTED'
-                                    ? (editSale.Recipient?.name ?? 'Name')
-                                    : 'Name'}
+                                placeholder={editSale.Gift?.Recipient.name ?? 'Name'}
                                 class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
                             />
                         </label>

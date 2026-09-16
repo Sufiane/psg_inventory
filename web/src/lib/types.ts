@@ -60,6 +60,14 @@ export type SaleRecipient = {
     name: string;
 };
 
+// `Recipient` is non-null inside a gift: gifts.recipient_id is NOT NULL, so a
+// gift without a recipient is not representable.
+export type SaleGift = {
+    giftedAt: string;
+    recipientId: string;
+    Recipient: SaleRecipient;
+};
+
 export type RecipientListItem = {
     id: string;
     name: string;
@@ -84,8 +92,7 @@ export type SaleListItem = {
     createdAt?: string;
     soldAt?: string | null;
     cancelledAt?: string | null;
-    giftedAt?: string | null;
-    Recipient?: SaleRecipient | null;
+    Gift: SaleGift | null;
     Allocations?: SaleAllocation[];
 };
 
@@ -101,8 +108,7 @@ export type SaleDetail = {
     createdAt?: string;
     soldAt?: string | null;
     cancelledAt?: string | null;
-    giftedAt?: string | null;
-    Recipient?: SaleRecipient | null;
+    Gift: SaleGift | null;
     Match: {
         date: string;
         Opponent: { id: OpponentId; name: OpponentName };
@@ -235,14 +241,6 @@ export type AddSalePayload = {
     allocations: SaleAllocation[];
     invest?: Invest;
     listedPrice: ListedPrice;
-};
-
-export type UpdateSalePayload = {
-    saleId: SaleId;
-    sold: boolean;
-    invest?: Invest;
-    listedPrice?: ListedPrice;
-    allocations?: SaleAllocation[];
 };
 
 export type CreateMatchPayload = {

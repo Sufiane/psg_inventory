@@ -1,16 +1,10 @@
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
 
 /**
- * This route's single form always submits a `status` value when the
- * PENDING/SOLD <select> is rendered — even when the user never touched it,
- * since a <select> always has a selected option. Resending the sale's
- * unchanged current status trips the backend's kickoff guard for an
- * already-SOLD, past-kickoff sale (`isKickoffGuarded('SOLD', 'SOLD')` is
- * unconditional), rejecting a plain price/invest edit with
- * `SALE_AFTER_KICKOFF`. The form also submits a hidden `currentStatus`
- * (the sale's status as loaded) so status is only forwarded on a genuine,
- * deliberate change — mirroring how the sales-list edit-numbers form omits
- * `status` entirely rather than resubmitting the current value.
+ * The PENDING/SOLD <select> always submits a value, even untouched. The
+ * hidden `currentStatus` is what distinguishes that from a deliberate
+ * change: resending an unchanged SOLD on a past-kickoff sale would trip the
+ * backend's kickoff guard and reject a plain price edit.
  */
 export function readPayload(
     form: FormData,

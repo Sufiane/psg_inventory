@@ -13,7 +13,7 @@ export default {
         start: Date,
         end?: Date,
     ): CacheKey<TimePeriodAccounting> =>
-        `accounting:user:id:${userId}:v2:start:${start.toISOString()}:end:${end?.toISOString()}` as CacheKey<TimePeriodAccounting>,
+        `accounting:user:id:${userId}:start:${start.toISOString()}:end:${end?.toISOString()}` as CacheKey<TimePeriodAccounting>,
     amortization: (userId: string, seasonStartYear: number): CacheKey<Amortization> =>
         `accounting:user:id:${userId}:amortization:${seasonStartYear}` as CacheKey<Amortization>,
     askRateLimit: (userId: string, hourBucket: string): CacheKey<number> =>
@@ -30,14 +30,11 @@ export default {
         `matches:start:${from.toISOString()}:end:${to?.toISOString()}:withResult:${withResult}` as CacheKey<
             Match[]
         >,
-    // :v2 — the cached payload is the db-layer `Sale`, whose shape changed when
-    // giftedness moved to its own joined row (spec D17). A warm pre-change entry
-    // would flatten to a null recipient for up to an hour.
-    sale: (saleId: string): CacheKey<Sale> => `sale:id:${saleId}:v2` as CacheKey<Sale>,
+    sale: (saleId: string): CacheKey<Sale> => `sale:id:${saleId}` as CacheKey<Sale>,
     sales: (userId: string): CacheKey<Sale[]> =>
-        `user:id:${userId}:sales:v2` as CacheKey<Sale[]>,
+        `user:id:${userId}:sales` as CacheKey<Sale[]>,
     salesByRange: (userId: string, from: Date, to: Date): CacheKey<Sale[]> =>
-        `user:id:${userId}:sales:v2:start:${from.toISOString()}:end:${to.toISOString()}` as CacheKey<
+        `user:id:${userId}:sales:start:${from.toISOString()}:end:${to.toISOString()}` as CacheKey<
             Sale[]
         >,
     invalidateSales: (userId: string): CacheKeyPattern =>
