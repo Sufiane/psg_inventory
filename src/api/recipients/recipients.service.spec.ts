@@ -5,7 +5,7 @@ import { RecipientsDb } from '../../db/recipients/recipients.db';
 import { IRecipientsDbService } from '../../db/recipients/recipients.db.interface';
 import { RecipientsService } from './recipients.service';
 
-describe('RecipientsService (api)', () => {
+describe('RecipientsService', () => {
     const userId = 'user-1' as UserId;
     let service: RecipientsService;
     let recipientsDbService: DeepMockProxy<RecipientsDb>;
