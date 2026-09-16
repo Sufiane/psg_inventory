@@ -1,11 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { AccountingService } from './accounting.service';
-import { SalesService as SalesDbService } from '../../db/sales/sales.service';
+import { SalesDb } from '../../db/sales/sales.db';
 import { RedisService } from '../../redis/redis.service';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
-import { AccountingService as AccountingDbService } from '../../db/accounting/accounting.service';
-import { SeasonPassesService as SeasonPassesDbService } from '../../db/season-passes/season-passes.service';
+import { AccountingDb } from '../../db/accounting/accounting.db';
+import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
@@ -37,9 +37,9 @@ const formatAggregateMocked = jest.mocked(formatAggregate);
 
 describe('AccountingService', () => {
     let service: AccountingService;
-    let salesDbService: DeepMockProxy<SalesDbService>;
-    let accountingDbService: DeepMockProxy<AccountingDbService>;
-    let seasonPassesDbService: DeepMockProxy<SeasonPassesDbService>;
+    let salesDbService: DeepMockProxy<SalesDb>;
+    let accountingDbService: DeepMockProxy<AccountingDb>;
+    let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
     let redisService: DeepMockProxy<RedisService>;
 
     beforeEach(async () => {
@@ -48,15 +48,15 @@ describe('AccountingService', () => {
                 AccountingService,
                 {
                     provide: IAccountingDbService,
-                    useValue: mockDeep<AccountingDbService>(),
+                    useValue: mockDeep<AccountingDb>(),
                 },
                 {
                     provide: ISalesDbService,
-                    useValue: mockDeep<SalesDbService>(),
+                    useValue: mockDeep<SalesDb>(),
                 },
                 {
                     provide: ISeasonPassesDbService,
-                    useValue: mockDeep<SeasonPassesDbService>(),
+                    useValue: mockDeep<SeasonPassesDb>(),
                 },
                 {
                     provide: RedisService,

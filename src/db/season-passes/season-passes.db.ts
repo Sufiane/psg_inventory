@@ -14,7 +14,7 @@ import {
 import { SeasonPass } from './type/season-pass.type';
 
 @Injectable()
-export class SeasonPassesService implements ISeasonPassesDbService {
+export class SeasonPassesDb implements ISeasonPassesDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,

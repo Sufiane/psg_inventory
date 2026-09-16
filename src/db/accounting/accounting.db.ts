@@ -11,7 +11,7 @@ import { SoldLeadTime } from './types/sold-lead-time.type';
 import { buildInclusiveDateRangeFilter } from '../shared/date-range.util';
 
 @Injectable()
-export class AccountingService implements IAccountingDbService {
+export class AccountingDb implements IAccountingDbService {
     constructor(private readonly prisma: PrismaService) {}
 
     async getAccounting(

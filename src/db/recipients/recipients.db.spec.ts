@@ -5,24 +5,24 @@ import type { RecipientId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-import { RecipientsService } from './recipients.service';
+import { RecipientsDb } from './recipients.db';
 
-describe('RecipientsService (db)', () => {
+describe('RecipientsDb', () => {
     const userId = 'user-1' as UserId;
-    let service: RecipientsService;
+    let service: RecipientsDb;
     let prisma: DeepMockProxy<PrismaService>;
     let redisService: DeepMockProxy<RedisService>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
             providers: [
-                RecipientsService,
+                RecipientsDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
             ],
         }).compile();
 
-        service = module.get(RecipientsService);
+        service = module.get(RecipientsDb);
         prisma = module.get(PrismaService);
         redisService = module.get(RedisService);
 

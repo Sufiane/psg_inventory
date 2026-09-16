@@ -1,4 +1,4 @@
-import { DbModule } from '../db/db.module';
+import { UsersDbModule } from '../db/users/users.db.module';
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -12,7 +12,7 @@ import { RedisModule } from '../redis/redis.module';
 
 @Module({
     imports: [
-        DbModule,
+        UsersDbModule,
         PassportModule,
         RedisModule,
         JwtModule.registerAsync({

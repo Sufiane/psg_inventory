@@ -2,9 +2,9 @@ import { AdminService } from './admin.service';
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { FootballDataService } from '../../football-data/football-data.service';
-import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { UsersService } from '../../db/users/users.service';
+import { UsersDb } from '../../db/users/users.db';
 import { IUsersDbService } from '../../db/users/users.db.interface';
 import { RedisService } from '../../redis/redis.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
@@ -17,8 +17,8 @@ import type { Users } from '@prisma/client';
 describe('AdminService', () => {
     let service: AdminService;
     let footballDataService: DeepMockProxy<FootballDataService>;
-    let matchsDbService: DeepMockProxy<MatchsDbService>;
-    let usersDbService: DeepMockProxy<UsersService>;
+    let matchsDbService: DeepMockProxy<MatchesDb>;
+    let usersDbService: DeepMockProxy<UsersDb>;
     let redisService: DeepMockProxy<RedisService>;
 
     beforeEach(async () => {
@@ -31,11 +31,11 @@ describe('AdminService', () => {
                 },
                 {
                     provide: IMatchesDbService,
-                    useValue: mockDeep<MatchsDbService>(),
+                    useValue: mockDeep<MatchesDb>(),
                 },
                 {
                     provide: IUsersDbService,
-                    useValue: mockDeep<UsersService>(),
+                    useValue: mockDeep<UsersDb>(),
                 },
                 {
                     provide: RedisService,

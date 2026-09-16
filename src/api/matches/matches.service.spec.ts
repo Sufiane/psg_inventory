@@ -1,7 +1,7 @@
 import { Competition } from '@prisma/client';
 import { MatchesService } from './matches.service';
 import { Test } from '@nestjs/testing';
-import { MatchesService as MatchsDbService } from '../../db/matches/matches.service';
+import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { Match } from '../../db/matches/types/match.type';
@@ -11,7 +11,7 @@ import type { SeasonYear } from '@psg/shared/time';
 
 describe('MatchesService', () => {
     let service: MatchesService;
-    let matchsDbService: DeepMockProxy<MatchsDbService>;
+    let matchsDbService: DeepMockProxy<MatchesDb>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -19,7 +19,7 @@ describe('MatchesService', () => {
                 MatchesService,
                 {
                     provide: IMatchesDbService,
-                    useValue: mockDeep<MatchsDbService>(),
+                    useValue: mockDeep<MatchesDb>(),
                 },
             ],
         }).compile();

@@ -8,7 +8,7 @@ import { IRecipientsDbService } from '../recipients/recipients.db.interface';
 import { BulkSaleInput, ISalesImportDbService } from './sales-import.db.interface';
 
 @Injectable()
-export class SalesImportService implements ISalesImportDbService {
+export class SalesImportDb implements ISalesImportDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
@@ -50,7 +50,7 @@ export class SalesImportService implements ISalesImportDbService {
                 // Resolved (or created) on this same tx, so a rolled-back
                 // import cannot leave an orphaned recipient behind (spec D8,
                 // D10) — the same call giftSale makes for the manual flow
-                // (src/db/sales/sales.service.ts).
+                // (src/db/sales/sales.db.ts).
                 if (sale.gift != null) {
                     const recipientId = await this.resolveRecipientId(
                         tx,
@@ -125,7 +125,7 @@ export class SalesImportService implements ISalesImportDbService {
         ]);
 
         // Mirrors cancelMany's own bulk invalidation in
-        // src/db/sales/sales.service.ts: each deleted sale may have a cached
+        // src/db/sales/sales.db.ts: each deleted sale may have a cached
         // detail entry from before the revert, plus the user's list/range
         // cache.
         await Promise.allSettled([
