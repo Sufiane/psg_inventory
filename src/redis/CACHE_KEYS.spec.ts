@@ -28,4 +28,24 @@ describe('CACHE_KEYS', () => {
             });
         });
     });
+
+    describe('invalidateSales', () => {
+        it('produces a pattern that covers the key the sales list is cached under', () => {
+            const key = CACHE_KEYS.sales('user-id');
+            const prefix = CACHE_KEYS.invalidateSales('user-id').replace('*', '');
+
+            expect(key.startsWith(prefix)).toBe(true);
+        });
+
+        it('produces a pattern that covers the key a ranged sales query is cached under', () => {
+            const key = CACHE_KEYS.salesByRange(
+                'user-id',
+                new Date('2025-08-01T00:00:00.000Z'),
+                new Date('2026-08-01T00:00:00.000Z'),
+            );
+            const prefix = CACHE_KEYS.invalidateSales('user-id').replace('*', '');
+
+            expect(key.startsWith(prefix)).toBe(true);
+        });
+    });
 });

@@ -98,9 +98,9 @@
     <span class="font-mono {profitTone(sale.status, sale.profit)}">
         {signedMoney(sale.profit)}
     </span>
-    {#if sale.status === 'GIFTED'}
+    {#if sale.Gift}
         <span class="text-ink-muted">Recipient</span>
-        <span class="text-ink">{sale.Recipient?.name ?? '—'}</span>
+        <span class="text-ink">{sale.Gift.Recipient.name}</span>
     {/if}
 </div>
 

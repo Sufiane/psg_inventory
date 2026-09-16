@@ -1,12 +1,5 @@
 import { PartialType } from '@nestjs/swagger';
-import {
-    IsBoolean,
-    IsIn,
-    IsOptional,
-    IsString,
-    IsUUID,
-    MaxLength,
-} from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import type { RecipientId, SaleId } from '@psg/shared/ids';
 import { AddSaleDto } from './add-sale.dto';
 
@@ -21,12 +14,6 @@ export class UpdateSaleDto extends PartialType(AddSaleDto) {
     @IsOptional()
     @IsIn(SALE_STATUS_TARGETS)
     status?: SaleStatusTarget;
-
-    /** @deprecated Use `status`. Kept one release so the web app and the api
-     *  can deploy independently; `status` wins when both are present. */
-    @IsOptional()
-    @IsBoolean()
-    sold?: boolean;
 
     @IsOptional()
     @IsUUID()

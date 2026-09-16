@@ -3,8 +3,8 @@
 // Lives in its own file so the type doesn't have to import the service
 // (which would close a service ↔ type cycle).
 // `Gift` is the sale's giftedness in full: its existence means gifted, its
-// `giftedAt` is when, its `Recipient` is to whom. The api layer flattens it
-// back onto the sale before it goes out on the wire (spec D17).
+// `giftedAt` is when, its `Recipient` is to whom. It goes out on the wire
+// as it is stored.
 export const saleQuery = {
     include: {
         Match: {

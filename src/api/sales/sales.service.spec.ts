@@ -160,7 +160,7 @@ describe('SalesService', () => {
 
     describe('reading a sale', () => {
         describe('when the sale has a gift', () => {
-            it('serves giftedAt and Recipient flattened onto the sale', async () => {
+            it('serves the gift nested on the sale', async () => {
                 const giftedAt = new Date('2026-03-01T12:00:00.000Z');
 
                 salesDbService.getOneSale.mockResolvedValueOnce(
@@ -177,27 +177,28 @@ describe('SalesService', () => {
 
                 const result = await service.getSale(userId, saleId);
 
-                expect(result.giftedAt).toEqual(giftedAt);
-                expect(result.Recipient).toEqual({ id: 'r1', name: 'Marc' });
-                expect('Gift' in result).toBe(false);
+                expect(result.Gift).toEqual({
+                    giftedAt,
+                    recipientId: 'r1',
+                    Recipient: { id: 'r1', name: 'Marc' },
+                });
             });
         });
 
         describe('when the sale has no gift', () => {
-            it('serves null for both fields', async () => {
+            it('serves a null gift', async () => {
                 salesDbService.getOneSale.mockResolvedValueOnce(
                     saleFixture(new Date('2026-03-02T20:00:00.000Z')),
                 );
 
                 const result = await service.getSale(userId, saleId);
 
-                expect(result.giftedAt).toBeNull();
-                expect(result.Recipient).toBeNull();
+                expect(result.Gift).toBeNull();
             });
         });
 
         describe('when listing sales', () => {
-            it('flattens the gift on every row', async () => {
+            it('keeps the gift nested on every row', async () => {
                 salesDbService.getSales.mockResolvedValueOnce([
                     saleFixture(
                         new Date('2026-03-02T20:00:00.000Z'),
@@ -212,53 +213,70 @@ describe('SalesService', () => {
 
                 const [sale] = await service.getSales(userId);
 
-                expect(sale?.Recipient).toEqual({ id: 'r1', name: 'Marc' });
-                expect('Gift' in (sale ?? {})).toBe(false);
+                expect(sale?.Gift).toEqual({
+                    giftedAt: new Date('2026-03-01T12:00:00.000Z'),
+                    recipientId: 'r1',
+                    Recipient: { id: 'r1', name: 'Marc' },
+                });
             });
         });
     });
 
     describe('updateSale kickoff guard', () => {
-        it('rejects marking a sale SOLD after the match kickoff', async () => {
-            salesDbService.getOneSale.mockResolvedValue(
-                saleFixture(new Date(Date.now() - 60_000)),
-            );
+        describe('when the match kickoff has passed', () => {
+            it('rejects marking the sale SOLD', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000)),
+                );
 
-            const payload: UpdateSaleDto = { saleId, sold: true } as UpdateSaleDto;
+                const payload: UpdateSaleDto = {
+                    saleId,
+                    status: 'SOLD',
+                } as UpdateSaleDto;
 
-            await expect(service.updateSale(userId, payload)).rejects.toThrow(
-                DomainException,
-            );
-            await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
-                code: ErrorCode.SALE_AFTER_KICKOFF,
+                await expect(service.updateSale(userId, payload)).rejects.toThrow(
+                    DomainException,
+                );
+                await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_AFTER_KICKOFF,
+                });
+
+                expect(salesDbService.updateSale).not.toHaveBeenCalled();
             });
-
-            expect(salesDbService.updateSale).not.toHaveBeenCalled();
         });
 
-        it('allows marking a sale SOLD when match is in the future', async () => {
-            salesDbService.getOneSale.mockResolvedValue(
-                saleFixture(new Date(Date.now() + 60 * 60_000)),
-            );
+        describe('when the match is in the future', () => {
+            it('allows marking the sale SOLD', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() + 60 * 60_000)),
+                );
 
-            const payload: UpdateSaleDto = {
-                saleId,
-                sold: true,
-                listedPrice: 120,
-            } as UpdateSaleDto;
+                const payload: UpdateSaleDto = {
+                    saleId,
+                    status: 'SOLD',
+                    listedPrice: 120 as ListedPrice,
+                } as UpdateSaleDto;
 
-            await expect(service.updateSale(userId, payload)).resolves.toBeUndefined();
-            expect(salesDbService.updateSale).toHaveBeenCalledTimes(1);
-            expect(redisService.invalidatePattern).toHaveBeenCalled();
+                await expect(
+                    service.updateSale(userId, payload),
+                ).resolves.toBeUndefined();
+                expect(salesDbService.updateSale).toHaveBeenCalledTimes(1);
+                expect(redisService.invalidatePattern).toHaveBeenCalled();
+            });
         });
 
-        it('throws SALE_NOT_FOUND when the target does not exist', async () => {
-            salesDbService.getOneSale.mockResolvedValueOnce(null);
+        describe('when the target sale does not exist', () => {
+            it('throws SALE_NOT_FOUND', async () => {
+                salesDbService.getOneSale.mockResolvedValueOnce(null);
 
-            const payload: UpdateSaleDto = { saleId, sold: true } as UpdateSaleDto;
+                const payload: UpdateSaleDto = {
+                    saleId,
+                    status: 'SOLD',
+                } as UpdateSaleDto;
 
-            await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
-                code: ErrorCode.SALE_NOT_FOUND,
+                await expect(service.updateSale(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
             });
         });
     });
@@ -366,6 +384,10 @@ describe('SalesService', () => {
                 expect(salesDbService.updateSale).toHaveBeenCalledWith(
                     expect.objectContaining({ listedPrice: 150 }),
                 );
+
+                expect(salesDbService.updateSale.mock.calls[0]?.[0]).not.toHaveProperty(
+                    'status',
+                );
             });
         });
 
@@ -373,6 +395,24 @@ describe('SalesService', () => {
             it('rejects the update', async () => {
                 salesDbService.getOneSale.mockResolvedValue(
                     saleFixture(new Date(Date.now() + 60_000), SaleStatus.SOLD),
+                );
+
+                await expect(
+                    service.updateSale(userId, {
+                        saleId,
+                        status: 'GIFTED',
+                        recipientName: 'Marc',
+                    } as UpdateSaleDto),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_INVALID_STATUS_TRANSITION,
+                });
+            });
+        });
+
+        describe('when the sale is SOLD, the target is GIFTED, and the match has kicked off', () => {
+            it('rejects the update with the transition error, not the kickoff error', async () => {
+                salesDbService.getOneSale.mockResolvedValue(
+                    saleFixture(new Date(Date.now() - 60_000), SaleStatus.SOLD),
                 );
 
                 await expect(
@@ -716,40 +756,6 @@ describe('SalesService', () => {
         // "when the sale is GIFTED and the target is PENDING" above, which
         // asserts SALE_INVALID_STATUS_TRANSITION instead. The sanctioned exit
         // is scripts/ungift-sale.ts — see "ungiftSale" below.
-
-        describe('when only the deprecated sold flag is sent', () => {
-            it('still maps to SOLD', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(new Date(Date.now() + 60_000)),
-                );
-
-                await service.updateSale(userId, { saleId, sold: true } as UpdateSaleDto);
-
-                expect(salesDbService.updateSale).toHaveBeenCalledWith(
-                    expect.objectContaining({ status: 'SOLD' }),
-                );
-            });
-        });
-
-        describe('when both status and the deprecated sold flag are sent', () => {
-            it('lets status win', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(new Date(Date.now() + 60_000)),
-                );
-
-                await service.updateSale(userId, {
-                    saleId,
-                    sold: true,
-                    status: 'GIFTED',
-                    recipientName: 'Marc',
-                } as UpdateSaleDto);
-
-                // Reachable only because target resolved to GIFTED, not SOLD —
-                // that is what proves status won over the deprecated alias.
-                expect(salesDbService.giftSale).toHaveBeenCalled();
-                expect(salesDbService.updateSale).not.toHaveBeenCalled();
-            });
-        });
     });
 
     describe('routing a write to the db layer', () => {
@@ -1237,7 +1243,6 @@ describe('SalesService', () => {
         describe('when the pass belongs to a different season than the match', () => {
             const payload: UpdateSaleDto = {
                 saleId,
-                sold: false,
                 allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
             } as UpdateSaleDto;
 
@@ -1283,7 +1288,6 @@ describe('SalesService', () => {
                 await expect(
                     service.updateSale(userId, {
                         saleId,
-                        sold: false,
                         allocations,
                     } as UpdateSaleDto),
                 ).resolves.toBeUndefined();

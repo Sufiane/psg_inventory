@@ -27,11 +27,7 @@ import {
 import { AddSaleDto } from './dto/add-sale.dto';
 import { SaleAllocationDto } from './dto/sale-allocation.dto';
 import { SaleStatusTarget, UpdateSaleDto } from './dto/update-sale.dto';
-import {
-    FormattedSale,
-    ISalesService,
-    SaleResponse,
-} from './interfaces/sales.service.interface';
+import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -43,14 +39,14 @@ export class SalesService implements ISalesService {
         private readonly redisService: RedisService,
     ) {}
 
-    async getSale(userId: UserId, saleId: SaleId): Promise<SaleResponse> {
+    async getSale(userId: UserId, saleId: SaleId): Promise<Sale> {
         const sale = await this.salesDbService.getOneSale(userId, saleId);
 
         if (!sale) {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
-        return flattenGift(sale);
+        return sale;
     }
 
     async getSales(userId: UserId): Promise<FormattedSale[]> {
@@ -80,10 +76,8 @@ export class SalesService implements ISalesService {
     }
 
     private formatSale(sale: Sale): FormattedSale {
-        const flattened = flattenGift(sale);
-
         return {
-            ...omit(flattened, ['Match', 'userId', 'matchId']),
+            ...omit(sale, ['Match', 'userId', 'matchId']),
             opponent: {
                 id: sale.Match.Opponent.id,
                 name: sale.Match.Opponent.name,
@@ -114,7 +108,7 @@ export class SalesService implements ISalesService {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
-        const target = resolveTargetStatus(payload);
+        const target = payload.status;
 
         assertLegalTransition(existing.status, target);
         assertNotAfterKickoff(existing, target);
@@ -134,14 +128,9 @@ export class SalesService implements ISalesService {
             ...(payload.allocations ? { allocations: payload.allocations } : {}),
         };
 
-        // A payload carrying `recipientId` / `recipientName` on an
-        // already-GIFTED sale is a gift update whether or not `status` came
-        // along for the ride. The shipped web form always sends
-        // `status: 'GIFTED'` explicitly, but the DTO does not require it, and
-        // `resolveTargetStatus` returns `undefined` when neither `status` nor
-        // the deprecated `sold` is present. Without this check, that shape
-        // fell through to the plain field-patch call below, which never
-        // touches the gift row — the recipient change was silently dropped.
+        // A recipient sent for an already-GIFTED sale is a gift update whether
+        // or not `status` came along: `status` is optional, and an absent one
+        // means "leave the status alone", not "this is not a gift write".
         const hasRecipientPayload =
             payload.recipientId != null || payload.recipientName != null;
         const targetsExistingGift =
@@ -149,11 +138,8 @@ export class SalesService implements ISalesService {
             (target === 'GIFTED' || (target === undefined && hasRecipientPayload));
 
         // The mirror of the case above: a recipient sent for a sale that is
-        // neither gifted nor becoming gifted has nowhere to go. It used to
-        // fall through to the plain field-patch call and return 200 having
-        // written nothing — the same silent-drop shape, just on the other
-        // side of the branch. Every gift now has a recipient (spec D9), so
-        // there is no reading of this payload that does something.
+        // neither gifted nor becoming gifted has nowhere to be written, so it
+        // is refused rather than accepted and dropped.
         if (hasRecipientPayload && target !== 'GIFTED' && !targetsExistingGift) {
             throw new DomainException(ErrorCode.SALE_GIFT_RECIPIENT_NOT_APPLICABLE);
         }
@@ -356,34 +342,6 @@ export class SalesService implements ISalesService {
     }
 }
 
-// Giftedness lives in its own row (spec D14); the wire shape it replaced does
-// not change (spec D17). One helper, used by every read path, is the whole of
-// that promise — if it stops being applied somewhere, the frontend silently
-// loses the recipient on that screen.
-function flattenGift(sale: Sale): SaleResponse {
-    const { Gift, ...rest } = sale;
-
-    return {
-        ...rest,
-        giftedAt: Gift?.giftedAt ?? null,
-        Recipient: Gift?.Recipient ?? null,
-    };
-}
-
-// `status` is the contract; `sold` is the deprecated alias kept for one release
-// so the web app and the api can deploy independently.
-function resolveTargetStatus(payload: UpdateSaleDto): SaleStatusTarget | undefined {
-    if (payload.status !== undefined) {
-        return payload.status;
-    }
-
-    if (payload.sold === undefined) {
-        return undefined;
-    }
-
-    return payload.sold ? 'SOLD' : 'PENDING';
-}
-
 // The legal manual transitions, per docs/specs/2026-09-11-gifted-sale-status-design.md
 // D5 (revised 2026-09-12). GIFTED is reachable only from PENDING and is
 // terminal: there is no in-app undo of the status, a mistake needs a
@@ -401,16 +359,8 @@ function isLegalTransition(current: RawSaleStatus, target: SaleStatusTarget): bo
     return LEGAL_TRANSITIONS[current].includes(target);
 }
 
-// Selling and giving a ticket away are both decisions taken before the match,
-// so entering either state after kickoff is refused. GIFTED -> GIFTED is NOT
-// entry: it moves no status, it is how a recipient is attached, corrected or
-// reused, and it is deliberately exempt. That exemption is what keeps the
-// recipient combobox usable on CSV-imported gifts, which are past-match with
-// recipientId = null by construction. See spec D5 and D10 — an intermediate
-// draft of this rule guarded on the target alone and was reversed for exactly
-// this reason. Do not reintroduce it.
-// D5: GIFTED is reachable only from PENDING and is terminal. An illegal move
-// is refused before the kickoff guard runs, so a SOLD -> GIFTED on a played
+// In updateSale, this runs before assertNotAfterKickoff. An illegal move is
+// refused before the kickoff guard runs, so a SOLD -> GIFTED on a played
 // match reports the transition, not the kickoff.
 function assertLegalTransition(
     current: RawSaleStatus,
@@ -434,6 +384,11 @@ function assertNotAfterKickoff(
     }
 }
 
+// Selling and giving a ticket away are both decisions taken before the match,
+// so entering either state after kickoff is refused. GIFTED -> GIFTED is NOT
+// entry: it moves no status, and correcting who received a gift is not a
+// decision that has to precede the match, so it is deliberately exempt
+// (spec D5/D10 — guarding on the target alone breaks that exemption).
 function isKickoffGuarded(current: RawSaleStatus, target: SaleStatusTarget): boolean {
     if (target === 'SOLD') {
         return true;
