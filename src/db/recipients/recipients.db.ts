@@ -10,7 +10,7 @@ import { IRecipientsDbService } from './recipients.db.interface';
 import { Recipient, RecipientWithGiftCount } from './type/recipient.type';
 
 @Injectable()
-export class RecipientsService implements IRecipientsDbService {
+export class RecipientsDb implements IRecipientsDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,

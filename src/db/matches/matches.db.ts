@@ -15,7 +15,7 @@ import { getSeasonWindow } from '../../shared/utils/season.utils';
 import { IMatchesDbService } from './matches.db.interface';
 
 @Injectable()
-export class MatchesService implements IMatchesDbService {
+export class MatchesDb implements IMatchesDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,

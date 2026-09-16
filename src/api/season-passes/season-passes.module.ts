@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { DbModule } from '../../db/db.module';
+import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.module';
 import { RedisModule } from '../../redis/redis.module';
 import { ISeasonPassesService } from './interfaces/season-passes.service.interface';
 import { SeasonPassesController } from './season-passes.controller';
 import { SeasonPassesService } from './season-passes.service';
 
 @Module({
-    imports: [DbModule, RedisModule],
+    imports: [SeasonPassesDbModule, RedisModule],
     controllers: [SeasonPassesController],
     providers: [{ provide: ISeasonPassesService, useClass: SeasonPassesService }],
     exports: [ISeasonPassesService],

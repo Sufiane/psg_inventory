@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
-import { DbModule } from '../../db/db.module';
+import { SalesDbModule } from '../../db/sales/sales.db.module';
+import { MatchesDbModule } from '../../db/matches/matches.db.module';
+import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.module';
+import { RecipientsDbModule } from '../../db/recipients/recipients.db.module';
 import { ISalesService } from './interfaces/sales.service.interface';
 
 @Module({
-    imports: [DbModule],
+    imports: [SalesDbModule, MatchesDbModule, SeasonPassesDbModule, RecipientsDbModule],
     controllers: [SalesController],
     providers: [{ provide: ISalesService, useClass: SalesService }],
 })

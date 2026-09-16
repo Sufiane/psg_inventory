@@ -5,22 +5,22 @@ import { Prisma, SaleStatus } from '.prisma/client';
 import type { MatchId, RecipientId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import type { TicketCount } from '@psg/shared/counts';
-import { SalesImportService } from './sales-import.service';
+import { SalesImportDb } from './sales-import.db';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { IRecipientsDbService } from '../recipients/recipients.db.interface';
-import { RecipientsService as RecipientsDbService } from '../recipients/recipients.service';
+import { RecipientsDb } from '../recipients/recipients.db';
 import { BulkSaleInput } from './sales-import.db.interface';
 
-describe('SalesImportService (db)', () => {
+describe('SalesImportDb', () => {
     const userId = 'user-1' as UserId;
     const matchId = 'match-1' as MatchId;
 
-    let service: SalesImportService;
+    let service: SalesImportDb;
     let prismaService: DeepMockProxy<PrismaService>;
     let redisService: DeepMockProxy<RedisService>;
-    let recipientsDbService: DeepMockProxy<RecipientsDbService>;
+    let recipientsDbService: DeepMockProxy<RecipientsDb>;
 
     function mockTransaction(): DeepMockProxy<Prisma.TransactionClient> {
         const tx = mockDeep<Prisma.TransactionClient>();
@@ -66,17 +66,17 @@ describe('SalesImportService (db)', () => {
     beforeEach(async () => {
         const module = await Test.createTestingModule({
             providers: [
-                SalesImportService,
+                SalesImportDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
                 {
                     provide: IRecipientsDbService,
-                    useValue: mockDeep<RecipientsDbService>(),
+                    useValue: mockDeep<RecipientsDb>(),
                 },
             ],
         }).compile();
 
-        service = module.get(SalesImportService);
+        service = module.get(SalesImportDb);
         prismaService = module.get(PrismaService);
         redisService = module.get(RedisService);
         recipientsDbService = module.get(IRecipientsDbService);

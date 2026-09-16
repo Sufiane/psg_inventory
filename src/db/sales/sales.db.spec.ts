@@ -3,19 +3,19 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { Prisma, SaleStatus } from '.prisma/client';
 
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
-import { SalesService } from './sales.service';
+import { SalesDb } from './sales.db';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { IRecipientsDbService } from '../recipients/recipients.db.interface';
-import { RecipientsService as RecipientsDbService } from '../recipients/recipients.service';
+import { RecipientsDb } from '../recipients/recipients.db';
 
-describe('SalesService (db)', () => {
+describe('SalesDb', () => {
     const userId = 'user-1' as UserId;
     const saleId = 'sale-1' as SaleId;
 
-    let service: SalesService;
+    let service: SalesDb;
     let prismaService: DeepMockProxy<PrismaService>;
-    let recipientsDbService: DeepMockProxy<RecipientsDbService>;
+    let recipientsDbService: DeepMockProxy<RecipientsDb>;
 
     function currentSaleRow(
         overrides: Partial<{
@@ -45,17 +45,17 @@ describe('SalesService (db)', () => {
     beforeEach(async () => {
         const module = await Test.createTestingModule({
             providers: [
-                SalesService,
+                SalesDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
                 {
                     provide: IRecipientsDbService,
-                    useValue: mockDeep<RecipientsDbService>(),
+                    useValue: mockDeep<RecipientsDb>(),
                 },
             ],
         }).compile();
 
-        service = module.get(SalesService);
+        service = module.get(SalesDb);
         prismaService = module.get(PrismaService);
         recipientsDbService = module.get(IRecipientsDbService);
 

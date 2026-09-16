@@ -3,13 +3,13 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { SaleStatus } from '@prisma/client';
 
 import { SalesService } from './sales.service';
-import { SalesService as SalesDbService } from '../../db/sales/sales.service';
+import { SalesDb } from '../../db/sales/sales.db';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
-import { MatchesService } from '../../db/matches/matches.service';
+import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { SeasonPassesService as SeasonPassesDbService } from '../../db/season-passes/season-passes.service';
+import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { RecipientsService as RecipientsDbService } from '../../db/recipients/recipients.service';
+import { RecipientsDb } from '../../db/recipients/recipients.db';
 import { IRecipientsDbService } from '../../db/recipients/recipients.db.interface';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
@@ -26,10 +26,10 @@ import type { Invest, ListedPrice } from '@psg/shared/money';
 
 describe('SalesService', () => {
     let service: SalesService;
-    let salesDbService: DeepMockProxy<SalesDbService>;
-    let matchesDbService: DeepMockProxy<MatchesService>;
-    let seasonPassesDbService: DeepMockProxy<SeasonPassesDbService>;
-    let recipientsDbService: DeepMockProxy<RecipientsDbService>;
+    let salesDbService: DeepMockProxy<SalesDb>;
+    let matchesDbService: DeepMockProxy<MatchesDb>;
+    let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
+    let recipientsDbService: DeepMockProxy<RecipientsDb>;
     let redisService: DeepMockProxy<RedisService>;
 
     const userId = 'user-uuid' as UserId;
@@ -108,15 +108,15 @@ describe('SalesService', () => {
         const module = await Test.createTestingModule({
             providers: [
                 SalesService,
-                { provide: ISalesDbService, useValue: mockDeep<SalesDbService>() },
-                { provide: IMatchesDbService, useValue: mockDeep<MatchesService>() },
+                { provide: ISalesDbService, useValue: mockDeep<SalesDb>() },
+                { provide: IMatchesDbService, useValue: mockDeep<MatchesDb>() },
                 {
                     provide: ISeasonPassesDbService,
-                    useValue: mockDeep<SeasonPassesDbService>(),
+                    useValue: mockDeep<SeasonPassesDb>(),
                 },
                 {
                     provide: IRecipientsDbService,
-                    useValue: mockDeep<RecipientsDbService>(),
+                    useValue: mockDeep<RecipientsDb>(),
                 },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
             ],
@@ -714,7 +714,7 @@ describe('SalesService', () => {
         // Resolve-or-create by name (existing vs. new) is a db-layer concern
         // now — it runs inside the sale-write transaction so a failed write
         // can't orphan a newly-created recipient (finding 6). See
-        // src/db/sales/sales.service.spec.ts for that resolution behavior;
+        // src/db/sales/sales.db.spec.ts for that resolution behavior;
         // this layer's job is only to pass the normalized name through.
         describe('when a recipient name is given', () => {
             it('trims and collapses whitespace before sending it to the db layer', async () => {
