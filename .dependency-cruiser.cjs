@@ -4,10 +4,10 @@ module.exports = {
         {
             name: 'no-orm-outside-db',
             comment:
-                'Only *.db.ts files (the data-access layer) and prisma.service.ts may import Prisma. Services and controllers must go through a *.db.ts.',
+                'Prisma may only be imported by the db layer: anything under src/db/, or any *.db.ts file wherever it lives (so a colocated *.usecase.db.ts under src/api/ stays legal). Api services and controllers go through a db token.',
             severity: 'error',
             from: {
-                pathNot: ['^src/db/', '\\.spec\\.ts$'],
+                pathNot: ['^src/db/', '\\.db\\.ts$', '\\.spec\\.ts$'],
             },
             to: {
                 path: ['^node_modules/(@prisma/client|\\.prisma/client)'],
@@ -20,7 +20,17 @@ module.exports = {
                 'Controllers are the http boundary; they must call api services, never the db layer directly.',
             severity: 'error',
             from: { path: '\\.controller\\.ts$' },
-            to: { path: '^src/db/' },
+            to: { path: ['^src/db/', '\\.db\\.ts$'] },
+        },
+        {
+            name: 'no-prisma-service-outside-db',
+            comment:
+                "PrismaService is the db layer's own handle on the ORM. Api services, controllers and their modules reach the database through a db token, never by importing PrismaService. PrismaModule is listed too: importing it hands PrismaService to every provider in the importing module, which is the same leak by another route.",
+            severity: 'error',
+            from: { pathNot: ['^src/db/', '\\.db\\.ts$'] },
+            to: {
+                path: ['^src/db/prisma\\.service\\.ts$', '^src/db/prisma\\.module\\.ts$'],
+            },
         },
         {
             name: 'no-api-from-db',
