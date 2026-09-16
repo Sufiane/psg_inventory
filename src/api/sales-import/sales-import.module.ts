@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { DbModule } from '../../db/db.module';
+import { MatchesDbModule } from '../../db/matches/matches.db.module';
+import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.module';
+import { SalesImportDbModule } from '../../db/sales-import/sales-import.db.module';
 import { SalesImportController } from './sales-import.controller';
 import { SalesImportService } from './sales-import.service';
 
 @Module({
-    imports: [DbModule],
+    imports: [MatchesDbModule, SeasonPassesDbModule, SalesImportDbModule],
     controllers: [SalesImportController],
     providers: [SalesImportService],
 })

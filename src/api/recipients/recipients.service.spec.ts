@@ -1,14 +1,14 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import type { RecipientId, UserId } from '@psg/shared/ids';
-import { RecipientsService as RecipientsDbService } from '../../db/recipients/recipients.service';
+import { RecipientsDb } from '../../db/recipients/recipients.db';
 import { IRecipientsDbService } from '../../db/recipients/recipients.db.interface';
 import { RecipientsService } from './recipients.service';
 
 describe('RecipientsService (api)', () => {
     const userId = 'user-1' as UserId;
     let service: RecipientsService;
-    let recipientsDbService: DeepMockProxy<RecipientsDbService>;
+    let recipientsDbService: DeepMockProxy<RecipientsDb>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -16,7 +16,7 @@ describe('RecipientsService (api)', () => {
                 RecipientsService,
                 {
                     provide: IRecipientsDbService,
-                    useValue: mockDeep<RecipientsDbService>(),
+                    useValue: mockDeep<RecipientsDb>(),
                 },
             ],
         }).compile();

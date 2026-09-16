@@ -19,7 +19,7 @@ export abstract class IRecipientsDbService {
         tx?: Prisma.TransactionClient,
     ): Promise<Recipient>;
     // Resolve-or-create, all on `tx` when one is passed, so callers that are
-    // themselves inside a transaction (e.g. sales.service.ts updateSale) get
+    // themselves inside a transaction (e.g. sales.db.ts updateSale) get
     // an atomic write: a rollback of the outer transaction rolls this back
     // too, instead of leaving an orphaned recipient behind.
     abstract findOrCreateForUser(

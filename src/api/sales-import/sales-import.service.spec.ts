@@ -1,11 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 
-import { MatchesService } from '../../db/matches/matches.service';
+import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { SeasonPassesService } from '../../db/season-passes/season-passes.service';
+import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { SalesImportService as SalesImportDbService } from '../../db/sales-import/sales-import.service';
+import { SalesImportDb } from '../../db/sales-import/sales-import.db';
 import { ISalesImportDbService } from '../../db/sales-import/sales-import.db.interface';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
@@ -19,9 +19,9 @@ import { CommitRequestDto } from './dto/commit-request.dto';
 
 describe('SalesImportService', () => {
     let service: SalesImportService;
-    let matchesDb: DeepMockProxy<MatchesService>;
-    let passesDb: DeepMockProxy<SeasonPassesService>;
-    let importDb: DeepMockProxy<SalesImportDbService>;
+    let matchesDb: DeepMockProxy<MatchesDb>;
+    let passesDb: DeepMockProxy<SeasonPassesDb>;
+    let importDb: DeepMockProxy<SalesImportDb>;
     let redisService: DeepMockProxy<RedisService>;
 
     const userId = 'user-1' as UserId;
@@ -58,9 +58,9 @@ describe('SalesImportService', () => {
     }
 
     beforeEach(async () => {
-        matchesDb = mockDeep<MatchesService>();
-        passesDb = mockDeep<SeasonPassesService>();
-        importDb = mockDeep<SalesImportDbService>();
+        matchesDb = mockDeep<MatchesDb>();
+        passesDb = mockDeep<SeasonPassesDb>();
+        importDb = mockDeep<SalesImportDb>();
         redisService = mockDeep<RedisService>();
 
         const moduleRef = await Test.createTestingModule({

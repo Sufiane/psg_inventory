@@ -1,28 +1,28 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { Prisma } from '.prisma/client';
-import { MatchesService } from './matches.service';
+import { MatchesDb } from './matches.db';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import type { OpponentName } from '@psg/shared/strings';
 
-describe('MatchesService (db)', () => {
-    let service: MatchesService;
+describe('MatchesDb', () => {
+    let service: MatchesDb;
     let prismaService: DeepMockProxy<PrismaService>;
     let redisService: DeepMockProxy<RedisService>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
             providers: [
-                MatchesService,
+                MatchesDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
             ],
         }).compile();
 
-        service = module.get(MatchesService);
+        service = module.get(MatchesDb);
         prismaService = module.get(PrismaService);
         redisService = module.get(RedisService);
     });

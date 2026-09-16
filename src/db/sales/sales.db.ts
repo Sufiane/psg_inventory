@@ -31,7 +31,7 @@ function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
 }
 
 @Injectable()
-export class SalesService implements ISalesDbService {
+export class SalesDb implements ISalesDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,

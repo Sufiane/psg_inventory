@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma.service';
 import { IHealthDbService } from './health.db.interface';
 
 @Injectable()
-export class HealthService implements IHealthDbService {
+export class HealthDb implements IHealthDbService {
     constructor(private readonly prisma: PrismaService) {}
 
     async ping(): Promise<boolean> {

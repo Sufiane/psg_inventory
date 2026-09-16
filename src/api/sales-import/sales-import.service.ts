@@ -127,8 +127,8 @@ export class SalesImportService {
     // every cache an ordinary sale write would touch (spec D15,
     // SalesService.updateSale's own invalidateAfterWrite) has to move here
     // too. The sales list/detail cache is invalidated by the db layer
-    // (src/db/sales-import/sales-import.service.ts), mirroring how
-    // src/db/sales/sales.service.ts owns its own row-shaped caches; accounting
+    // (src/db/sales-import/sales-import.db.ts), mirroring how
+    // src/db/sales/sales.db.ts owns its own row-shaped caches; accounting
     // and the recipients list (its giftCount sort key) are derived views only
     // the api layer knows changed — invalidated unconditionally rather than
     // trying to work out from the batch contents whether a recipient's count

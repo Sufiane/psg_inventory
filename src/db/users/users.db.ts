@@ -12,7 +12,7 @@ import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 
 @Injectable()
-export class UsersService implements IUsersDbService {
+export class UsersDb implements IUsersDbService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
