@@ -25,3 +25,11 @@ jobs:
       - run: npm run lint:deps
 
       - run: npm test
+
+      - run: npm run build
+
+      # The build can exit 0 while emitting nothing (stale .tsbuildinfo), and a
+      # wrong rootDir silently relocates output to dist/src/, which breaks the
+      # `node dist/main` start command at deploy time only.
+      - name: Verify the build emitted a runnable entrypoint
+        run: test -f dist/main.js
