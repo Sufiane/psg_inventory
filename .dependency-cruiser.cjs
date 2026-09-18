@@ -17,10 +17,10 @@ module.exports = {
         {
             name: 'no-db-from-controller',
             comment:
-                'Controllers are the http boundary; they must call api services, never the db layer directly.',
+                'Controllers are the http boundary; they must call api services, never the db layer directly. Type-only imports are exempt — they are erased at compile time (mirrors no-orm-outside-db).',
             severity: 'error',
             from: { path: '\\.controller\\.ts$' },
-            to: { path: ['^src/db/', '\\.db\\.ts$'] },
+            to: { path: ['^src/db/', '\\.db\\.ts$'], dependencyTypesNot: ['type-only'] },
         },
         {
             name: 'no-prisma-service-outside-db',

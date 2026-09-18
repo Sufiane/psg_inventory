@@ -2,7 +2,8 @@ import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import type { SeasonYear } from '@psg/shared/time';
 import { User } from '../../shared/decorators/user.decorator';
 import { GetSaleDto } from './dto/get-sale.dto';
-import { ISalesService } from './interfaces/sales.service.interface';
+import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
+import type { Sale } from '../../db/sales/type/sale.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
@@ -14,7 +15,9 @@ export class SalesController {
     constructor(private readonly salesService: ISalesService) {}
 
     @Get('/current-season')
-    async getCurrentSeasonSales(@User() user: AuthenticatedUser) {
+    async getCurrentSeasonSales(
+        @User() user: AuthenticatedUser,
+    ): Promise<FormattedSale[]> {
         return await this.salesService.getCurrentSeasonSales(user.id);
     }
 
@@ -22,7 +25,7 @@ export class SalesController {
     async getSeasonSales(
         @User() user: AuthenticatedUser,
         @Param() { seasonStartYear }: GetSeasonSalesDto,
-    ) {
+    ): Promise<FormattedSale[]> {
         return await this.salesService.getSeasonSales(
             user.id,
             Number.parseInt(seasonStartYear, 10) as SeasonYear,
@@ -30,12 +33,15 @@ export class SalesController {
     }
 
     @Get('/:saleId')
-    async getSale(@User() user: AuthenticatedUser, @Param() { saleId }: GetSaleDto) {
+    async getSale(
+        @User() user: AuthenticatedUser,
+        @Param() { saleId }: GetSaleDto,
+    ): Promise<Sale> {
         return await this.salesService.getSale(user.id, saleId);
     }
 
     @Get('/')
-    async getSales(@User() user: AuthenticatedUser) {
+    async getSales(@User() user: AuthenticatedUser): Promise<FormattedSale[]> {
         return await this.salesService.getSales(user.id);
     }
 
@@ -48,7 +54,10 @@ export class SalesController {
     }
 
     @Post('/update')
-    async updateSale(@User() user: AuthenticatedUser, @Body() payload: UpdateSaleDto) {
+    async updateSale(
+        @User() user: AuthenticatedUser,
+        @Body() payload: UpdateSaleDto,
+    ): Promise<void> {
         await this.salesService.updateSale(user.id, payload);
     }
 
@@ -56,7 +65,7 @@ export class SalesController {
     async deleteSale(
         @User() user: AuthenticatedUser,
         @Param() { saleId }: DeleteSaleDto,
-    ) {
+    ): Promise<void> {
         await this.salesService.deleteSale(user.id, saleId);
     }
 }

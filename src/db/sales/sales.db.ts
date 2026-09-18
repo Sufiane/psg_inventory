@@ -474,7 +474,7 @@ export class SalesDb implements ISalesDbService {
         }) as unknown as Promise<SaleWithFullMatch>;
     }
 
-    async cancelMany() {
+    async cancelMany(): Promise<void> {
         const affected = await this.prisma.sales.findMany({
             select: { id: true, userId: true },
             where: {

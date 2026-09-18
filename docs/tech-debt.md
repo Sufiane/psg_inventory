@@ -8,37 +8,6 @@ Add an entry when you find something real but out of scope. Delete it when it's 
 
 ---
 
-## 1. Eslint does not enforce the return-type rules CLAUDE.md claims are enforced
-
-**Found:** 2026-09-16, while planning the db-module split.
-
-`eslint.config.mjs` does not enable `@typescript-eslint/explicit-function-return-type` or
-`@typescript-eslint/explicit-module-boundary-types`, although the global CLAUDE.md states
-both are enforced ("Explicit return types on every backend function/method. Enforced by
-…"). So the convention is real and followed by hand, but nothing checks it — new code can
-drift silently and the next person reading CLAUDE.md will believe the gate exists.
-
-**Why deferred:** it was found mid-refactor, and the refactor it was found in
-(`docs/plans/2026-09-16-db-module-split-and-db-rename.md`) depends on being provably
-net-zero. Turning the rules on lights up unrelated files across the repo, which destroys
-that property and makes the refactor's diff unreviewable.
-
-**Cost to act:** unknown until measured. Run with the rules set to `warn` first to get a
-count:
-
-```
-npx eslint "src/**/*.ts" --rule '{"@typescript-eslint/explicit-function-return-type":"warn"}'
-```
-
-If the count is small, fix and flip to `error` in one commit. If it's large, land the rule
-as `warn` with `--max-warnings` held at the current count and ratchet down. Note `lint` is
-`eslint … --max-warnings 0`, so `warn` is currently as fatal as `error` — a ratchet needs
-the script changed too.
-
-**Recommendation:** do it. A documented convention with no gate is the one that rots.
-
----
-
 ## 2. `RedisModule` is `@Global()` — the same invisible-availability shape we removed from the db layer
 
 **Found:** 2026-09-16, while planning the db-module split.
