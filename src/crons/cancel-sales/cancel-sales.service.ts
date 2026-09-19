@@ -7,7 +7,7 @@ export class CancelSalesService {
     constructor(private readonly salesDbService: ISalesDbService) {}
 
     @Cron('0 0 * * *')
-    async cancelSales() {
+    async cancelSales(): Promise<void> {
         await this.salesDbService.cancelMany();
     }
 }

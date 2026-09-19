@@ -16,7 +16,7 @@ export class UsersController {
     @Public()
     @Post('/')
     // todo should return a jwt
-    async createUser(@Body() payload: CreateUserDto) {
+    async createUser(@Body() payload: CreateUserDto): Promise<void> {
         await this.usersService.create(payload);
     }
 

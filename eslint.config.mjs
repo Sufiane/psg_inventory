@@ -22,6 +22,10 @@ export default [
         rules: {
             'no-console': 'error',
             'prefer-const': 'error',
+            '@typescript-eslint/explicit-function-return-type': [
+                'error',
+                { allowTypedFunctionExpressions: true },
+            ],
         },
     },
 ];

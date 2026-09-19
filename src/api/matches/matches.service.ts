@@ -36,7 +36,10 @@ export class MatchesService implements IMatchesService {
         return matches.map((match) => formatMatch(match, withResult));
     }
 
-    async getMatch(matchId: MatchId, withResult: boolean = false) {
+    async getMatch(
+        matchId: MatchId,
+        withResult: boolean = false,
+    ): Promise<FormattedMatch> {
         const match = await this.matchsDbService.getOneMatch(matchId, withResult);
 
         if (!match) {

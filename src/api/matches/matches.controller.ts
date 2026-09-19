@@ -35,7 +35,7 @@ export class MatchesController {
     async getMatch(
         @Param() { matchId }: GetMatchDto,
         @Query() { withResult }: QueryMatchDto,
-    ) {
+    ): Promise<FormattedMatch> {
         return await this.matchesService.getMatch(matchId, withResult);
     }
 }
