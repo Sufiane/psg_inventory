@@ -164,5 +164,42 @@ describe('MatchesDb', () => {
                 ).rejects.toThrow('db exploded');
             });
         });
+
+        describe('when a match has an unknown competition', () => {
+            const unknownMatch: FormattedMatch = {
+                ...formattedMatch,
+                competition: 'Coupe de France',
+            };
+
+            it('skips the match without opening a transaction and reports the competition', async () => {
+                const result = await service.loadMatches([unknownMatch]);
+
+                expect(prismaService.$transaction).not.toHaveBeenCalled();
+                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+            });
+
+            it('still syncs valid matches and reports the unknown one', async () => {
+                mockTransaction(null);
+
+                const result = await service.loadMatches([formattedMatch, unknownMatch]);
+
+                expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
+                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+            });
+
+            it('deduplicates repeated unknown competitions', async () => {
+                mockTransaction(null);
+
+                const secondUnknown: FormattedMatch = {
+                    ...unknownMatch,
+                    opponent: 'Lyon' as OpponentName,
+                };
+
+                const result = await service.loadMatches([unknownMatch, secondUnknown]);
+
+                expect(prismaService.$transaction).not.toHaveBeenCalled();
+                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+            });
+        });
     });
 });

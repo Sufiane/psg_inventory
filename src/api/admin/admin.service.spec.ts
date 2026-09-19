@@ -9,6 +9,7 @@ import { IUsersDbService } from '../../db/users/users.db.interface';
 import { RedisService } from '../../redis/redis.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { DomainException } from '../../common/exceptions/domain.exception';
+import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { PSG_ID } from '../../shared/constants';
 import type { Email } from '@psg/shared/strings';
@@ -58,7 +59,9 @@ describe('AdminService', () => {
             const matches = [] as FormattedMatch[];
             footballDataService.getTeamMatches.mockResolvedValue(matches);
 
-            matchsDbService.loadMatches.mockResolvedValueOnce(undefined);
+            matchsDbService.loadMatches.mockResolvedValueOnce({
+                unknownCompetitions: [],
+            });
 
             const seasonStartYear = 2022;
 
@@ -70,6 +73,38 @@ describe('AdminService', () => {
             );
             expect(matchsDbService.loadMatches).toHaveBeenCalledTimes(1);
             expect(matchsDbService.loadMatches).toHaveBeenCalledWith(matches);
+        });
+
+        describe('when a match has an unknown competition', () => {
+            it('should throw a domain exception', async () => {
+                const matches = [] as FormattedMatch[];
+                footballDataService.getTeamMatches.mockResolvedValue(matches);
+                matchsDbService.loadMatches.mockResolvedValueOnce({
+                    unknownCompetitions: ['Coupe de France'],
+                });
+
+                const seasonStartYear = 2022;
+
+                await expect(service.loadMatches(seasonStartYear)).rejects.toMatchObject({
+                    code: ErrorCode.UNKNOWN_COMPETITION,
+                });
+            });
+        });
+
+        describe('when every competition is known', () => {
+            it('should not throw', async () => {
+                const matches = [] as FormattedMatch[];
+                footballDataService.getTeamMatches.mockResolvedValue(matches);
+                matchsDbService.loadMatches.mockResolvedValueOnce({
+                    unknownCompetitions: [],
+                });
+
+                const seasonStartYear = 2022;
+
+                await expect(
+                    service.loadMatches(seasonStartYear),
+                ).resolves.toBeUndefined();
+            });
         });
     });
 
