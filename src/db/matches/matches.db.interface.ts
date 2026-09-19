@@ -4,6 +4,10 @@ import type { SeasonYear } from '@psg/shared/time';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { Match } from './types/match.type';
 
+export type LoadMatchesResult = {
+    unknownCompetitions: string[];
+};
+
 export abstract class IMatchesDbService {
     abstract getMatches(
         dates: { from: Date; to?: Date },
@@ -12,7 +16,7 @@ export abstract class IMatchesDbService {
     abstract getOneMatch(id: MatchId, withResult?: boolean): Promise<Match | null>;
     abstract getHomeMatchesForSeason(seasonStartYear: SeasonYear): Promise<Match[]>;
 
-    abstract loadMatches(matches: FormattedMatch[]): Promise<void>;
+    abstract loadMatches(matches: FormattedMatch[]): Promise<LoadMatchesResult>;
     abstract createMatch(payload: {
         date: string;
         atHome: boolean;

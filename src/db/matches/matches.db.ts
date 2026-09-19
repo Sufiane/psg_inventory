@@ -12,7 +12,7 @@ import { matchQuery } from './matches.query';
 import { Match } from './types/match.type';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { getSeasonWindow } from '../../shared/utils/season.utils';
-import { IMatchesDbService } from './matches.db.interface';
+import { IMatchesDbService, LoadMatchesResult } from './matches.db.interface';
 
 @Injectable()
 export class MatchesDb implements IMatchesDbService {
@@ -77,15 +77,16 @@ export class MatchesDb implements IMatchesDbService {
         );
     }
 
-    async loadMatches(matches: FormattedMatch[]): Promise<void> {
-        // syncMatches mutates this array in place rather than returning one,
+    async loadMatches(matches: FormattedMatch[]): Promise<LoadMatchesResult> {
+        // syncMatches mutates these arrays in place rather than returning one,
         // because if a mid-loop transaction throws, its return value never
-        // runs — this array is the only way the `finally` block below still
-        // sees the ids that committed before the throw.
+        // runs — these arrays are the only way the `finally` block below still
+        // sees the ids/unknowns accumulated before the throw.
         const updatedMatchIds: string[] = [];
+        const unknownCompetitions: string[] = [];
 
         try {
-            await this.syncMatches(matches, updatedMatchIds);
+            await this.syncMatches(matches, updatedMatchIds, unknownCompetitions);
         } finally {
             // Runs even if a mid-loop transaction throws, so matches
             // committed by earlier iterations never serve stale cache data
@@ -102,6 +103,8 @@ export class MatchesDb implements IMatchesDbService {
                 await this.redisService.invalidate(CACHE_KEYS.match(matchId, false));
             }
         }
+
+        return { unknownCompetitions: [...new Set(unknownCompetitions)] };
     }
 
     // updatedMatchIds is an out-parameter, not a return value — see the
@@ -109,8 +112,17 @@ export class MatchesDb implements IMatchesDbService {
     private async syncMatches(
         matches: FormattedMatch[],
         updatedMatchIds: string[],
+        unknownCompetitions: string[],
     ): Promise<void> {
         for (const match of matches) {
+            const competition = convertStringToCompetition(match.competition);
+
+            if (competition === null) {
+                unknownCompetitions.push(match.competition);
+
+                continue;
+            }
+
             await this.prisma.$transaction(async (tx) => {
                 const { id: opponentId } = await tx.opponents.upsert({
                     select: {
@@ -146,7 +158,6 @@ export class MatchesDb implements IMatchesDbService {
                     },
                 });
 
-                const competition = convertStringToCompetition(match.competition);
                 const resultData = match.result
                     ? {
                           isWin: match.result.isWin,

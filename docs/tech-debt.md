@@ -39,34 +39,6 @@ separable. `src/app.module.spec.ts` (added by that plan) is the net that catches
 
 ---
 
-## 3. `matches.utils.ts` throws a domain exception from the db layer
-
-**Found:** 2026-09-16, while planning the db-module split.
-
-`src/db/matches/matches.utils.ts` throws a `DomainException`. The global CLAUDE.md's
-hexagonal rules put domain throws in the service layer: "No domain throws here — return
-`null`/`undefined` and let the service decide."
-
-**Why deferred:** unlike the other two, this is not a mechanical change. Moving the throw
-means deciding what the db layer returns instead and making the calling service raise —
-which changes control flow on a path that currently has test coverage built around the
-current behavior. That is a behavior-risk change and does not belong in a refactor that
-claims to be net-zero.
-
-**Also note:** `matches.utils.ts` is the one file under `src/db/` that imports Prisma for a
-*runtime* value (`Competition.CHAMPIONSHIP`, `Competition.CHAMPIONS_LEAGUE`) rather than a
-type. That is why `no-orm-outside-db` has to keep its `^src/db/` location clause and
-cannot become filename-only (spec D4). If this file is ever restructured, re-check whether
-that clause is still needed.
-
-**Cost to act:** needs its own read of the call sites and their tests before a shape can be
-proposed. Not a one-sitting change.
-
-**Recommendation:** lowest priority of the three. Worth doing when `matches` is being
-touched for another reason, not on its own.
-
----
-
 ## 4. Jest cannot load pure-ESM deps, so nothing could import the real `AppModule`
 
 **Found:** 2026-09-16, while adding `src/app.module.spec.ts` in the db-module split.

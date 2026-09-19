@@ -32,7 +32,16 @@ export class AdminService implements IAdminService {
 
         this.logger.log(`Loading ${psgMatches.length} matches.`);
 
-        await this.matchsDbService.loadMatches(psgMatches);
+        const { unknownCompetitions } =
+            await this.matchsDbService.loadMatches(psgMatches);
+
+        if (unknownCompetitions.length > 0) {
+            this.logger.warn(
+                `Skipped matches in unknown competitions: ${unknownCompetitions.join(', ')}`,
+            );
+
+            throw new DomainException(ErrorCode.UNKNOWN_COMPETITION);
+        }
     }
 
     async createMatch(payload: CreateMatchDto): Promise<void> {
