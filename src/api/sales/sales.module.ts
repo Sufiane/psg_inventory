@@ -5,10 +5,17 @@ import { SalesDbModule } from '../../db/sales/sales.db.module';
 import { MatchesDbModule } from '../../db/matches/matches.db.module';
 import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.module';
 import { RecipientsDbModule } from '../../db/recipients/recipients.db.module';
+import { RedisModule } from '../../redis/redis.module';
 import { ISalesService } from './interfaces/sales.service.interface';
 
 @Module({
-    imports: [SalesDbModule, MatchesDbModule, SeasonPassesDbModule, RecipientsDbModule],
+    imports: [
+        SalesDbModule,
+        MatchesDbModule,
+        SeasonPassesDbModule,
+        RecipientsDbModule,
+        RedisModule,
+    ],
     controllers: [SalesController],
     providers: [{ provide: ISalesService, useClass: SalesService }],
 })
