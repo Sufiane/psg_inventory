@@ -7,6 +7,22 @@ import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.mo
 import { RecipientsDbModule } from '../../db/recipients/recipients.db.module';
 import { RedisModule } from '../../redis/redis.module';
 import { ISalesService } from './interfaces/sales.service.interface';
+import {
+    IUngiftSaleUsecase,
+    UngiftSaleUsecase,
+} from './usecases/ungift-sale/ungift-sale.usecase';
+import {
+    IUngiftSaleUsecaseDb,
+    UngiftSaleUsecaseDb,
+} from './usecases/ungift-sale/ungift-sale.usecase.db';
+import {
+    IDeleteSaleUsecase,
+    DeleteSaleUsecase,
+} from './usecases/delete-sale/delete-sale.usecase';
+import {
+    IDeleteSaleUsecaseDb,
+    DeleteSaleUsecaseDb,
+} from './usecases/delete-sale/delete-sale.usecase.db';
 
 @Module({
     imports: [
@@ -17,6 +33,12 @@ import { ISalesService } from './interfaces/sales.service.interface';
         RedisModule,
     ],
     controllers: [SalesController],
-    providers: [{ provide: ISalesService, useClass: SalesService }],
+    providers: [
+        { provide: ISalesService, useClass: SalesService },
+        { provide: IUngiftSaleUsecaseDb, useClass: UngiftSaleUsecaseDb },
+        { provide: IUngiftSaleUsecase, useClass: UngiftSaleUsecase },
+        { provide: IDeleteSaleUsecaseDb, useClass: DeleteSaleUsecaseDb },
+        { provide: IDeleteSaleUsecase, useClass: DeleteSaleUsecase },
+    ],
 })
 export class SalesModule {}

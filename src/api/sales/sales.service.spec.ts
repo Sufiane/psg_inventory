@@ -20,6 +20,8 @@ import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { Match } from '../../db/matches/types/match.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
+import { IUngiftSaleUsecase } from './usecases/ungift-sale/ungift-sale.usecase';
+import { IDeleteSaleUsecase } from './usecases/delete-sale/delete-sale.usecase';
 import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, RecipientId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
@@ -31,6 +33,8 @@ describe('SalesService', () => {
     let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
     let recipientsDbService: DeepMockProxy<RecipientsDb>;
     let redisService: DeepMockProxy<RedisService>;
+    let ungiftSaleUsecase: DeepMockProxy<IUngiftSaleUsecase>;
+    let deleteSaleUsecase: DeepMockProxy<IDeleteSaleUsecase>;
 
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
@@ -119,6 +123,8 @@ describe('SalesService', () => {
                     useValue: mockDeep<RecipientsDb>(),
                 },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
+                { provide: IUngiftSaleUsecase, useValue: mockDeep<IUngiftSaleUsecase>() },
+                { provide: IDeleteSaleUsecase, useValue: mockDeep<IDeleteSaleUsecase>() },
             ],
         }).compile();
 
@@ -137,6 +143,8 @@ describe('SalesService', () => {
         seasonPassesDbService = module.get(ISeasonPassesDbService);
         recipientsDbService = module.get(IRecipientsDbService);
         redisService = module.get(RedisService);
+        ungiftSaleUsecase = module.get(IUngiftSaleUsecase);
+        deleteSaleUsecase = module.get(IDeleteSaleUsecase);
 
         module.useLogger(false);
     });
@@ -912,46 +920,10 @@ describe('SalesService', () => {
     });
 
     describe('ungiftSale', () => {
-        describe('when the sale is GIFTED', () => {
-            it('delegates to the db layer and clears the recipients cache', async () => {
-                salesDbService.getOneSale.mockResolvedValueOnce(
-                    saleFixture(
-                        new Date(Date.now() - 86_400_000),
-                        SaleStatus.GIFTED,
-                        giftFixture(),
-                    ),
-                );
+        it('delegates to UngiftSaleUsecase.execute', async () => {
+            await service.ungiftSale(userId, saleId);
 
-                await service.ungiftSale(userId, saleId);
-
-                expect(salesDbService.ungiftSale).toHaveBeenCalledWith(userId, saleId);
-                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
-        });
-
-        describe('when the sale is not GIFTED', () => {
-            it('rejects with SALE_INVALID_STATUS_TRANSITION', async () => {
-                salesDbService.getOneSale.mockResolvedValueOnce(
-                    saleFixture(new Date(Date.now() - 86_400_000)),
-                );
-
-                await expect(service.ungiftSale(userId, saleId)).rejects.toThrow(
-                    DomainException,
-                );
-                expect(salesDbService.ungiftSale).not.toHaveBeenCalled();
-            });
-        });
-
-        describe('when the sale does not exist', () => {
-            it('rejects with SALE_NOT_FOUND', async () => {
-                salesDbService.getOneSale.mockResolvedValueOnce(null);
-
-                await expect(service.ungiftSale(userId, saleId)).rejects.toMatchObject({
-                    code: ErrorCode.SALE_NOT_FOUND,
-                });
-            });
+            expect(ungiftSaleUsecase.execute).toHaveBeenCalledWith(userId, saleId);
         });
     });
 
@@ -1081,87 +1053,10 @@ describe('SalesService', () => {
     });
 
     describe('deleteSale', () => {
-        describe('when the sale does not exist or does not belong to the user', () => {
-            it('throws SALE_NOT_FOUND instead of calling the db layer', async () => {
-                salesDbService.getOneSale.mockResolvedValueOnce(null);
-
-                await expect(service.deleteSale(userId, saleId)).rejects.toThrow(
-                    DomainException,
-                );
-                expect(salesDbService.deleteSale).not.toHaveBeenCalled();
-            });
-        });
-
-        it('always invalidates the accounting cache', async () => {
-            salesDbService.getOneSale.mockResolvedValue(
-                saleFixture(new Date(Date.now() + 60_000), SaleStatus.PENDING),
-            );
-
+        it('delegates to DeleteSaleUsecase.execute', async () => {
             await service.deleteSale(userId, saleId);
 
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateAccounting(userId),
-            );
-        });
-
-        describe('when the deleted sale was GIFTED', () => {
-            it('invalidates the recipients cache too, so the combobox giftCount does not go stale', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(
-                        new Date(Date.now() + 60_000),
-                        SaleStatus.GIFTED,
-                        giftFixture(),
-                    ),
-                );
-
-                await service.deleteSale(userId, saleId);
-
-                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
-        });
-
-        describe('when the deleted sale was PENDING', () => {
-            it('does not invalidate the recipients cache', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.PENDING),
-                );
-
-                await service.deleteSale(userId, saleId);
-
-                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
-        });
-
-        describe('when the deleted sale was SOLD', () => {
-            it('does not invalidate the recipients cache', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.SOLD),
-                );
-
-                await service.deleteSale(userId, saleId);
-
-                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
-        });
-
-        describe('when the deleted sale was CANCELLED', () => {
-            it('does not invalidate the recipients cache', async () => {
-                salesDbService.getOneSale.mockResolvedValue(
-                    saleFixture(new Date(Date.now() + 60_000), SaleStatus.CANCELLED),
-                );
-
-                await service.deleteSale(userId, saleId);
-
-                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
+            expect(deleteSaleUsecase.execute).toHaveBeenCalledWith(userId, saleId);
         });
     });
 
