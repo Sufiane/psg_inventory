@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
-import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
+import type { Invest, ListedPrice } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 import { DomainException } from '../../common/exceptions/domain.exception';
@@ -16,8 +16,8 @@ import {
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
-import { PSG_COMMISSION } from '../../shared/constants';
 import { normalizeRecipientName } from '../../shared/utils/recipient-name.util';
+import { computeProfit } from '../sales/shared/profit.util';
 import { CommitRequestDto } from './dto/commit-request.dto';
 import { DraftRowDto } from './dto/draft-row.dto';
 import { PreviewResponse } from './dto/preview-response.dto';
@@ -86,7 +86,7 @@ export class SalesImportService {
             matchId: row.matchId! as MatchId,
             listedPrice: row.listedPrice as ListedPrice,
             invest: row.invest as Invest,
-            profit: this.computeProfit(row.listedPrice),
+            profit: computeProfit(row.listedPrice as ListedPrice),
             nbTickets: row.nbTickets as TicketCount,
             status: row.status,
             soldAt:
@@ -167,10 +167,6 @@ export class SalesImportService {
         }
 
         return [...years][0]! as SeasonYear;
-    }
-
-    private computeProfit(price: number): Profit {
-        return ((price * (100 - PSG_COMMISSION)) / 100) as Profit;
     }
 
     // Non-null exactly for a GIFTED row. A row that carries its own date uses
