@@ -1,17 +1,24 @@
 import { ConfigService } from '@nestjs/config';
 import { FinishReason, GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { Mock } from 'vitest';
 
 import { DomainException } from '../common/exceptions/domain.exception';
 import { ErrorCode } from '../common/exceptions/error-codes.enum';
 import { LlmService } from './llm.service';
 
-const generateContentMock = jest.fn();
+const { generateContentMock, GoogleGenAIMock } = vi.hoisted(() => {
+    const generateContentMock = vi.fn();
+    const GoogleGenAIMock = vi.fn().mockImplementation(function (this: {
+        models: { generateContent: typeof generateContentMock };
+    }) {
+        this.models = { generateContent: generateContentMock };
+    });
+    return { generateContentMock, GoogleGenAIMock };
+});
 
-jest.mock('@google/genai', () => {
+vi.mock('@google/genai', () => {
     return {
-        GoogleGenAI: jest.fn().mockImplementation(() => ({
-            models: { generateContent: generateContentMock },
-        })),
+        GoogleGenAI: GoogleGenAIMock,
         FinishReason: {
             STOP: 'STOP',
             MAX_TOKENS: 'MAX_TOKENS',
@@ -34,7 +41,7 @@ function configWithKey(
 
 describe('LlmService', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('when GEMINI_API_KEY is not configured', () => {
@@ -45,7 +52,7 @@ describe('LlmService', () => {
         });
 
         it('does not construct a Gemini client', () => {
-            expect(GoogleGenAI as unknown as jest.Mock).not.toHaveBeenCalled();
+            expect(GoogleGenAI as unknown as Mock).not.toHaveBeenCalled();
         });
 
         it('throws ASK_LLM_UNAVAILABLE without calling the model', async () => {
@@ -70,7 +77,7 @@ describe('LlmService', () => {
         });
 
         it('does not construct a Gemini client', () => {
-            expect(GoogleGenAI as unknown as jest.Mock).not.toHaveBeenCalled();
+            expect(GoogleGenAI as unknown as Mock).not.toHaveBeenCalled();
         });
 
         it('throws ASK_LLM_UNAVAILABLE without calling the model', async () => {
@@ -117,7 +124,11 @@ describe('LlmService', () => {
                     userMessage: 'question',
                 });
 
-                const config = generateContentMock.mock.calls[0][0].config;
+                const config = (
+                    generateContentMock.mock.calls[0]![0] as {
+                        config: Record<string, unknown>;
+                    }
+                ).config;
 
                 expect(config.thinkingConfig).toEqual({
                     thinkingLevel: ThinkingLevel.LOW,

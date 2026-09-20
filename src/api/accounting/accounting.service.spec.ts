@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AccountingService } from './accounting.service';
 import { SalesDb } from '../../db/sales/sales.db';
 import { RedisService } from '../../redis/redis.service';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { getCurrentSeasonDate } from '../../shared/utils/season.utils';
 import { AccountingDb } from '../../db/accounting/accounting.db';
 import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
@@ -26,14 +26,21 @@ import type { SeasonYear } from '@psg/shared/time';
 // Only getCurrentSeasonDate needs mocking (to control "now") — seasonStartYearFromDate
 // and getSeasonWindow must stay real so getGivenSeason/getCurrentSeason assertions
 // exercise the actual UTC boundary math.
-jest.mock('../../shared/utils/season.utils', () => ({
-    ...jest.requireActual('../../shared/utils/season.utils'),
-    getCurrentSeasonDate: jest.fn(),
+const seasonUtilsRef = vi.hoisted(() => ({
+    value: null as null | typeof import('../../shared/utils/season.utils'),
 }));
-const getCurrentSeasonDateMocked = jest.mocked(getCurrentSeasonDate);
 
-jest.mock('./utils/format-aggregate.util');
-const formatAggregateMocked = jest.mocked(formatAggregate);
+vi.mock('../../shared/utils/season.utils', async (importOriginal) => {
+    seasonUtilsRef.value = await importOriginal();
+    return {
+        ...seasonUtilsRef.value,
+        getCurrentSeasonDate: vi.fn(),
+    };
+});
+const getCurrentSeasonDateMocked = vi.mocked(getCurrentSeasonDate);
+
+vi.mock('./utils/format-aggregate.util');
+const formatAggregateMocked = vi.mocked(formatAggregate);
 
 describe('AccountingService', () => {
     let service: AccountingService;
@@ -102,7 +109,7 @@ describe('AccountingService', () => {
                 end: endDate,
             });
 
-            const getSeasonSpy = jest.spyOn(service, 'getSeason');
+            const getSeasonSpy = vi.spyOn(service, 'getSeason');
             getSeasonSpy.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
@@ -131,7 +138,7 @@ describe('AccountingService', () => {
                 leadTime: null,
             };
 
-            const getSeasonSpy = jest.spyOn(service, 'getSeason');
+            const getSeasonSpy = vi.spyOn(service, 'getSeason');
             getSeasonSpy.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
@@ -171,7 +178,7 @@ describe('AccountingService', () => {
             } as OldestMatchSale;
             salesDbService.getOldestMatchSale.mockResolvedValueOnce(oldestMatchSale);
 
-            const getSeasonSpy = jest.spyOn(service, 'getSeason');
+            const getSeasonSpy = vi.spyOn(service, 'getSeason');
             getSeasonSpy.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
@@ -357,7 +364,7 @@ describe('AccountingService', () => {
                     start: new Date('2022-02-02'),
                 };
 
-                const getAccountingSpy = jest.spyOn(service, 'getAccounting');
+                const getAccountingSpy = vi.spyOn(service, 'getAccounting');
                 const realized = {} as Accounting;
                 const unrealized = {} as Accounting;
                 const pending = {} as Accounting;
@@ -405,7 +412,7 @@ describe('AccountingService', () => {
                 const pending = {} as Accounting;
                 const gifted = {} as Accounting;
 
-                jest.spyOn(service, 'getAccounting')
+                vi.spyOn(service, 'getAccounting')
                     .mockResolvedValueOnce(realized)
                     .mockResolvedValueOnce(unrealized)
                     .mockResolvedValueOnce(pending)
@@ -618,7 +625,7 @@ describe('AccountingService', () => {
         beforeEach(() => {
             seasonPassesDbService.findBySeason.mockResolvedValue([]);
             seasonPassesDbService.findAll.mockResolvedValue([]);
-            jest.spyOn(service, 'getAccounting').mockResolvedValue(null);
+            vi.spyOn(service, 'getAccounting').mockResolvedValue(null);
         });
 
         it('returns null leadTime when no sold sales in range', async () => {

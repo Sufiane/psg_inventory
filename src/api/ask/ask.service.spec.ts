@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { mock, MockProxy } from 'jest-mock-extended';
+import { mock, MockProxy } from 'vitest-mock-extended';
 import type { UserId } from '@psg/shared/ids';
 
 import { AskService } from './ask.service';
@@ -291,18 +291,18 @@ describe('AskService', () => {
 
         describe('when the hour rolls over while the model call is in flight', () => {
             beforeEach(() => {
-                jest.useFakeTimers();
-                jest.setSystemTime(new Date('2026-01-01T12:59:59.900Z'));
+                vi.useFakeTimers();
+                vi.setSystemTime(new Date('2026-01-01T12:59:59.900Z'));
 
                 llm.complete.mockImplementation(async () => {
-                    jest.setSystemTime(new Date('2026-01-01T13:00:00.100Z'));
+                    vi.setSystemTime(new Date('2026-01-01T13:00:00.100Z'));
 
                     throw new DomainException(ErrorCode.ASK_LLM_UNAVAILABLE);
                 });
             });
 
             afterEach(() => {
-                jest.useRealTimers();
+                vi.useRealTimers();
             });
 
             it('releases against the same hour bucket it incremented', async () => {
@@ -318,12 +318,12 @@ describe('AskService', () => {
 
     describe('when fetching matches for the context', () => {
         beforeEach(() => {
-            jest.useFakeTimers();
-            jest.setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date('2026-03-20T12:00:00.000Z'));
         });
 
         afterEach(() => {
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
 
         it('fetches matches for the same season year it fetches amortization for', async () => {

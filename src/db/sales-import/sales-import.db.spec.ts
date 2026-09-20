@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { Mock } from 'vitest';
 import { Prisma, SaleStatus } from '@prisma/client';
 
 import type { MatchId, RecipientId, UserId } from '@psg/shared/ids';
@@ -25,7 +26,7 @@ describe('SalesImportDb', () => {
     function mockTransaction(): DeepMockProxy<Prisma.TransactionClient> {
         const tx = mockDeep<Prisma.TransactionClient>();
 
-        (prismaService.$transaction as jest.Mock).mockImplementation(
+        (prismaService.$transaction as Mock).mockImplementation(
             (callback: (tx: Prisma.TransactionClient) => unknown) => callback(tx),
         );
 
@@ -89,7 +90,7 @@ describe('SalesImportDb', () => {
             it('resolves the recipient on the same transaction as the sale write', async () => {
                 const tx = mockTransaction();
 
-                (tx.sales.create as jest.Mock).mockResolvedValue({ id: 'sale-1' });
+                (tx.sales.create as Mock).mockResolvedValue({ id: 'sale-1' });
                 recipientsDbService.findOrCreateForUser.mockResolvedValue({
                     id: 'recipient-1' as RecipientId,
                 } as never);
@@ -110,7 +111,7 @@ describe('SalesImportDb', () => {
             it('creates the gift row alongside the sale, in the same transaction', async () => {
                 const tx = mockTransaction();
 
-                (tx.sales.create as jest.Mock).mockResolvedValue({ id: 'sale-1' });
+                (tx.sales.create as Mock).mockResolvedValue({ id: 'sale-1' });
                 recipientsDbService.findOrCreateForUser.mockResolvedValue({
                     id: 'recipient-1' as RecipientId,
                 } as never);
@@ -136,7 +137,7 @@ describe('SalesImportDb', () => {
             it('creates no gift row', async () => {
                 const tx = mockTransaction();
 
-                (tx.sales.create as jest.Mock).mockResolvedValue({ id: 'sale-1' });
+                (tx.sales.create as Mock).mockResolvedValue({ id: 'sale-1' });
 
                 await service.bulkCreate({
                     userId,
@@ -150,7 +151,7 @@ describe('SalesImportDb', () => {
             it('never resolves a recipient', async () => {
                 const tx = mockTransaction();
 
-                (tx.sales.create as jest.Mock).mockResolvedValue({ id: 'sale-1' });
+                (tx.sales.create as Mock).mockResolvedValue({ id: 'sale-1' });
 
                 await service.bulkCreate({
                     userId,
@@ -189,7 +190,7 @@ describe('SalesImportDb', () => {
             it("invalidates the user's sales list cache", async () => {
                 const tx = mockTransaction();
 
-                (tx.sales.create as jest.Mock).mockResolvedValue({ id: 'sale-1' });
+                (tx.sales.create as Mock).mockResolvedValue({ id: 'sale-1' });
 
                 await service.bulkCreate({
                     userId,

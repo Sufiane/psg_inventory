@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { SaleStatus } from '@prisma/client';
 
 import { SalesService } from './sales.service';
@@ -143,7 +143,7 @@ describe('SalesService', () => {
 
     describe('getCurrentSeasonSales', () => {
         it('queries with the same exclusive-upper season bounds getSalesByRange expects', async () => {
-            jest.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
+            vi.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
 
             salesDbService.getSalesByRange.mockResolvedValueOnce([]);
 
@@ -154,7 +154,7 @@ describe('SalesService', () => {
                 to: new Date('2026-08-01T00:00:00.000Z'),
             });
 
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
     });
 

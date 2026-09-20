@@ -3,7 +3,7 @@ import { MatchesService } from './matches.service';
 import { Test } from '@nestjs/testing';
 import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { Match } from '../../db/matches/types/match.type';
 import { getSeasonWindow } from '../../shared/utils/season.utils';
 import { formatMatch } from './formatters/format-match.formatter';
@@ -85,12 +85,12 @@ describe('MatchesService', () => {
         } as Match;
 
         afterEach(() => {
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
 
         describe('when the calendar date is before August', () => {
             beforeEach(() => {
-                jest.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
+                vi.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
             });
 
             it('requests the season that started the previous August', async () => {
@@ -123,7 +123,7 @@ describe('MatchesService', () => {
 
         describe('when the calendar date is exactly the August 1 boundary', () => {
             beforeEach(() => {
-                jest.useFakeTimers().setSystemTime(new Date('2026-08-01T00:00:00.000Z'));
+                vi.useFakeTimers().setSystemTime(new Date('2026-08-01T00:00:00.000Z'));
             });
 
             it('requests the season that starts that August', async () => {
@@ -143,7 +143,7 @@ describe('MatchesService', () => {
 
         describe('when withResult is true', () => {
             beforeEach(() => {
-                jest.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
+                vi.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
             });
 
             it('returns formatted matches and forwards the flag', async () => {
@@ -161,7 +161,7 @@ describe('MatchesService', () => {
 
         describe('when the season includes matches that have already kicked off', () => {
             beforeEach(() => {
-                jest.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
+                vi.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
             });
 
             it('includes those matches in the result', async () => {
@@ -176,7 +176,7 @@ describe('MatchesService', () => {
 
         describe('compared with getSeasonMatches for the same calendar season', () => {
             beforeEach(() => {
-                jest.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
+                vi.useFakeTimers().setSystemTime(new Date('2025-09-20T00:00:00.000Z'));
             });
 
             it('requests an identical window, so both share one cache key', async () => {
