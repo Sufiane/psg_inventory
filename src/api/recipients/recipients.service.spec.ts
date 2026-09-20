@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import type { RecipientId, UserId } from '@psg/shared/ids';
 import { RecipientsDb } from '../../db/recipients/recipients.db';
 import { IRecipientsDbService } from '../../db/recipients/recipients.db.interface';

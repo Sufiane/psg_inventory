@@ -1,10 +1,8 @@
 import { Test } from '@nestjs/testing';
 
-// @nestjs/observe is pure ESM and jest's transformIgnorePatterns skips
-// node_modules, so importing app.module.ts for real throws on it. Stubbing the
-// local wrapper costs no coverage here: OBSERVE_APP_KEY/SECRET are unset below,
-// so ObserveModule never enters the graph this spec exists to compile.
-jest.mock('./observe', () => ({ ObserveModule: {}, ObserveInstrument: {} }));
+// No vi.mock('./observe') here: Vitest loads the pure-ESM @nestjs/observe
+// natively — vitest.config.ts has no transformIgnorePatterns, so node_modules
+// is never transformed (PSG-8). This spec therefore exercises the real wrapper.
 
 const STUB_ENV = {
     NODE_ENV: 'production',

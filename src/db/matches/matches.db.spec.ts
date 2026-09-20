@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { Mock } from 'vitest';
 import { Prisma } from '@prisma/client';
 import { MatchesDb } from './matches.db';
 import { PrismaService } from '../prisma.service';
@@ -43,7 +44,7 @@ describe('MatchesDb', () => {
                 existingMatchId ? ({ id: existingMatchId } as never) : null,
             );
 
-            (prismaService.$transaction as jest.Mock).mockImplementation(
+            (prismaService.$transaction as Mock).mockImplementation(
                 (callback: (tx: Prisma.TransactionClient) => unknown) => callback(tx),
             );
         }
@@ -122,7 +123,7 @@ describe('MatchesDb', () => {
 
                 let callCount = 0;
 
-                (prismaService.$transaction as jest.Mock).mockImplementation(
+                (prismaService.$transaction as Mock).mockImplementation(
                     (callback: (tx: Prisma.TransactionClient) => unknown) => {
                         callCount += 1;
 

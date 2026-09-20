@@ -50,13 +50,13 @@ describe('season.utils', () => {
 
     describe('getCurrentSeasonDate', () => {
         it('buckets the current date the same way as getSeasonBucket', () => {
-            jest.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
+            vi.useFakeTimers().setSystemTime(new Date('2026-07-29T00:00:00.000Z'));
 
             expect(getCurrentSeasonDate()).toEqual(
                 getSeasonBucket(new Date('2026-07-29T00:00:00.000Z')),
             );
 
-            jest.useRealTimers();
+            vi.useRealTimers();
         });
     });
 

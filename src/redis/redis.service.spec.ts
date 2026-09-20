@@ -3,14 +3,14 @@ import type { CacheKey } from '@psg/shared/cache';
 
 import { RedisService } from './redis.service';
 
-const evalMock = jest.fn();
-const incrMock = jest.fn();
-const expireMock = jest.fn();
+const evalMock = vi.fn();
+const incrMock = vi.fn();
+const expireMock = vi.fn();
 
-jest.mock('redis', () => ({
-    createClient: jest.fn().mockImplementation(() => ({
-        connect: jest.fn().mockResolvedValue(undefined),
-        quit: jest.fn().mockResolvedValue(undefined),
+vi.mock('redis', () => ({
+    createClient: vi.fn().mockImplementation(() => ({
+        connect: vi.fn().mockResolvedValue(undefined),
+        quit: vi.fn().mockResolvedValue(undefined),
         eval: evalMock,
         incr: incrMock,
         expire: expireMock,
@@ -23,7 +23,7 @@ describe('RedisService', () => {
     let service: RedisService;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         service = new RedisService(
             new ConfigService({ REDIS_URL: 'redis://localhost:6379' }),
         );
@@ -46,7 +46,7 @@ describe('RedisService', () => {
 
             await service.incrementWithTtl(RATE_LIMIT_KEY, 3600);
 
-            const options = evalMock.mock.calls[0][1] as {
+            const options = evalMock.mock.calls[0]![1] as {
                 keys: string[];
                 arguments: string[];
             };
@@ -89,7 +89,7 @@ describe('RedisService', () => {
 
             await service.decrement(RATE_LIMIT_KEY);
 
-            const options = evalMock.mock.calls[0][1] as { keys: string[] };
+            const options = evalMock.mock.calls[0]![1] as { keys: string[] };
 
             expect(options.keys).toEqual([RATE_LIMIT_KEY]);
         });

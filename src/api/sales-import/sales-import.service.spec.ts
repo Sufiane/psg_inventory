@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 
 import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';

@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { Mock } from 'vitest';
 import { Prisma, SaleStatus } from '@prisma/client';
 
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
@@ -35,7 +36,7 @@ describe('SalesDb', () => {
     function mockTransaction(): DeepMockProxy<Prisma.TransactionClient> {
         const tx = mockDeep<Prisma.TransactionClient>();
 
-        (prismaService.$transaction as jest.Mock).mockImplementation(
+        (prismaService.$transaction as Mock).mockImplementation(
             (callback: (tx: Prisma.TransactionClient) => unknown) => callback(tx),
         );
 
@@ -153,12 +154,12 @@ describe('SalesDb', () => {
                     userId,
                     name: 'Marc',
                 });
-                (tx.sales.update as jest.Mock).mockImplementation(() => {
+                (tx.sales.update as Mock).mockImplementation(() => {
                     order.push('status');
 
                     return Promise.resolve({});
                 });
-                (tx.gifts.create as jest.Mock).mockImplementation(() => {
+                (tx.gifts.create as Mock).mockImplementation(() => {
                     order.push('gift');
 
                     return Promise.resolve({});
@@ -243,7 +244,7 @@ describe('SalesDb', () => {
             it('leaves the gift row untouched and returns the existing recipient', async () => {
                 const tx = mockTransaction();
 
-                (tx.gifts.findUniqueOrThrow as jest.Mock).mockResolvedValueOnce({
+                (tx.gifts.findUniqueOrThrow as Mock).mockResolvedValueOnce({
                     recipientId: 'r1',
                 });
 
@@ -271,12 +272,12 @@ describe('SalesDb', () => {
             const tx = mockTransaction();
             const order: string[] = [];
 
-            (tx.gifts.deleteMany as jest.Mock).mockImplementation(() => {
+            (tx.gifts.deleteMany as Mock).mockImplementation(() => {
                 order.push('delete');
 
                 return Promise.resolve({ count: 1 });
             });
-            (tx.sales.update as jest.Mock).mockImplementation(() => {
+            (tx.sales.update as Mock).mockImplementation(() => {
                 order.push('status');
 
                 return Promise.resolve({});
