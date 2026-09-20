@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { Prisma, SaleStatus } from '.prisma/client';
+import { Prisma, SaleStatus } from '@prisma/client';
 
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import { SalesDb } from './sales.db';

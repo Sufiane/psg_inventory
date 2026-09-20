@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 
 import type { RecipientId, UserId } from '@psg/shared/ids';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';

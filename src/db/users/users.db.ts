@@ -7,7 +7,7 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IUsersDbService } from './users.db.interface';
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 

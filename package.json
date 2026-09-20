@@ -4,6 +4,7 @@
   "description": "",
   "author": "",
   "private": true,
+  "type": "module",
   "engines": {
     "node": "24.21.0"
   },
@@ -12,7 +13,7 @@
     "schema": "src/prisma/schema.prisma"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && tsc-alias --resolve-full-paths",
     "lint": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\" --max-warnings 0",
     "lint:fix": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\" --fix",
     "lint:deps": "depcruise src --config",
@@ -31,8 +32,8 @@
     "local:db:down": "docker compose down",
     "local:db:destroy": "docker compose down -v --remove-orphans",
     "local:db:migrate": "prisma migrate deploy",
-    "local:db:seed": "node --env-file-if-exists=.env -r ts-node/register scripts/seed-demo.ts",
-    "ungift": "npx ts-node scripts/ungift-sale.ts"
+    "local:db:seed": "node --env-file-if-exists=.env node_modules/.bin/tsx scripts/seed-demo.ts",
+    "ungift": "npx tsx scripts/ungift-sale.ts"
   },
   "dependencies": {
     "@google/genai": "2.19.0",
@@ -91,6 +92,8 @@
     "prettier": "3.3.3",
     "ts-jest": "29.4.12",
     "ts-node": "10.9.2",
+    "tsc-alias": "1.9.5",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0"
   },
