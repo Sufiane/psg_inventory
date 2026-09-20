@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { SaleStatus } from '@prisma/client';
 
 import { UngiftSaleUsecase } from './ungift-sale.usecase';

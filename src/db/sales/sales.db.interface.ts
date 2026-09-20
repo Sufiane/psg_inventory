@@ -85,13 +85,6 @@ export abstract class ISalesDbService {
         allocations?: SaleAllocationInput[];
     }): Promise<{ recipientId: RecipientId }>;
 
-    // The sanctioned manual repair (spec D16). No controller reaches it:
-    // GIFTED is terminal in the app (spec D5). Deletes the gift row and flips
-    // the status back to PENDING in one transaction, never one without the
-    // other.
-    abstract ungiftSale(userId: UserId, saleId: SaleId): Promise<void>;
-
-    abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;
     abstract getOneByWithFullMatch(query: {
         profit?: Profit;
         listedPrice?: ListedPrice;

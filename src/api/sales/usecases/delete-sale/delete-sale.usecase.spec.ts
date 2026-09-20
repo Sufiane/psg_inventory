@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 
 import { DeleteSaleUsecase } from './delete-sale.usecase';
 import { IDeleteSaleUsecaseDb } from './delete-sale.usecase.db';

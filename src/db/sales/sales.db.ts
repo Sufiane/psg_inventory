@@ -394,51 +394,6 @@ export class SalesDb implements ISalesDbService {
         return { recipientId };
     }
 
-    async ungiftSale(userId: UserId, saleId: SaleId): Promise<void> {
-        const currentSale = await this.loadSaleRowOrThrow(userId, saleId);
-
-        await this.prisma.$transaction(async (tx) => {
-            // Gift row first, then the status. The reverse order is not a style
-            // preference — Postgres rejects it (spec D15).
-            await tx.gifts.deleteMany({ where: { saleId } });
-
-            await this.applySaleWrite(tx, currentSale, {
-                saleId,
-                userId,
-                profit: undefined,
-                status: SaleStatus.PENDING,
-            });
-        });
-
-        await this.invalidateSaleCaches(userId, saleId);
-    }
-
-    async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {
-        await this.prisma.$transaction(async (tx) => {
-            await tx.gifts.deleteMany({ where: { saleId } });
-
-            await tx.saleHistories.deleteMany({
-                where: {
-                    saleId,
-                },
-            });
-
-            await tx.salePassAllocations.deleteMany({
-                where: { saleId },
-            });
-
-            await tx.sales.delete({
-                where: {
-                    id: saleId,
-                    userId,
-                },
-            });
-        });
-
-        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-        await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
-    }
-
     getOneByWithFullMatch(query: {
         profit?: Profit;
         listedPrice?: ListedPrice;

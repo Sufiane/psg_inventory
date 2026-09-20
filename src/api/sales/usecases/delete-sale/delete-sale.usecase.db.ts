@@ -2,13 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { SaleStatus } from '@prisma/client';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
-import { ISalesDbService } from '../../../../db/sales/sales.db.interface';
-import { Sale } from '../../../../db/sales/type/sale.type';
+import { PrismaService } from '../../../../db/prisma.service';
 import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 
 export abstract class IDeleteSaleUsecaseDb {
-    abstract loadSale(userId: UserId, saleId: SaleId): Promise<Sale | null>;
+    abstract loadSale(
+        userId: UserId,
+        saleId: SaleId,
+    ): Promise<{ id: string; status: SaleStatus } | null>;
     abstract deleteSale(
         userId: UserId,
         saleId: SaleId,
@@ -19,12 +21,18 @@ export abstract class IDeleteSaleUsecaseDb {
 @Injectable()
 export class DeleteSaleUsecaseDb implements IDeleteSaleUsecaseDb {
     constructor(
-        private readonly salesDbService: ISalesDbService,
+        private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
     ) {}
 
-    async loadSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
-        return this.salesDbService.getOneSale(userId, saleId);
+    async loadSale(
+        userId: UserId,
+        saleId: SaleId,
+    ): Promise<{ id: string; status: SaleStatus } | null> {
+        return this.prisma.sales.findUnique({
+            where: { userId, id: saleId },
+            select: { id: true, status: true },
+        });
     }
 
     async deleteSale(
@@ -32,15 +40,21 @@ export class DeleteSaleUsecaseDb implements IDeleteSaleUsecaseDb {
         saleId: SaleId,
         saleStatus: SaleStatus,
     ): Promise<void> {
-        await this.salesDbService.deleteSale(userId, saleId);
+        await this.prisma.$transaction(async (tx) => {
+            await tx.gifts.deleteMany({ where: { saleId } });
+            await tx.saleHistories.deleteMany({ where: { saleId } });
+            await tx.salePassAllocations.deleteMany({ where: { saleId } });
+            await tx.sales.delete({ where: { id: saleId, userId } });
+        });
 
+        // Invalidate all sale-level caches.
+        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
+        await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
+        // Accounting cache always.
         await this.redisService.invalidatePattern(
             CACHE_KEYS.invalidateAccounting(userId),
         );
-
-        // Deleting a GIFTED sale destroys its gift row with it (ON DELETE
-        // CASCADE plus the explicit delete in the db layer), which moves the
-        // recipient's giftCount — the combobox's sort key.
+        // Recipients cache only when a gift was destroyed (giftCount moves).
         if (saleStatus === SaleStatus.GIFTED) {
             await this.redisService.invalidatePattern(
                 CACHE_KEYS.invalidateRecipients(userId),

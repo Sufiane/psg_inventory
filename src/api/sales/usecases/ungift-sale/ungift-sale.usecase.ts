@@ -9,6 +9,9 @@ export abstract class IUngiftSaleUsecase {
     abstract execute(userId: UserId, saleId: SaleId): Promise<void>;
 }
 
+// The sanctioned manual repair for a sale gifted by mistake (spec D16).
+// Deliberately NOT exposed by SalesController: GIFTED is terminal in the
+// app (spec D5). Its caller is scripts/ungift-sale.ts.
 @Injectable()
 export class UngiftSaleUsecase implements IUngiftSaleUsecase {
     constructor(private readonly usecaseDb: IUngiftSaleUsecaseDb) {}
