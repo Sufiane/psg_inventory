@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 import type { RecipientId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';

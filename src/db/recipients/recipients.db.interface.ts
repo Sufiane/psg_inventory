@@ -1,4 +1,4 @@
-import type { Prisma } from '.prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { RecipientId, UserId } from '@psg/shared/ids';
 import { Recipient, RecipientWithGiftCount } from './type/recipient.type';
 

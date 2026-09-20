@@ -2,7 +2,7 @@ import type { MatchId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../prisma.service';
 import { AccountingAggregate } from './types/get-accounting.type';
 import { omit } from 'radash';
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 import { SaleStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { IAccountingDbService } from './accounting.db.interface';

@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { Prisma, SaleStatus } from '.prisma/client';
+import { Prisma, SaleStatus } from '@prisma/client';
 
 import type { MatchId, RecipientId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';

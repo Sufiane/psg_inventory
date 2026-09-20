@@ -1,4 +1,4 @@
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 import type { Override } from '@psg/shared/brand';
 import type { MatchId, MatchResultId, OpponentId } from '@psg/shared/ids';
 import type { MatchScore, OpponentName } from '@psg/shared/strings';

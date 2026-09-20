@@ -2,7 +2,7 @@ import { PrismaService } from '../prisma.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { convertStringToCompetition } from './matches.utils';
 import { Competition } from '@prisma/client';
-import { Prisma } from '.prisma/client';
+import { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
