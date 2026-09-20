@@ -12,8 +12,20 @@ describe('convertStringToCompetition', () => {
         );
     });
 
+    it('maps "Coupe de France" to FRENCH_CUP', () => {
+        expect(convertStringToCompetition('Coupe de France')).toBe(
+            Competition.FRENCH_CUP,
+        );
+    });
+
+    it('maps "Coupe de la Ligue" to LEAGUE_CUP', () => {
+        expect(convertStringToCompetition('Coupe de la Ligue')).toBe(
+            Competition.LEAGUE_CUP,
+        );
+    });
+
     it('returns null for an unknown competition', () => {
-        expect(convertStringToCompetition('Coupe de France')).toBeNull();
+        expect(convertStringToCompetition('Trophée des Champions')).toBeNull();
     });
 
     it('returns null for an empty string', () => {

@@ -80,7 +80,7 @@ describe('AdminService', () => {
                 const matches = [] as FormattedMatch[];
                 footballDataService.getTeamMatches.mockResolvedValue(matches);
                 matchsDbService.loadMatches.mockResolvedValueOnce({
-                    unknownCompetitions: ['Coupe de France'],
+                    unknownCompetitions: ['Trophée des Champions'],
                 });
 
                 const seasonStartYear = 2022;

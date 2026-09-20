@@ -168,14 +168,14 @@ describe('MatchesDb', () => {
         describe('when a match has an unknown competition', () => {
             const unknownMatch: FormattedMatch = {
                 ...formattedMatch,
-                competition: 'Coupe de France',
+                competition: 'Trophée des Champions',
             };
 
             it('skips the match without opening a transaction and reports the competition', async () => {
                 const result = await service.loadMatches([unknownMatch]);
 
                 expect(prismaService.$transaction).not.toHaveBeenCalled();
-                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+                expect(result.unknownCompetitions).toEqual(['Trophée des Champions']);
             });
 
             it('still syncs valid matches and reports the unknown one', async () => {
@@ -184,7 +184,7 @@ describe('MatchesDb', () => {
                 const result = await service.loadMatches([formattedMatch, unknownMatch]);
 
                 expect(prismaService.$transaction).toHaveBeenCalledTimes(1);
-                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+                expect(result.unknownCompetitions).toEqual(['Trophée des Champions']);
             });
 
             it('deduplicates repeated unknown competitions', async () => {
@@ -198,7 +198,7 @@ describe('MatchesDb', () => {
                 const result = await service.loadMatches([unknownMatch, secondUnknown]);
 
                 expect(prismaService.$transaction).not.toHaveBeenCalled();
-                expect(result.unknownCompetitions).toEqual(['Coupe de France']);
+                expect(result.unknownCompetitions).toEqual(['Trophée des Champions']);
             });
         });
     });
