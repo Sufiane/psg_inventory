@@ -18,8 +18,8 @@ import { Sale } from '../../db/sales/type/sale.type';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
-import { PSG_COMMISSION } from '../../shared/constants';
 import { normalizeRecipientName } from '../../shared/utils/recipient-name.util';
+import { computeProfit } from './shared/profit.util';
 import {
     getSeasonWindow,
     seasonStartYearFromDate,
@@ -183,7 +183,7 @@ export class SalesService implements ISalesService {
     }
 
     getProfit(price: ListedPrice): Profit {
-        return ((price * (100 - PSG_COMMISSION)) / 100) as Profit;
+        return computeProfit(price);
     }
 
     // Entry into GIFTED. A recipient is mandatory (spec D9): the combobox always
