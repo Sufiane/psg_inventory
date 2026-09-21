@@ -288,6 +288,8 @@ describe('SalesDb', () => {
     });
 
     describe('getSalesGrouped', () => {
+        const range = { from: new Date('2026-08-01'), to: new Date('2027-07-31') };
+
         beforeEach(() => {
             // Make redisService.get call through to the loader callback
             (redisService.get as Mock).mockImplementation(
@@ -311,7 +313,7 @@ describe('SalesDb', () => {
             (giftedSale as { id: SaleId }).id = 'sale-4' as SaleId;
             (cancelledSale as { id: SaleId }).id = 'sale-5' as SaleId;
 
-            // Data in match-date-ascending order (as getSales returns from the DB)
+            // Data in match-date-ascending order (as getSalesByRange returns from the DB)
             const allSales = [
                 cancelledSale,
                 giftedSale,
@@ -322,7 +324,7 @@ describe('SalesDb', () => {
 
             (prismaService.sales.findMany as Mock).mockResolvedValue(allSales as never);
 
-            const result = await service.getSalesGrouped(userId);
+            const result = await service.getSalesGrouped(userId, range);
 
             expect(result.pending).toHaveLength(2);
             expect(result.pending[0]!.id).toBe('sale-2'); // Aug 1 before Sep 1
@@ -337,7 +339,7 @@ describe('SalesDb', () => {
         it('returns empty arrays when no sales exist', async () => {
             (prismaService.sales.findMany as Mock).mockResolvedValue([] as never);
 
-            const result = await service.getSalesGrouped(userId);
+            const result = await service.getSalesGrouped(userId, range);
 
             expect(result.pending).toHaveLength(0);
             expect(result.terminal).toHaveLength(0);
