@@ -94,8 +94,13 @@ async function fetchShowcase(
 
         const { accessToken } = (await loginResponse.json()) as LoginResponse;
 
+        // Use all-time rather than current-season so the showcase always
+        // shows seeded demo data regardless of which season the calendar
+        // is currently in.  The seed script creates data for the season
+        // that was "current" when it last ran; switching seasons would
+        // blank the showcase if we pinned to current-season.
         const accountingResponse = await event.fetch(
-            `${base}/accounting/current-season`,
+            `${base}/accounting/all-time`,
             {
                 headers: { Authorization: `Bearer ${accessToken}` },
                 signal: controller.signal,
