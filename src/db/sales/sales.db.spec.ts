@@ -368,13 +368,13 @@ describe('SalesDb', () => {
             const result = await service.getSalesGrouped(userId);
 
             expect(result.pending).toHaveLength(2);
-            expect(result.pending[0].id).toBe('sale-2'); // Aug 1 before Sep 1
-            expect(result.pending[1].id).toBe(saleId); // Sep 1
+            expect(result.pending[0]!.id).toBe('sale-2'); // Aug 1 before Sep 1
+            expect(result.pending[1]!.id).toBe(saleId); // Sep 1
 
             expect(result.terminal).toHaveLength(3);
-            expect(result.terminal[0].id).toBe('sale-5'); // May 1 (cancelled)
-            expect(result.terminal[1].id).toBe('sale-4'); // Jun 1 (gifted)
-            expect(result.terminal[2].id).toBe('sale-3'); // Jul 1 (sold)
+            expect(result.terminal[0]!.id).toBe('sale-5'); // May 1 (cancelled)
+            expect(result.terminal[1]!.id).toBe('sale-4'); // Jun 1 (gifted)
+            expect(result.terminal[2]!.id).toBe('sale-3'); // Jul 1 (sold)
         });
 
         it('returns empty arrays when no sales exist', async () => {
