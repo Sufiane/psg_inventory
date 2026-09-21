@@ -287,8 +287,6 @@ describe('SalesDb', () => {
         });
     });
 
-    });
-
     describe('getSalesGrouped', () => {
         beforeEach(() => {
             // Make redisService.get call through to the loader callback
@@ -345,5 +343,4 @@ describe('SalesDb', () => {
             expect(result.terminal).toHaveLength(0);
         });
     });
-});
 });
