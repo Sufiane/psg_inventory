@@ -51,3 +51,8 @@ export type Sale = Override<
         >;
     }
 >;
+
+export type SalesGroup = {
+    pending: Sale[];
+    terminal: Sale[];
+};
