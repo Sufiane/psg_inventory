@@ -158,6 +158,33 @@ describe('SalesService', () => {
         });
     });
 
+    describe('getSalesGrouped', () => {
+        it('returns formatted pending and terminal groups', async () => {
+            const pendingSale = saleFixture(new Date('2026-09-01'), SaleStatus.PENDING);
+            const soldSale = saleFixture(new Date('2026-07-01'), SaleStatus.SOLD);
+
+            salesDbService.getSalesGrouped.mockResolvedValue({
+                pending: [pendingSale],
+                terminal: [soldSale],
+            });
+
+            const result = await service.getSalesGrouped(userId);
+
+            expect(result.pending).toHaveLength(1);
+            expect(result.pending[0]).toMatchObject({
+                opponent: { id: 'opp', name: 'Marseille' },
+                matchDate: new Date('2026-09-01'),
+                status: 'PENDING',
+            });
+            expect(result.pending[0]).not.toHaveProperty('Match');
+
+            expect(result.terminal).toHaveLength(1);
+            expect(result.terminal[0]).toMatchObject({
+                status: 'SOLD',
+            });
+        });
+    });
+
     describe('reading a sale', () => {
         describe('when the sale has a gift', () => {
             it('serves the gift nested on the sale', async () => {

@@ -12,10 +12,16 @@ export type FormattedSale = Omit<Sale, 'Match' | 'userId' | 'matchId'> & {
     matchDate: Date;
 };
 
+export type FormattedSalesGroup = {
+    pending: FormattedSale[];
+    terminal: FormattedSale[];
+};
+
 export abstract class ISalesService {
     abstract getSale(userId: UserId, saleId: SaleId): Promise<Sale>;
     abstract getSales(userId: UserId): Promise<FormattedSale[]>;
     abstract getCurrentSeasonSales(userId: UserId): Promise<FormattedSale[]>;
+    abstract getSalesGrouped(userId: UserId): Promise<FormattedSalesGroup>;
     abstract getSeasonSales(
         userId: UserId,
         seasonStartYear: SeasonYear,

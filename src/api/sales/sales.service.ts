@@ -27,7 +27,11 @@ import {
 import { AddSaleDto } from './dto/add-sale.dto';
 import { SaleAllocationDto } from './dto/sale-allocation.dto';
 import { SaleStatusTarget, UpdateSaleDto } from './dto/update-sale.dto';
-import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
+import {
+    FormattedSale,
+    FormattedSalesGroup,
+    ISalesService,
+} from './interfaces/sales.service.interface';
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -63,6 +67,15 @@ export class SalesService implements ISalesService {
         const sales = await this.salesDbService.getSalesByRange(userId, { from, to });
 
         return sales.map((sale) => this.formatSale(sale));
+    }
+
+    async getSalesGrouped(userId: UserId): Promise<FormattedSalesGroup> {
+        const group = await this.salesDbService.getSalesGrouped(userId);
+
+        return {
+            pending: group.pending.map((sale) => this.formatSale(sale)),
+            terminal: group.terminal.map((sale) => this.formatSale(sale)),
+        };
     }
 
     async getSeasonSales(
