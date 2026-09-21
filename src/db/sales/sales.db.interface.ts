@@ -24,7 +24,10 @@ export abstract class ISalesDbService {
         userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<Sale[]>;
-    abstract getSalesGrouped(userId: UserId): Promise<SalesGroup>;
+    abstract getSalesGrouped(
+        userId: UserId,
+        range: { from: Date; to: Date },
+    ): Promise<SalesGroup>;
     abstract addSale(payload: {
         userId: UserId;
         profit: Profit;

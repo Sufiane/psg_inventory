@@ -107,8 +107,11 @@ export class SalesDb implements ISalesDbService {
         return result ?? [];
     }
 
-    async getSalesGrouped(userId: UserId): Promise<SalesGroup> {
-        const sales = await this.getSales(userId);
+    async getSalesGrouped(
+        userId: UserId,
+        range: { from: Date; to: Date },
+    ): Promise<SalesGroup> {
+        const sales = await this.getSalesByRange(userId, range);
 
         const pending: Sale[] = [];
         const terminal: Sale[] = [];

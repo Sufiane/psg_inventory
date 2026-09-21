@@ -74,7 +74,11 @@ export class SalesService implements ISalesService {
     }
 
     async getSalesGrouped(userId: UserId): Promise<FormattedSalesGroup> {
-        const group = await this.salesDbService.getSalesGrouped(userId);
+        const { start: from, end: to } = getSeasonWindow(
+            seasonStartYearFromDate(new Date()),
+            'exclusive',
+        );
+        const group = await this.salesDbService.getSalesGrouped(userId, { from, to });
 
         return {
             pending: group.pending.map((sale) => this.formatSale(sale)),
