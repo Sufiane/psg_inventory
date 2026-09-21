@@ -10,6 +10,7 @@ import type {
     RecipientListItem,
     SaleDetail,
     SaleListItem,
+    SalesGroupListItem,
     SeasonPass,
 } from '$lib/types';
 
@@ -19,10 +20,16 @@ export const load: PageServerLoad = async (event) => {
     // `?year=` is a seasonStartYear, so it maps straight onto the
     // `/season/:seasonStartYear` routes for both sales and matches.
     const seasonYear = parseSeasonYearParam(event.url);
-    const salesPath =
-        seasonYear !== null ? `/sales/season/${seasonYear}` : '/sales/current-season';
+    let sales: SaleListItem[];
+    let salesGroup: SalesGroupListItem | null = null;
 
-    const sales = await api<SaleListItem[]>(event, salesPath);
+    if (seasonYear === null) {
+        const grouped = await api<SalesGroupListItem>(event, '/sales/grouped');
+        sales = [...grouped.pending, ...grouped.terminal];
+        salesGroup = grouped;
+    } else {
+        sales = await api<SaleListItem[]>(event, `/sales/season/${seasonYear}`);
+    }
 
     let editSale: SaleDetail | null = null;
     let recipients: RecipientListItem[] = [];
@@ -74,6 +81,7 @@ export const load: PageServerLoad = async (event) => {
 
     return {
         sales,
+        salesGroup,
         year: seasonYear,
         editSale,
         matches,

@@ -110,6 +110,33 @@
         });
     });
 
+    // Grouped derivations for the current season. When `data.salesGroup` is
+    // non-null the backend returned pending/terminal arrays; when null the page
+    // falls back to the flat `sortedSales` above.
+    let pendingSales = $derived(
+        data.salesGroup
+            ? sortKey === null
+                ? data.salesGroup.pending
+                : [...data.salesGroup.pending].sort(
+                      (a, b) => (a[sortKey!] - b[sortKey!]) * (sortDir === 'asc' ? 1 : -1),
+                  )
+            : null,
+    );
+
+    let terminalSales = $derived(
+        data.salesGroup
+            ? sortKey === null
+                ? data.salesGroup.terminal
+                : [...data.salesGroup.terminal].sort(
+                      (a, b) => (a[sortKey!] - b[sortKey!]) * (sortDir === 'asc' ? 1 : -1),
+                  )
+            : null,
+    );
+
+    function sectionLabel(count: number, label: string): string {
+        return `${count} ${label}${count !== 1 ? 's' : ''}`;
+    }
+
     function arrow(key: SortKey): string {
         if (sortKey !== key) {
             return '';
@@ -889,6 +916,123 @@
     </section>
 {/snippet}
 
+{#snippet saleCard(sale: SaleListItem)}
+    {@const isOpen = editId === sale.id}
+    {@const mobileNote = lifecycleNote(sale)}
+    <li
+        class="bg-surface rounded-lg border {isOpen
+            ? 'border-line-strong'
+            : 'border-line'} overflow-hidden"
+    >
+        <a
+            href={urlWithEdit(isOpen ? null : sale.id)}
+            aria-expanded={isOpen}
+            aria-controls={isOpen ? `edit-${sale.id}` : undefined}
+            class="block p-4 hover:bg-surface-subtle transition-colors"
+        >
+            <header class="flex items-baseline justify-between gap-3 mb-1">
+                <span class="font-medium text-ink truncate">{sale.opponent.name}</span>
+                <span
+                    class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
+                        sale.status,
+                    )}"
+                >
+                    {sale.status}
+                </span>
+            </header>
+            {#if mobileNote}
+                <p class="mb-2 text-xs text-ink-faint">{mobileNote}</p>
+            {/if}
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <dt class="text-ink-muted">Tickets</dt>
+                <dd class="text-right font-mono text-ink">{sale.nbTickets}</dd>
+
+                <dt class="text-ink-muted">Price</dt>
+                <dd class="text-right font-mono text-ink">
+                    {money(sale.listedPrice)}
+                </dd>
+
+                <dt class="text-ink-muted">Invest</dt>
+                <dd class="text-right font-mono text-ink">
+                    {money(sale.invest)}
+                </dd>
+
+                <dt class="text-ink-muted">Profit</dt>
+                <dd
+                    class="text-right font-mono {profitTone(
+                        sale.status,
+                        sale.profit,
+                    )}"
+                >
+                    {signedMoney(sale.profit)}
+                </dd>
+            </dl>
+        </a>
+
+        {#if isOpen}
+            <div id="edit-{sale.id}">
+                {@render editPanel(sale.id)}
+            </div>
+        {/if}
+    </li>
+{/snippet}
+
+{#snippet saleRow(sale: SaleListItem)}
+    {@const isOpen = editId === sale.id}
+    {@const desktopNote = lifecycleNote(sale)}
+    <tr class={isOpen ? 'bg-surface-subtle' : ''}>
+        <td class="px-4 py-2 text-ink">{sale.opponent.name}</td>
+        <td class="px-4 py-2 text-right font-mono text-ink">
+            {sale.nbTickets}
+        </td>
+        <td class="px-4 py-2 text-right font-mono text-ink">
+            {money(sale.listedPrice)}
+        </td>
+        <td class="px-4 py-2 text-right font-mono text-ink">
+            {money(sale.invest)}
+        </td>
+        <td
+            class="px-4 py-2 text-right font-mono {profitTone(
+                sale.status,
+                sale.profit,
+            )}"
+        >
+            {signedMoney(sale.profit)}
+        </td>
+        <td class="px-4 py-2">
+            <span
+                class="inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
+                    sale.status,
+                )}"
+            >
+                {sale.status}
+            </span>
+            {#if desktopNote}
+                <div class="mt-1 text-[0.65rem] text-ink-faint leading-snug">
+                    {desktopNote}
+                </div>
+            {/if}
+        </td>
+        <td class="px-4 py-2 text-right">
+            <a
+                href={urlWithEdit(isOpen ? null : sale.id)}
+                aria-expanded={isOpen}
+                aria-controls={isOpen ? `edit-${sale.id}` : undefined}
+                class="text-primary font-medium hover:text-primary-hover hover:underline"
+            >
+                {isOpen ? 'Close' : 'Edit'}
+            </a>
+        </td>
+    </tr>
+    {#if isOpen}
+        <tr id="edit-{sale.id}">
+            <td colspan="7" class="p-0">
+                {@render editPanel(sale.id)}
+            </td>
+        </tr>
+    {/if}
+{/snippet}
+
 <svelte:window onkeydown={onWindowKeydown} />
 
 <datalist id="recipient-options">
@@ -984,68 +1128,38 @@
     </div>
 
     <!-- Mobile card list -->
-    <ul class="grid gap-3 sm:hidden">
-        {#each sortedSales as sale (sale.id)}
-            {@const isOpen = editId === sale.id}
-            {@const mobileNote = lifecycleNote(sale)}
-            <li
-                class="bg-surface rounded-lg border {isOpen
-                    ? 'border-line-strong'
-                    : 'border-line'} overflow-hidden"
-            >
-                <a
-                    href={urlWithEdit(isOpen ? null : sale.id)}
-                    aria-expanded={isOpen}
-                    aria-controls={isOpen ? `edit-${sale.id}` : undefined}
-                    class="block p-4 hover:bg-surface-subtle transition-colors"
-                >
-                    <header class="flex items-baseline justify-between gap-3 mb-1">
-                        <span class="font-medium text-ink truncate">{sale.opponent.name}</span>
-                        <span
-                            class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
-                                sale.status,
-                            )}"
-                        >
-                            {sale.status}
-                        </span>
-                    </header>
-                    {#if mobileNote}
-                        <p class="mb-2 text-xs text-ink-faint">{mobileNote}</p>
-                    {/if}
-                    <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                        <dt class="text-ink-muted">Tickets</dt>
-                        <dd class="text-right font-mono text-ink">{sale.nbTickets}</dd>
-
-                        <dt class="text-ink-muted">Price</dt>
-                        <dd class="text-right font-mono text-ink">
-                            {money(sale.listedPrice)}
-                        </dd>
-
-                        <dt class="text-ink-muted">Invest</dt>
-                        <dd class="text-right font-mono text-ink">
-                            {money(sale.invest)}
-                        </dd>
-
-                        <dt class="text-ink-muted">Profit</dt>
-                        <dd
-                            class="text-right font-mono {profitTone(
-                                sale.status,
-                                sale.profit,
-                            )}"
-                        >
-                            {signedMoney(sale.profit)}
-                        </dd>
-                    </dl>
-                </a>
-
-                {#if isOpen}
-                    <div id="edit-{sale.id}">
-                        {@render editPanel(sale.id)}
-                    </div>
-                {/if}
-            </li>
-        {/each}
-    </ul>
+    {#if pendingSales !== null && terminalSales !== null}
+        {#if pendingSales.length > 0}
+            <div class="sm:hidden">
+                <h3 class="text-xs font-medium text-ink-muted uppercase tracking-wide px-1 mb-2">
+                    Pending — {sectionLabel(pendingSales.length, 'sale')}
+                </h3>
+                <ul class="grid gap-3">
+                    {#each pendingSales as sale (sale.id)}
+                        {@render saleCard(sale)}
+                    {/each}
+                </ul>
+            </div>
+        {/if}
+        {#if terminalSales.length > 0}
+            <div class="sm:hidden mt-6">
+                <h3 class="text-xs font-medium text-ink-muted uppercase tracking-wide px-1 mb-2">
+                    Completed — {sectionLabel(terminalSales.length, 'sale')}
+                </h3>
+                <ul class="grid gap-3">
+                    {#each terminalSales as sale (sale.id)}
+                        {@render saleCard(sale)}
+                    {/each}
+                </ul>
+            </div>
+        {/if}
+    {:else}
+        <ul class="grid gap-3 sm:hidden">
+            {#each sortedSales as sale (sale.id)}
+                {@render saleCard(sale)}
+            {/each}
+        </ul>
+    {/if}
 
     <!-- Desktop / tablet table -->
     <div class="hidden sm:block bg-surface rounded-lg border border-line overflow-x-auto">
@@ -1118,61 +1232,32 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-line">
-                {#each sortedSales as sale (sale.id)}
-                    {@const isOpen = editId === sale.id}
-                    {@const desktopNote = lifecycleNote(sale)}
-                    <tr class={isOpen ? 'bg-surface-subtle' : ''}>
-                        <td class="px-4 py-2 text-ink">{sale.opponent.name}</td>
-                        <td class="px-4 py-2 text-right font-mono text-ink">
-                            {sale.nbTickets}
-                        </td>
-                        <td class="px-4 py-2 text-right font-mono text-ink">
-                            {money(sale.listedPrice)}
-                        </td>
-                        <td class="px-4 py-2 text-right font-mono text-ink">
-                            {money(sale.invest)}
-                        </td>
-                        <td
-                            class="px-4 py-2 text-right font-mono {profitTone(
-                                sale.status,
-                                sale.profit,
-                            )}"
-                        >
-                            {signedMoney(sale.profit)}
-                        </td>
-                        <td class="px-4 py-2">
-                            <span
-                                class="inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
-                                    sale.status,
-                                )}"
-                            >
-                                {sale.status}
-                            </span>
-                            {#if desktopNote}
-                                <div class="mt-1 text-[0.65rem] text-ink-faint leading-snug">
-                                    {desktopNote}
-                                </div>
-                            {/if}
-                        </td>
-                        <td class="px-4 py-2 text-right">
-                            <a
-                                href={urlWithEdit(isOpen ? null : sale.id)}
-                                aria-expanded={isOpen}
-                                aria-controls={isOpen ? `edit-${sale.id}` : undefined}
-                                class="text-primary font-medium hover:text-primary-hover hover:underline"
-                            >
-                                {isOpen ? 'Close' : 'Edit'}
-                            </a>
-                        </td>
-                    </tr>
-                    {#if isOpen}
-                        <tr id="edit-{sale.id}">
-                            <td colspan="7" class="p-0">
-                                {@render editPanel(sale.id)}
+                {#if pendingSales !== null && terminalSales !== null}
+                    {#if pendingSales.length > 0}
+                        <tr>
+                            <td colspan="7" class="px-4 py-2 text-xs font-medium text-ink-muted uppercase tracking-wide bg-surface-subtle">
+                                Pending — {sectionLabel(pendingSales.length, 'sale')}
                             </td>
                         </tr>
+                        {#each pendingSales as sale (sale.id)}
+                            {@render saleRow(sale)}
+                        {/each}
                     {/if}
-                {/each}
+                    {#if terminalSales.length > 0}
+                        <tr>
+                            <td colspan="7" class="px-4 py-2 text-xs font-medium text-ink-muted uppercase tracking-wide bg-surface-subtle">
+                                Completed — {sectionLabel(terminalSales.length, 'sale')}
+                            </td>
+                        </tr>
+                        {#each terminalSales as sale (sale.id)}
+                            {@render saleRow(sale)}
+                        {/each}
+                    {/if}
+                {:else}
+                    {#each sortedSales as sale (sale.id)}
+                        {@render saleRow(sale)}
+                    {/each}
+                {/if}
             </tbody>
         </table>
     </div>
