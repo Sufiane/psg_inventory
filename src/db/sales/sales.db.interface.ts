@@ -2,7 +2,7 @@ import { SaleStatus } from '@prisma/client';
 import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, RecipientId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
-import { Sale } from './type/sale.type';
+import { Sale, SalesGroup } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 
@@ -24,6 +24,7 @@ export abstract class ISalesDbService {
         userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<Sale[]>;
+    abstract getSalesGrouped(userId: UserId): Promise<SalesGroup>;
     abstract addSale(payload: {
         userId: UserId;
         profit: Profit;
