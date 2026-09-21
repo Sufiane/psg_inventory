@@ -13,7 +13,7 @@ import { RedisModule } from '../redis/redis.module';
 @Module({
     imports: [
         UsersDbModule,
-        PassportModule,
+        PassportModule.register({}),
         RedisModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
@@ -37,6 +37,6 @@ import { RedisModule } from '../redis/redis.module';
         LocalStrategy,
         JwtStrategy,
     ],
-    exports: [IAuthService],
+    exports: [IAuthService, PassportModule],
 })
 export class AuthModule {}
