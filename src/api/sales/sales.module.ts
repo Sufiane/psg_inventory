@@ -7,6 +7,7 @@ import { SeasonPassesDbModule } from '../../db/season-passes/season-passes.db.mo
 import { RecipientsDbModule } from '../../db/recipients/recipients.db.module';
 import { RedisModule } from '../../redis/redis.module';
 import { ISalesService } from './interfaces/sales.service.interface';
+import { SalesUsecasesModule } from './usecases/sales-usecases.module';
 
 @Module({
     imports: [
@@ -15,6 +16,7 @@ import { ISalesService } from './interfaces/sales.service.interface';
         SeasonPassesDbModule,
         RecipientsDbModule,
         RedisModule,
+        SalesUsecasesModule,
     ],
     controllers: [SalesController],
     providers: [{ provide: ISalesService, useClass: SalesService }],

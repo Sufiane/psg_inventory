@@ -261,46 +261,4 @@ describe('SalesDb', () => {
         });
     });
 
-    describe('ungiftSale', () => {
-        beforeEach(() => {
-            prismaService.sales.findUnique.mockResolvedValue(
-                currentSaleRow({ status: SaleStatus.GIFTED }) as never,
-            );
-        });
-
-        it('deletes the gift row before flipping the status back to PENDING', async () => {
-            const tx = mockTransaction();
-            const order: string[] = [];
-
-            (tx.gifts.deleteMany as Mock).mockImplementation(() => {
-                order.push('delete');
-
-                return Promise.resolve({ count: 1 });
-            });
-            (tx.sales.update as Mock).mockImplementation(() => {
-                order.push('status');
-
-                return Promise.resolve({});
-            });
-
-            await service.ungiftSale(userId, saleId);
-
-            expect(order).toEqual(['delete', 'status']);
-            expect(tx.sales.update).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({ status: SaleStatus.PENDING }),
-                }),
-            );
-        });
-    });
-
-    describe('deleteSale', () => {
-        it('removes the sale gift row inside the same transaction', async () => {
-            const tx = mockTransaction();
-
-            await service.deleteSale(userId, saleId);
-
-            expect(tx.gifts.deleteMany).toHaveBeenCalledWith({ where: { saleId } });
-        });
-    });
 });

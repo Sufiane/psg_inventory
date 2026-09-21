@@ -28,6 +28,8 @@ import { AddSaleDto } from './dto/add-sale.dto';
 import { SaleAllocationDto } from './dto/sale-allocation.dto';
 import { SaleStatusTarget, UpdateSaleDto } from './dto/update-sale.dto';
 import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
+import { IUngiftSaleUsecase } from './usecases/ungift-sale/ungift-sale.usecase';
+import { IDeleteSaleUsecase } from './usecases/delete-sale/delete-sale.usecase';
 
 @Injectable()
 export class SalesService implements ISalesService {
@@ -37,6 +39,8 @@ export class SalesService implements ISalesService {
         private readonly seasonPassesDbService: ISeasonPassesDbService,
         private readonly recipientsDbService: IRecipientsDbService,
         private readonly redisService: RedisService,
+        private readonly ungiftSaleUsecase: IUngiftSaleUsecase,
+        private readonly deleteSaleUsecase: IDeleteSaleUsecase,
     ) {}
 
     async getSale(userId: UserId, saleId: SaleId): Promise<Sale> {
@@ -261,42 +265,12 @@ export class SalesService implements ISalesService {
         }
     }
 
-    // The sanctioned manual repair for a sale gifted by mistake (spec D16).
-    // Deliberately NOT exposed by SalesController: GIFTED is terminal in the
-    // app (spec D5). Its caller is scripts/ungift-sale.ts. It lives here, not
-    // in the script, so the cache invalidation stays with the rest of the
-    // write logic.
     async ungiftSale(userId: UserId, saleId: SaleId): Promise<void> {
-        const existing = await this.salesDbService.getOneSale(userId, saleId);
-
-        if (!existing) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
-        }
-
-        if (existing.status !== 'GIFTED') {
-            throw new DomainException(ErrorCode.SALE_INVALID_STATUS_TRANSITION);
-        }
-
-        await this.salesDbService.ungiftSale(userId, saleId);
-
-        await this.invalidateAfterWrite(userId, { recipientChanged: true });
+        return this.ungiftSaleUsecase.execute(userId, saleId);
     }
 
     async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {
-        const existing = await this.salesDbService.getOneSale(userId, saleId);
-
-        if (!existing) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
-        }
-
-        await this.salesDbService.deleteSale(userId, saleId);
-
-        // Deleting a GIFTED sale destroys its gift row with it (ON DELETE
-        // CASCADE plus the explicit delete in the db layer), which moves the
-        // recipient's giftCount — the combobox's sort key.
-        await this.invalidateAfterWrite(userId, {
-            recipientChanged: existing.status === 'GIFTED',
-        });
+        return this.deleteSaleUsecase.execute(userId, saleId);
     }
 
     private async validateAllocations(
