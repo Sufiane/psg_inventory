@@ -96,6 +96,11 @@ export type SaleListItem = {
     Allocations?: SaleAllocation[];
 };
 
+export type SalesGroupListItem = {
+    pending: SaleListItem[];
+    terminal: SaleListItem[];
+};
+
 export type SaleDetail = {
     id: SaleId;
     userId: UserId;
