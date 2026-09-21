@@ -13,7 +13,7 @@ import { RedisService } from '../../redis/redis.service';
 import { PrismaService } from '../prisma.service';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { saleQuery } from './sales.query';
-import { Sale } from './type/sale.type';
+import { Sale, SalesGroup } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
 import {
@@ -105,6 +105,23 @@ export class SalesDb implements ISalesDbService {
         );
 
         return result ?? [];
+    }
+
+    async getSalesGrouped(userId: UserId): Promise<SalesGroup> {
+        const sales = await this.getSales(userId);
+
+        const pending: Sale[] = [];
+        const terminal: Sale[] = [];
+
+        for (const sale of sales) {
+            if (sale.status === 'PENDING') {
+                pending.push(sale);
+            } else {
+                terminal.push(sale);
+            }
+        }
+
+        return { pending, terminal };
     }
 
     async addSale(payload: {
