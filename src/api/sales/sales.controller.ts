@@ -2,7 +2,11 @@ import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import type { SeasonYear } from '@psg/shared/time';
 import { User } from '../../shared/decorators/user.decorator';
 import { GetSaleDto } from './dto/get-sale.dto';
-import { FormattedSale, ISalesService } from './interfaces/sales.service.interface';
+import {
+    FormattedSale,
+    FormattedSalesGroup,
+    ISalesService,
+} from './interfaces/sales.service.interface';
 import type { Sale } from '../../db/sales/type/sale.type';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
@@ -30,6 +34,11 @@ export class SalesController {
             user.id,
             Number.parseInt(seasonStartYear, 10) as SeasonYear,
         );
+    }
+
+    @Get('/grouped')
+    async getSalesGrouped(@User() user: AuthenticatedUser): Promise<FormattedSalesGroup> {
+        return await this.salesService.getSalesGrouped(user.id);
     }
 
     @Get('/:saleId')
