@@ -12,6 +12,7 @@ import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
 import { GetSeasonSalesDto } from './dto/get-season-sales.dto';
+import { GetMatchSalesDto } from './dto/get-match-sales.dto';
 import { AuthenticatedUser } from '../../shared/types/authenticated-user.type';
 
 @Controller('sales')
@@ -39,6 +40,14 @@ export class SalesController {
     @Get('/grouped')
     async getSalesGrouped(@User() user: AuthenticatedUser): Promise<FormattedSalesGroup> {
         return await this.salesService.getSalesGrouped(user.id);
+    }
+
+    @Get('/match/:matchId')
+    async getMatchSales(
+        @User() user: AuthenticatedUser,
+        @Param() { matchId }: GetMatchSalesDto,
+    ): Promise<FormattedSale[]> {
+        return await this.salesService.getMatchSales(user.id, matchId);
     }
 
     @Get('/:saleId')

@@ -14,7 +14,8 @@
     } from '$lib/format';
     import { passesForMatch, passesForSale } from '$lib/sale-passes';
     import { seasonLabel, seasonLabelFromDate, seasonStartYearFromDate } from '$lib/season';
-    import type { SaleListItem, SaleStatus } from '$lib/types';
+    import { statusPill, profitTone } from '$lib/sale-helpers';
+    import type { SaleListItem } from '$lib/types';
     import type { SeasonYear } from '@psg/shared/time';
     import Spinner from '$lib/ui/Spinner.svelte';
     import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
@@ -143,43 +144,6 @@
         }
 
         return sortDir === 'asc' ? '↑' : '↓';
-    }
-
-    function statusPill(status: SaleStatus): string {
-        switch (status) {
-            case 'SOLD':
-                return 'bg-positive/15 text-positive-strong';
-            case 'PENDING':
-                return 'bg-warning/15 text-warning-strong';
-            case 'CANCELLED':
-                return 'bg-sunk/15 text-sunk-strong';
-            case 'GIFTED':
-                return 'bg-gift/15 text-gift-strong';
-        }
-    }
-
-    function profitTone(status: SaleStatus, profit: number): string {
-        if (status === 'CANCELLED') {
-            return 'text-sunk';
-        }
-
-        if (status === 'GIFTED') {
-            return 'text-gift';
-        }
-
-        if (status === 'PENDING') {
-            return 'text-warning';
-        }
-
-        if (profit < 0) {
-            return 'text-negative';
-        }
-
-        if (profit > 0) {
-            return 'text-positive';
-        }
-
-        return 'text-ink';
     }
 
     function onMobileSortChange(event: Event): void {

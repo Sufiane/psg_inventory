@@ -2,7 +2,7 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { dateTime, signedMoney } from '$lib/format';
-    import type { SaleStatus } from '$lib/types';
+    import { profitTone } from '$lib/sale-helpers';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -10,30 +10,6 @@
     let matchDate = $derived(new Date(sale.Match.date));
     let isPastMatch = $derived(matchDate.getTime() < Date.now());
     let submitting = $state<'update' | 'delete' | null>(null);
-
-    function profitTone(status: SaleStatus, profit: number): string {
-        if (status === 'CANCELLED') {
-            return 'text-sunk';
-        }
-
-        if (status === 'GIFTED') {
-            return 'text-gift';
-        }
-
-        if (status === 'PENDING') {
-            return 'text-warning';
-        }
-
-        if (profit < 0) {
-            return 'text-negative';
-        }
-
-        if (profit > 0) {
-            return 'text-positive';
-        }
-
-        return 'text-ink';
-    }
 
     function confirmIfPast(event: Event, action: 'save' | 'delete'): void {
         if (!isPastMatch) {

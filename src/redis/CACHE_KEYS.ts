@@ -33,6 +33,8 @@ export default {
     sale: (saleId: string): CacheKey<Sale> => `sale:id:${saleId}` as CacheKey<Sale>,
     sales: (userId: string): CacheKey<Sale[]> =>
         `user:id:${userId}:sales` as CacheKey<Sale[]>,
+    salesByMatch: (userId: string, matchId: string): CacheKey<Sale[]> =>
+        `user:id:${userId}:sales:match:${matchId}` as CacheKey<Sale[]>,
     salesByRange: (userId: string, from: Date, to: Date): CacheKey<Sale[]> =>
         `user:id:${userId}:sales:start:${from.toISOString()}:end:${to.toISOString()}` as CacheKey<
             Sale[]
