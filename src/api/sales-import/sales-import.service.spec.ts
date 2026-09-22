@@ -15,6 +15,9 @@ import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids'
 import type { Match } from '../../db/matches/types/match.type';
 import type { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { SalesImportService } from './sales-import.service';
+import { ICommitSalesImportUsecase } from './usecases/commit-sales-import/commit-sales-import.usecase';
+import { ImportCacheInvalidator } from './shared/import-cache.invalidator';
+import { ImportPassesValidator } from './shared/import-passes.validator';
 import { CommitRequestDto } from './dto/commit-request.dto';
 
 describe('SalesImportService', () => {
@@ -23,6 +26,7 @@ describe('SalesImportService', () => {
     let passesDb: DeepMockProxy<SeasonPassesDb>;
     let importDb: DeepMockProxy<SalesImportDb>;
     let redisService: DeepMockProxy<RedisService>;
+    let commitUsecase: DeepMockProxy<ICommitSalesImportUsecase>;
 
     const userId = 'user-1' as UserId;
     const passAId = '11111111-1111-1111-1111-111111111111';
@@ -62,10 +66,14 @@ describe('SalesImportService', () => {
         passesDb = mockDeep<SeasonPassesDb>();
         importDb = mockDeep<SalesImportDb>();
         redisService = mockDeep<RedisService>();
+        commitUsecase = mockDeep<ICommitSalesImportUsecase>();
 
         const moduleRef = await Test.createTestingModule({
             providers: [
                 SalesImportService,
+                ImportPassesValidator,
+                ImportCacheInvalidator,
+                { provide: ICommitSalesImportUsecase, useValue: commitUsecase },
                 { provide: IMatchesDbService, useValue: matchesDb },
                 { provide: ISeasonPassesDbService, useValue: passesDb },
                 { provide: ISalesImportDbService, useValue: importDb },
@@ -134,287 +142,20 @@ describe('SalesImportService', () => {
     });
 
     describe('commit', () => {
-        const validDto: CommitRequestDto = {
-            selectedPassIds: [passAId],
-            rows: [
-                {
-                    rowIndex: 0,
-                    date: '2025-09-14',
-                    opponent: 'Marseille',
-                    listedPrice: 120,
-                    nbTickets: 1,
-                    invest: 80,
-                    status: 'SOLD',
-                    matchId,
-                    allocations: [{ seasonPassId: passAId, nbTickets: 1 }],
-                    rowStatus: 'ok',
-                },
-            ],
-        };
-
-        it('creates sales with a fresh batchId', async () => {
-            passesDb.findById.mockResolvedValue(passFixture({}));
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-            importDb.bulkCreate.mockResolvedValue(1);
-
-            const result = await service.commit(userId, validDto);
-
-            expect(result.salesCreated).toBe(1);
-            expect(result.batchId).toEqual(expect.any(String));
-            expect(importDb.bulkCreate).toHaveBeenCalledTimes(1);
-        });
-
-        describe('when sales are created', () => {
-            it('invalidates the accounting and recipients caches', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-
-                await service.commit(userId, validDto);
-
-                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateAccounting(userId),
-                );
-                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateRecipients(userId),
-                );
-            });
-        });
-
-        describe('when no sales are created', () => {
-            it('does not invalidate any cache', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(0);
-
-                await service.commit(userId, validDto);
-
-                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            });
-        });
-
-        it('passes a provided soldAt through to bulkCreate for SOLD rows', async () => {
-            passesDb.findById.mockResolvedValue(passFixture({}));
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-            importDb.bulkCreate.mockResolvedValue(1);
-
-            const withSoldAt: CommitRequestDto = {
-                ...validDto,
-                rows: [{ ...validDto.rows[0]!, soldAt: '2025-09-10' }],
+        it('delegates to the commit usecase', async () => {
+            const dto: CommitRequestDto = {
+                selectedPassIds: [passAId],
+                rows: [],
             };
-
-            await service.commit(userId, withSoldAt);
-
-            expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    sales: [
-                        expect.objectContaining({
-                            soldAt: new Date('2025-09-10T12:00:00.000Z'),
-                        }),
-                    ],
-                }),
-            );
-        });
-
-        describe('when the row is not SOLD', () => {
-            it('nulls soldAt, even if provided', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-
-                const pending: CommitRequestDto = {
-                    ...validDto,
-                    rows: [
-                        { ...validDto.rows[0]!, status: 'PENDING', soldAt: '2025-09-10' },
-                    ],
-                };
-
-                await service.commit(userId, pending);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [expect.objectContaining({ soldAt: null })],
-                    }),
-                );
+            commitUsecase.execute.mockResolvedValue({
+                batchId: 'batch-1',
+                salesCreated: 2,
             });
 
-            it('sends no gift payload', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
+            const result = await service.commit(userId, dto);
 
-                const pending: CommitRequestDto = {
-                    ...validDto,
-                    rows: [
-                        { ...validDto.rows[0]!, status: 'PENDING', soldAt: '2025-09-10' },
-                    ],
-                };
-
-                await service.commit(userId, pending);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [expect.objectContaining({ gift: null })],
-                    }),
-                );
-            });
-        });
-
-        describe('when the row is GIFTED', () => {
-            it('sets gift.giftedAt to the provided date at noon UTC and gift.recipientName to the row recipient', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-
-                const gifted: CommitRequestDto = {
-                    ...validDto,
-                    rows: [
-                        {
-                            ...validDto.rows[0]!,
-                            status: 'GIFTED',
-                            soldAt: '2025-09-10',
-                            recipient: 'Marc',
-                        },
-                    ],
-                };
-
-                await service.commit(userId, gifted);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [
-                            expect.objectContaining({
-                                gift: {
-                                    recipientName: 'Marc',
-                                    giftedAt: new Date('2025-09-10T12:00:00.000Z'),
-                                },
-                                soldAt: null,
-                            }),
-                        ],
-                    }),
-                );
-            });
-
-            it('falls back to the match date when no date was provided', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-
-                const gifted: CommitRequestDto = {
-                    ...validDto,
-                    rows: [{ ...validDto.rows[0]!, status: 'GIFTED', recipient: 'Marc' }],
-                };
-
-                await service.commit(userId, gifted);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [
-                            expect.objectContaining({
-                                gift: expect.objectContaining({
-                                    giftedAt: matchFixture().date,
-                                }),
-                            }),
-                        ],
-                    }),
-                );
-            });
-
-            it('normalizes ragged whitespace in the recipient name', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-
-                const gifted: CommitRequestDto = {
-                    ...validDto,
-                    rows: [
-                        {
-                            ...validDto.rows[0]!,
-                            status: 'GIFTED',
-                            recipient: '  Marc   Dupont ',
-                        },
-                    ],
-                };
-
-                await service.commit(userId, gifted);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [
-                            expect.objectContaining({
-                                gift: expect.objectContaining({
-                                    recipientName: 'Marc Dupont',
-                                }),
-                            }),
-                        ],
-                    }),
-                );
-            });
-        });
-
-        describe('when a row has an error', () => {
-            it('throws IMPORT_ROWS_INVALID', async () => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-
-                const bad: CommitRequestDto = {
-                    ...validDto,
-                    rows: [{ ...validDto.rows[0]!, allocations: [] }],
-                };
-
-                await expect(service.commit(userId, bad)).rejects.toMatchObject({
-                    code: ErrorCode.IMPORT_ROWS_INVALID,
-                });
-            });
-        });
-
-        it('re-resolves matchId server-side and rejects a tampered row', async () => {
-            passesDb.findById.mockResolvedValue(passFixture({}));
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-
-            const tampered: CommitRequestDto = {
-                ...validDto,
-                rows: [{ ...validDto.rows[0]!, date: '2025-12-25' }],
-            };
-
-            await expect(service.commit(userId, tampered)).rejects.toMatchObject({
-                code: ErrorCode.IMPORT_ROWS_INVALID,
-            });
-        });
-
-        describe('when a row resolves by date but carries a foreign client-supplied matchId', () => {
-            const foreignMatchId = '44444444-4444-4444-4444-444444444444';
-
-            beforeEach(() => {
-                passesDb.findById.mockResolvedValue(passFixture({}));
-                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
-                importDb.bulkCreate.mockResolvedValue(1);
-            });
-
-            it('commits using the server-resolved matchId, not the client-supplied one', async () => {
-                const tampered: CommitRequestDto = {
-                    ...validDto,
-                    rows: [
-                        {
-                            ...validDto.rows[0]!,
-                            matchId: foreignMatchId,
-                        },
-                    ],
-                };
-
-                await service.commit(userId, tampered);
-
-                expect(importDb.bulkCreate).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [expect.objectContaining({ matchId })],
-                    }),
-                );
-                expect(importDb.bulkCreate).not.toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        sales: [expect.objectContaining({ matchId: foreignMatchId })],
-                    }),
-                );
-            });
+            expect(commitUsecase.execute).toHaveBeenCalledWith(userId, dto);
+            expect(result).toEqual({ batchId: 'batch-1', salesCreated: 2 });
         });
     });
 
