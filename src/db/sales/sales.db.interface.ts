@@ -37,58 +37,6 @@ export abstract class ISalesDbService {
         allocations: SaleAllocationInput[];
     }): Promise<{ id: SaleId }>;
 
-    // Ordinary field and status edits. `status` deliberately cannot express
-    // GIFTED: entering, changing and leaving that state is the exclusive
-    // business of giftSale / updateGift / ungiftSale, each of which writes the
-    // status and the gift row in one transaction (spec D15, layer 2). Widening
-    // this back to `SaleStatus` reopens the exact hole this redesign closed.
-    abstract updateSale(payload: {
-        saleId: SaleId;
-        userId: UserId;
-        profit: Profit | undefined;
-        invest?: Invest;
-        listedPrice?: ListedPrice;
-        status?: 'PENDING' | 'SOLD';
-        allocations?: SaleAllocationInput[];
-    }): Promise<void>;
-
-    // PENDING -> GIFTED. Sets the status and inserts the gift row in one
-    // transaction, in that order — the composite foreign key rejects the
-    // reverse order outright.
-    abstract giftSale(payload: {
-        saleId: SaleId;
-        userId: UserId;
-        profit: Profit | undefined;
-        invest?: Invest;
-        listedPrice?: ListedPrice;
-        recipient: GiftRecipientInput;
-        allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }>;
-
-    // GIFTED -> GIFTED. Attaches, corrects or reuses the recipient on an
-    // existing gift row. Writes no status at all. `recipient` omitted is the
-    // deliberate no-op of spec D9.
-    //
-    // Assumes the gift row exists, which is true for every sale this method
-    // can reach through the app (only giftSale creates a GIFTED sale, and it
-    // always writes the gift row in the same transaction — see the Gifts
-    // model comment in schema.prisma). That assumption is not database-
-    // enforced in this direction by design (spec D15's rejected trigger
-    // alternative); a row bypassing the app write paths could in principle
-    // violate it, in which case the no-recipient read uses `findUniqueOrThrow`
-    // and the recipient-supplied write uses `gifts.update` — a bypassed-write-
-    // path row raises Prisma's P2025 from *both* branches rather than
-    // silently returning `null` from one.
-    abstract updateGift(payload: {
-        saleId: SaleId;
-        userId: UserId;
-        profit: Profit | undefined;
-        invest?: Invest;
-        listedPrice?: ListedPrice;
-        recipient?: GiftRecipientInput;
-        allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }>;
-
     abstract getOneByWithFullMatch(query: {
         profit?: Profit;
         listedPrice?: ListedPrice;
