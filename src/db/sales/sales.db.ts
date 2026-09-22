@@ -118,6 +118,26 @@ export class SalesDb implements ISalesDbService {
         return { pending, terminal };
     }
 
+    async getSalesByMatch(userId: UserId, matchId: MatchId): Promise<Sale[]> {
+        const result = await this.redisService.get(
+            CACHE_KEYS.salesByMatch(userId, matchId),
+            ONE_HOUR_TTL,
+            () =>
+                this.prisma.sales.findMany({
+                    ...saleQuery,
+                    where: {
+                        userId,
+                        matchId,
+                    },
+                    orderBy: {
+                        createdAt: 'asc',
+                    },
+                }) as Promise<Sale[]>,
+        );
+
+        return (result ?? []) as Sale[];
+    }
+
     async addSale(payload: {
         userId: UserId;
         profit: Profit;

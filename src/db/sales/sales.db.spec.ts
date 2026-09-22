@@ -3,11 +3,12 @@ import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { Mock } from 'vitest';
 import { SaleStatus } from '@prisma/client';
 
-import type { SaleId, UserId } from '@psg/shared/ids';
+import type { MatchId, SaleId, UserId } from '@psg/shared/ids';
 import { SalesDb } from './sales.db';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import type { Sale } from './type/sale.type';
+import CACHE_KEYS from '../../redis/CACHE_KEYS';
 
 describe('SalesDb', () => {
     const userId = 'user-1' as UserId;
@@ -130,6 +131,41 @@ describe('SalesDb', () => {
 
             expect(result.pending).toHaveLength(0);
             expect(result.terminal).toHaveLength(0);
+        });
+    });
+
+    describe('getSalesByMatch', () => {
+        const matchId = 'match-1' as MatchId;
+
+        it('fetches through redisService.get with the salesByMatch cache key', async () => {
+            const redisService = service['redisService'] as DeepMockProxy<RedisService>;
+            const fakeSales = [{ id: 's1' }] as never;
+            (redisService.get as Mock).mockResolvedValue(fakeSales);
+
+            const result = await service.getSalesByMatch(userId, matchId);
+
+            expect(redisService.get).toHaveBeenCalledWith(
+                CACHE_KEYS.salesByMatch(userId, matchId),
+                expect.any(Number),
+                expect.any(Function),
+            );
+            expect(result).toBe(fakeSales);
+        });
+
+        it('orders by createdAt asc', async () => {
+            const redisService = service['redisService'] as DeepMockProxy<RedisService>;
+            (redisService.get as Mock).mockImplementation(
+                (_key: unknown, _ttl: unknown, loader: () => Promise<unknown>) =>
+                    loader(),
+            );
+
+            await service.getSalesByMatch(userId, matchId);
+
+            expect(prismaService.sales.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    orderBy: { createdAt: 'asc' },
+                }),
+            );
         });
     });
 });

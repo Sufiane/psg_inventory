@@ -1,4 +1,4 @@
-import type { OpponentId, SaleId, UserId } from '@psg/shared/ids';
+import type { MatchId, OpponentId, SaleId, UserId } from '@psg/shared/ids';
 import type { ListedPrice, Profit } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 import { Sale } from '../../../db/sales/type/sale.type';
@@ -26,6 +26,7 @@ export abstract class ISalesService {
         userId: UserId,
         seasonStartYear: SeasonYear,
     ): Promise<FormattedSale[]>;
+    abstract getMatchSales(userId: UserId, matchId: MatchId): Promise<FormattedSale[]>;
     abstract addSale(userId: UserId, payload: AddSaleDto): Promise<{ id: SaleId }>;
     abstract updateSale(userId: UserId, payload: UpdateSaleDto): Promise<void>;
     abstract getProfit(price: ListedPrice): Profit;

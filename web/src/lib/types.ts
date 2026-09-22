@@ -1,5 +1,12 @@
 import type { SaleCount, SoldCount, TicketCount } from '@psg/shared/counts';
-import type { MatchId, OpponentId, SaleId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type {
+    MatchId,
+    OpponentId,
+    SaleId,
+    SalePassAllocationId,
+    SeasonPassId,
+    UserId,
+} from '@psg/shared/ids';
 import type {
     AvgProfit,
     AvgTicketPrice,
@@ -78,6 +85,35 @@ export type SaleAllocation = {
     id?: SeasonPassId;
     seasonPassId: SeasonPassId;
     nbTickets: TicketCount;
+};
+
+/**
+ * Sale row returned by `GET /sales/match/:matchId`.  Mirrors the backend
+ * `FormattedSale` shape — dates are ISO strings after JSON deserialization,
+ * so the timestamp fields stay plain `string` (same convention as
+ * `SaleListItem`/`SaleDetail`; `IsoDateString` is only used for
+ * user-entered import dates).  Value fields carry the same branded types as
+ * `SaleListItem` — brands are type-level only, so the JSON boundary in
+ * `api()` is unaffected.
+ */
+export type MatchSale = {
+    id: SaleId;
+    listedPrice: ListedPrice;
+    profit: Profit;
+    invest: Invest;
+    nbTickets: TicketCount;
+    status: SaleStatus;
+    soldAt: string | null;
+    cancelledAt: string | null;
+    createdAt: string;
+    opponent: { id: OpponentId; name: OpponentName };
+    matchDate: string;
+    Gift: SaleGift | null;
+    Allocations?: {
+        id: SalePassAllocationId;
+        seasonPassId: SeasonPassId;
+        nbTickets: TicketCount;
+    }[];
 };
 
 export type SaleListItem = {

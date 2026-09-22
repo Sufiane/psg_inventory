@@ -37,6 +37,8 @@ export abstract class ISalesDbService {
         allocations: SaleAllocationInput[];
     }): Promise<{ id: SaleId }>;
 
+    abstract getSalesByMatch(userId: UserId, matchId: MatchId): Promise<Sale[]>;
+
     abstract getOneByWithFullMatch(query: {
         profit?: Profit;
         listedPrice?: ListedPrice;
