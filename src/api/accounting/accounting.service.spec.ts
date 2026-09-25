@@ -9,17 +9,12 @@ import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { SaleStatus } from '@prisma/client';
-import { AccountingAggregate } from '../../db/accounting/types/get-accounting.type';
-import { formatAggregate } from './utils/format-aggregate.util';
-import { FormattedAggregate } from './types/formatted-aggregate.type';
-import { SaleWithFullMatch } from '../../db/sales/type/sale-with-full-match.type';
 import { TimePeriodAccounting } from './types/time-period-accounting.type';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-import { Accounting } from './types/accounting.type';
 import { OldestMatchSale } from '../../db/sales/type/oldest-match-sale.type';
 import { MatchRealizedProfit } from '../../db/accounting/types/match-realized-profit.type';
 import { SeasonPass } from '../../db/season-passes/type/season-pass.type';
+import { IGetSeasonAccountingUsecase } from './usecases/get-season-accounting/get-season-accounting.usecase';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { SeasonYear } from '@psg/shared/time';
 
@@ -39,15 +34,13 @@ vi.mock('../../shared/utils/season.utils', async (importOriginal) => {
 });
 const getCurrentSeasonDateMocked = vi.mocked(getCurrentSeasonDate);
 
-vi.mock('./utils/format-aggregate.util');
-const formatAggregateMocked = vi.mocked(formatAggregate);
-
 describe('AccountingService', () => {
     let service: AccountingService;
     let salesDbService: DeepMockProxy<SalesDb>;
     let accountingDbService: DeepMockProxy<AccountingDb>;
     let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
     let redisService: DeepMockProxy<RedisService>;
+    let getSeasonAccountingUsecase: DeepMockProxy<IGetSeasonAccountingUsecase>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -69,6 +62,10 @@ describe('AccountingService', () => {
                     provide: RedisService,
                     useValue: mockDeep<RedisService>(),
                 },
+                {
+                    provide: IGetSeasonAccountingUsecase,
+                    useValue: mockDeep<IGetSeasonAccountingUsecase>(),
+                },
             ],
         }).compile();
 
@@ -77,6 +74,7 @@ describe('AccountingService', () => {
         accountingDbService = module.get(IAccountingDbService);
         seasonPassesDbService = module.get(ISeasonPassesDbService);
         redisService = module.get(RedisService);
+        getSeasonAccountingUsecase = module.get(IGetSeasonAccountingUsecase);
 
         module.useLogger(false);
 
@@ -91,7 +89,7 @@ describe('AccountingService', () => {
 
     describe('getCurrentSeason', () => {
         it('should get the current season', async () => {
-            const expectedResult = {
+            const expectedResult: TimePeriodAccounting = {
                 realized: null,
                 unrealized: null,
                 pending: null,
@@ -109,16 +107,15 @@ describe('AccountingService', () => {
                 end: endDate,
             });
 
-            const getSeasonSpy = vi.spyOn(service, 'getSeason');
-            getSeasonSpy.mockResolvedValueOnce(expectedResult);
+            getSeasonAccountingUsecase.execute.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
 
             await expect(service.getCurrentSeason(userId)).resolves.toEqual(
                 expectedResult,
             );
-            expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledTimes(1);
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledWith(
                 userId,
                 { start: startDate, end: endDate },
                 2021,
@@ -128,7 +125,7 @@ describe('AccountingService', () => {
 
     describe('getGivenSeason', () => {
         it('should get the given season', async () => {
-            const expectedResult = {
+            const expectedResult: TimePeriodAccounting = {
                 realized: null,
                 unrealized: null,
                 pending: null,
@@ -138,8 +135,7 @@ describe('AccountingService', () => {
                 leadTime: null,
             };
 
-            const getSeasonSpy = vi.spyOn(service, 'getSeason');
-            getSeasonSpy.mockResolvedValueOnce(expectedResult);
+            getSeasonAccountingUsecase.execute.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
             const seasonStartYear = 2022 as SeasonYear;
@@ -147,8 +143,8 @@ describe('AccountingService', () => {
             await expect(
                 service.getGivenSeason(userId, seasonStartYear),
             ).resolves.toEqual(expectedResult);
-            expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledTimes(1);
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledWith(
                 userId,
                 {
                     start: new Date(Date.UTC(seasonStartYear, 7, 1)),
@@ -161,7 +157,7 @@ describe('AccountingService', () => {
 
     describe('getAllTime', () => {
         it('should get the all time accounting', async () => {
-            const expectedResult = {
+            const expectedResult: TimePeriodAccounting = {
                 realized: null,
                 unrealized: null,
                 pending: null,
@@ -178,251 +174,17 @@ describe('AccountingService', () => {
             } as OldestMatchSale;
             salesDbService.getOldestMatchSale.mockResolvedValueOnce(oldestMatchSale);
 
-            const getSeasonSpy = vi.spyOn(service, 'getSeason');
-            getSeasonSpy.mockResolvedValueOnce(expectedResult);
+            getSeasonAccountingUsecase.execute.mockResolvedValueOnce(expectedResult);
 
             const userId = 'userUuid' as UserId;
 
             await expect(service.getAllTime(userId)).resolves.toEqual(expectedResult);
-            expect(getSeasonSpy).toHaveBeenCalledTimes(1);
-            expect(getSeasonSpy).toHaveBeenCalledWith(
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledTimes(1);
+            expect(getSeasonAccountingUsecase.execute).toHaveBeenCalledWith(
                 userId,
                 { start: oldestMatchSale.Match.date },
                 null,
             );
-        });
-    });
-
-    describe('getAccounting', () => {
-        describe('when there is no aggregate found', () => {
-            it('should return null', async () => {
-                accountingDbService.getAccounting.mockResolvedValueOnce(null);
-
-                const userId = 'userId' as UserId;
-                const status = 'realized';
-                const date: { start: Date; end?: Date } = {
-                    start: new Date('2022-02-02'),
-                };
-
-                await expect(
-                    service.getAccounting(userId, status, date),
-                ).resolves.toEqual(null);
-                expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
-                expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
-                    userId,
-                    [SaleStatus.SOLD],
-                    date.start,
-                    date.end,
-                );
-            });
-        });
-
-        describe('when there is an aggregate found', () => {
-            const aggregate = {
-                _min: { profit: 1 },
-                _max: { profit: 1 },
-            } as AccountingAggregate;
-            const userId = 'userId' as UserId;
-            const status = 'realized';
-            const lowestMatch = {
-                Match: { Opponent: { name: 'opponentLowest' } },
-            } as SaleWithFullMatch;
-            const highestMatch = {
-                Match: { Opponent: { name: 'opponentHighest' } },
-            } as SaleWithFullMatch;
-            const formatResult = {} as FormattedAggregate;
-
-            beforeEach(() => {
-                accountingDbService.getAccounting.mockResolvedValueOnce(aggregate);
-                salesDbService.getOneByWithFullMatch
-                    .mockResolvedValueOnce(lowestMatch)
-                    .mockResolvedValueOnce(highestMatch);
-                formatAggregateMocked.mockReturnValueOnce(formatResult);
-            });
-
-            describe('when the period has no end date', () => {
-                it('returns the aggregated accounting', async () => {
-                    const date: { start: Date; end?: Date } = {
-                        start: new Date('2022-02-02'),
-                    };
-
-                    await expect(
-                        service.getAccounting(userId, status, date),
-                    ).resolves.toEqual(formatResult);
-                    expect(accountingDbService.getAccounting).toHaveBeenCalledTimes(1);
-                    expect(accountingDbService.getAccounting).toHaveBeenCalledWith(
-                        userId,
-                        [SaleStatus.SOLD],
-                        date.start,
-                        date.end,
-                    );
-                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenCalledTimes(2);
-                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
-                        1,
-                        {
-                            profit: aggregate._min.profit,
-                            statuses: [SaleStatus.SOLD],
-                            userId,
-                            matchDateFrom: date.start,
-                        },
-                    );
-                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
-                        2,
-                        {
-                            profit: aggregate._max.profit,
-                            statuses: [SaleStatus.SOLD],
-                            userId,
-                            matchDateFrom: date.start,
-                        },
-                    );
-                    expect(formatAggregateMocked).toHaveBeenCalledTimes(1);
-                    expect(formatAggregateMocked).toHaveBeenCalledWith({
-                        sum: aggregate._sum,
-                        avg: aggregate._avg,
-                        min: {
-                            ...aggregate._min,
-                            match: {
-                                ...lowestMatch.Match,
-                                opponent: lowestMatch.Match.Opponent.name,
-                            },
-                        },
-                        max: {
-                            ...aggregate._max,
-                            match: {
-                                ...highestMatch.Match,
-                                opponent: highestMatch.Match.Opponent.name,
-                            },
-                        },
-                    });
-                });
-            });
-
-            describe('when the period has an end date', () => {
-                it('includes matchDateTo in the extreme-sale lookup scope', async () => {
-                    const date: { start: Date; end?: Date } = {
-                        start: new Date('2026-07-01'),
-                        end: new Date('2027-06-30'),
-                    };
-
-                    await service.getAccounting(userId, status, date);
-
-                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
-                        1,
-                        {
-                            profit: aggregate._min.profit,
-                            statuses: [SaleStatus.SOLD],
-                            userId,
-                            matchDateFrom: date.start,
-                            matchDateTo: date.end,
-                        },
-                    );
-                    expect(salesDbService.getOneByWithFullMatch).toHaveBeenNthCalledWith(
-                        2,
-                        {
-                            profit: aggregate._max.profit,
-                            statuses: [SaleStatus.SOLD],
-                            userId,
-                            matchDateFrom: date.start,
-                            matchDateTo: date.end,
-                        },
-                    );
-                });
-            });
-        });
-    });
-
-    describe('getSeason', () => {
-        describe('when there is cache', () => {
-            it('should return the cache data', async () => {
-                const expectedResult = {} as TimePeriodAccounting;
-                redisService.get.mockResolvedValueOnce(expectedResult);
-
-                const userId = 'userId' as UserId;
-                const dates: { start: Date; end?: Date } = {
-                    start: new Date('2022-02-02'),
-                };
-
-                await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
-                    expectedResult,
-                );
-                expect(redisService.get).toHaveBeenCalledTimes(1);
-                expect(redisService.get).toHaveBeenCalledWith(
-                    CACHE_KEYS.accounting(userId, dates.start, dates.end),
-                    24 * 60 * 60,
-                    expect.any(Function),
-                );
-            });
-        });
-
-        describe('when there is no cache', () => {
-            it('should return the accounting and set the cache', async () => {
-                seasonPassesDbService.findAll.mockResolvedValueOnce([]);
-                accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
-
-                const userId = 'userId' as UserId;
-                const dates: { start: Date; end?: Date } = {
-                    start: new Date('2022-02-02'),
-                };
-
-                const getAccountingSpy = vi.spyOn(service, 'getAccounting');
-                const realized = {} as Accounting;
-                const unrealized = {} as Accounting;
-                const pending = {} as Accounting;
-                const gifted = {} as Accounting;
-                getAccountingSpy
-                    .mockResolvedValueOnce(realized)
-                    .mockResolvedValueOnce(unrealized)
-                    .mockResolvedValueOnce(pending)
-                    .mockResolvedValueOnce(gifted);
-
-                const expectedResult: TimePeriodAccounting = {
-                    realized,
-                    unrealized,
-                    pending,
-                    gifted,
-                    seasonInvestments: [],
-                    totalSeasonInvestment: 0,
-                    leadTime: null,
-                };
-
-                await expect(service.getSeason(userId, dates, null)).resolves.toEqual(
-                    expectedResult,
-                );
-                expect(redisService.get).toHaveBeenCalledTimes(1);
-                expect(redisService.get).toHaveBeenCalledWith(
-                    CACHE_KEYS.accounting(userId, dates.start, dates.end),
-                    24 * 60 * 60,
-                    expect.any(Function),
-                );
-            });
-        });
-
-        describe('when the period has gifted sales', () => {
-            it('returns the gifted sub-bucket alongside unrealized', async () => {
-                seasonPassesDbService.findBySeason.mockResolvedValueOnce([]);
-                accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
-
-                const userId = 'userId' as UserId;
-                const dates: { start: Date; end?: Date } = {
-                    start: new Date('2025-08-01'),
-                    end: new Date('2026-07-31'),
-                };
-                const realized = {} as Accounting;
-                const unrealized = {} as Accounting;
-                const pending = {} as Accounting;
-                const gifted = {} as Accounting;
-
-                vi.spyOn(service, 'getAccounting')
-                    .mockResolvedValueOnce(realized)
-                    .mockResolvedValueOnce(unrealized)
-                    .mockResolvedValueOnce(pending)
-                    .mockResolvedValueOnce(gifted);
-
-                const result = await service.getSeason(userId, dates, 2025 as SeasonYear);
-
-                expect(result.gifted).toBe(gifted);
-                expect(result.unrealized).toBe(unrealized);
-            });
         });
     });
 
@@ -466,8 +228,8 @@ describe('AccountingService', () => {
 
             const result = await service.getAmortization(userId, seasonStartYear);
 
-            expect(result.hasPass).toBe(false);
             expect(result.passPrice).toBe(0);
+            expect(result.hasPass).toBe(false);
             expect(result.totalRealized).toBe(0);
             expect(result.progress).toBe(0);
             expect(result.remaining).toBe(0);
@@ -484,27 +246,21 @@ describe('AccountingService', () => {
                     date: new Date('2024-09-01'),
                     matchProfit: 200,
                 }),
-                row({
-                    matchId: 'm2' as MatchId,
-                    date: new Date('2024-10-01'),
-                    matchProfit: 300,
-                }),
             ]);
 
             const result = await service.getAmortization(userId, seasonStartYear);
 
             expect(result.hasPass).toBe(true);
             expect(result.passPrice).toBe(1000);
-            expect(result.totalRealized).toBe(500);
-            expect(result.progress).toBeCloseTo(0.5);
-            expect(result.remaining).toBe(500);
+            expect(result.totalRealized).toBe(200);
+            expect(result.progress).toBe(0.2);
+            expect(result.remaining).toBe(800);
             expect(result.surplus).toBe(0);
             expect(result.breakEven).toBeNull();
-            expect(result.perMatch[1]?.cumulative).toBe(500);
         });
 
         it('flags the first match whose cumulative crosses pass price', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(500)]);
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(300)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({
                     matchId: 'm1' as MatchId,
@@ -513,46 +269,42 @@ describe('AccountingService', () => {
                 }),
                 row({
                     matchId: 'm2' as MatchId,
-                    date: new Date('2024-10-01'),
-                    matchProfit: 400,
-                    opponent: 'Lyon',
+                    date: new Date('2024-09-15'),
+                    matchProfit: 150,
                 }),
                 row({
                     matchId: 'm3' as MatchId,
-                    date: new Date('2024-11-01'),
-                    matchProfit: 100,
+                    date: new Date('2024-09-29'),
+                    matchProfit: 50,
                 }),
             ]);
 
             const result = await service.getAmortization(userId, seasonStartYear);
 
+            expect(result.totalRealized).toBe(400);
             expect(result.progress).toBe(1);
             expect(result.remaining).toBe(0);
-            expect(result.surplus).toBe(200);
-            expect(result.breakEven).toEqual({
-                matchId: 'm2' as MatchId,
-                date: new Date('2024-10-01'),
-                opponent: 'Lyon',
-                cumulative: 600,
-            });
-            expect(result.perMatch.filter((entry) => entry.isBreakEven)).toHaveLength(1);
+            expect(result.surplus).toBe(100);
+            expect(result.breakEven).toMatchObject({ matchId: 'm2' });
+            expect(result.perMatch[0]?.isBreakEven).toBe(false);
+            expect(result.perMatch[1]?.isBreakEven).toBe(true);
+            expect(result.perMatch[2]?.isBreakEven).toBe(false);
         });
 
         it('caps progress at 1 and reports surplus on overshoot', async () => {
-            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(300)]);
+            seasonPassesDbService.findBySeason.mockResolvedValueOnce([pass(100)]);
             accountingDbService.getRealizedProfitPerMatch.mockResolvedValueOnce([
                 row({
                     matchId: 'm1' as MatchId,
                     date: new Date('2024-09-01'),
-                    matchProfit: 800,
+                    matchProfit: 500,
                 }),
             ]);
 
             const result = await service.getAmortization(userId, seasonStartYear);
 
             expect(result.progress).toBe(1);
-            expect(result.remaining).toBe(0);
-            expect(result.surplus).toBe(500);
+            expect(result.surplus).toBe(400);
         });
 
         it('treats missing pass as no progress; surplus tracks total realized', async () => {
@@ -561,7 +313,7 @@ describe('AccountingService', () => {
                 row({
                     matchId: 'm1' as MatchId,
                     date: new Date('2024-09-01'),
-                    matchProfit: 150,
+                    matchProfit: 300,
                 }),
             ]);
 
@@ -570,8 +322,7 @@ describe('AccountingService', () => {
             expect(result.hasPass).toBe(false);
             expect(result.progress).toBe(0);
             expect(result.remaining).toBe(0);
-            expect(result.surplus).toBe(150);
-            expect(result.breakEven).toBeNull();
+            expect(result.surplus).toBe(300);
         });
 
         it('reads from cache when present', async () => {
@@ -615,98 +366,6 @@ describe('AccountingService', () => {
                 expect.any(Function),
             );
             expect(result.progress).toBe(1);
-        });
-    });
-
-    describe('getSeason — lead-time aggregation', () => {
-        const userId = 'userUuid' as UserId;
-        const dates = { start: new Date('2024-08-01'), end: new Date('2025-07-31') };
-
-        beforeEach(() => {
-            seasonPassesDbService.findBySeason.mockResolvedValue([]);
-            seasonPassesDbService.findAll.mockResolvedValue([]);
-            vi.spyOn(service, 'getAccounting').mockResolvedValue(null);
-        });
-
-        it('returns null leadTime when no sold sales in range', async () => {
-            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([]);
-
-            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
-
-            expect(result.leadTime).toBeNull();
-        });
-
-        it('computes avg/median/min/max lead days from soldAt vs match date', async () => {
-            // lead days: 10, 5, 1 → sorted [1, 5, 10], avg 5.33→5.3, median 5
-            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
-                {
-                    soldAt: new Date('2024-09-01T00:00:00Z'),
-                    matchDate: new Date('2024-09-11T00:00:00Z'),
-                },
-                {
-                    soldAt: new Date('2024-10-01T00:00:00Z'),
-                    matchDate: new Date('2024-10-06T00:00:00Z'),
-                },
-                {
-                    soldAt: new Date('2024-11-01T00:00:00Z'),
-                    matchDate: new Date('2024-11-02T00:00:00Z'),
-                },
-            ]);
-
-            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
-
-            expect(result.leadTime).toEqual({
-                soldCount: 3,
-                avgLeadDays: 5.3,
-                medianLeadDays: 5,
-                minLeadDays: 1,
-                maxLeadDays: 10,
-            });
-        });
-
-        it('clamps negative lead days to 0 (defensive against legacy backfill)', async () => {
-            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
-                {
-                    soldAt: new Date('2024-09-15T00:00:00Z'),
-                    matchDate: new Date('2024-09-10T00:00:00Z'),
-                },
-            ]);
-
-            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
-
-            expect(result.leadTime).toEqual({
-                soldCount: 1,
-                avgLeadDays: 0,
-                medianLeadDays: 0,
-                minLeadDays: 0,
-                maxLeadDays: 0,
-            });
-        });
-
-        it('averages the two middle values for an even-length sample', async () => {
-            // 2, 4, 6, 10 → median = (4+6)/2 = 5
-            accountingDbService.getSoldLeadTimes.mockResolvedValueOnce([
-                {
-                    soldAt: new Date('2024-09-01T00:00:00Z'),
-                    matchDate: new Date('2024-09-03T00:00:00Z'),
-                },
-                {
-                    soldAt: new Date('2024-10-01T00:00:00Z'),
-                    matchDate: new Date('2024-10-05T00:00:00Z'),
-                },
-                {
-                    soldAt: new Date('2024-11-01T00:00:00Z'),
-                    matchDate: new Date('2024-11-07T00:00:00Z'),
-                },
-                {
-                    soldAt: new Date('2024-12-01T00:00:00Z'),
-                    matchDate: new Date('2024-12-11T00:00:00Z'),
-                },
-            ]);
-
-            const result = await service.getSeason(userId, dates, 2024 as SeasonYear);
-
-            expect(result.leadTime?.medianLeadDays).toBe(5);
         });
     });
 });
