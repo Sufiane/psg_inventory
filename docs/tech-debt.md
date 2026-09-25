@@ -39,3 +39,30 @@ separable. `src/app.module.spec.ts` (added by that plan) is the net that catches
 
 ---
 
+## 3. `e2e/package.json` has no own `lint` script or `eslint` devDependency
+
+**Found:** 2026-09-24, code review of `scripts/seed-e2e.ts` (PSG-32).
+
+`e2e/` is a standalone package (own `package.json`, own `package-lock.json`, not an npm
+workspace member of the root). It currently lints clean only because ESLint's flat config
+resolution climbs up the directory tree and picks up the root `eslint.config.mjs`. `e2e/`
+itself declares no `lint` script and no `eslint`/`typescript-eslint`/`@eslint/js`/`globals`
+devDependencies.
+
+**Why deferred:** out of scope for the seed-script idempotency fix it was found next to,
+and low current risk — `e2e/` is always run from inside this repo tree today, so the
+climb-up resolution always finds the root config.
+
+**Cost to act:** low. Add a `"lint": "eslint \"**/*.ts\" --max-warnings 0"` script to
+`e2e/package.json`, plus `eslint`, `@eslint/js`, `typescript-eslint`, and `globals` as
+devDependencies pinned to the exact versions already used at the repo root
+(`eslint@9.17.0`, `@eslint/js@9.17.0`, `typescript-eslint@8.70.0`, `globals@15.13.0`), and
+give `e2e/` its own `eslint.config.mjs` (or explicitly re-export the root one) so the
+package lints correctly if it's ever installed/run standalone, outside this repo tree.
+
+**Recommendation:** do it if/when `e2e/` is ever extracted, run in CI independently of the
+root `npm run lint`, or published/installed on its own. Not worth doing preemptively for a
+directory that today is always run in place.
+
+---
+

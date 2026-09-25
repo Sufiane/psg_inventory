@@ -33,6 +33,7 @@
     "local:db:destroy": "docker compose down -v --remove-orphans",
     "local:db:migrate": "prisma migrate deploy",
     "local:db:seed": "node --env-file-if-exists=.env node_modules/.bin/tsx scripts/seed-demo.ts",
+    "local:db:seed:e2e": "node --env-file-if-exists=.env node_modules/.bin/tsx scripts/seed-e2e.ts",
     "ungift": "npx tsx scripts/ungift-sale.ts"
   },
   "dependencies": {
