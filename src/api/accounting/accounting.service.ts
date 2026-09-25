@@ -1,30 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import type { SoldCount } from '@psg/shared/counts';
 import type { UserId } from '@psg/shared/ids';
-import type { LeadDays, SeasonYear } from '@psg/shared/time';
-import { Accounting } from './types/accounting.type';
+import type { SeasonYear } from '@psg/shared/time';
 import { IAccountingDbService } from '../../db/accounting/accounting.db.interface';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { formatAggregate } from './utils/format-aggregate.util';
-import {
-    SeasonInvestment,
-    TimePeriodAccounting,
-} from './types/time-period-accounting.type';
 import {
     getCurrentSeasonDate,
     getSeasonWindow,
     seasonStartYearFromDate,
 } from '../../shared/utils/season.utils';
-import { statusConverter } from './utils/status-converter.util';
-import type { AccountingStatus } from './types/accounting-status.type';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { ONE_DAY_TTL } from '../../shared/constants';
 import { IAccountingService } from './interfaces/accounting.service.interface';
 import { Amortization, AmortizationMatchRow } from './types/amortization.type';
-import { LeadTime } from './types/lead-time.type';
-import { SoldLeadTime } from '../../db/accounting/types/sold-lead-time.type';
+import { TimePeriodAccounting } from './types/time-period-accounting.type';
+import { IGetSeasonAccountingUsecase } from './usecases/get-season-accounting/get-season-accounting.usecase';
 
 @Injectable()
 export class AccountingService implements IAccountingService {
@@ -33,13 +24,14 @@ export class AccountingService implements IAccountingService {
         private readonly salesDbService: ISalesDbService,
         private readonly seasonPassesDbService: ISeasonPassesDbService,
         private readonly redisService: RedisService,
+        private readonly getSeasonAccountingUsecase: IGetSeasonAccountingUsecase,
     ) {}
 
     async getCurrentSeason(userId: UserId): Promise<TimePeriodAccounting> {
         const seasonDate = getCurrentSeasonDate();
         const year = seasonStartYearFromDate(seasonDate.start);
 
-        return this.getSeason(userId, seasonDate, year);
+        return this.getSeasonAccountingUsecase.execute(userId, seasonDate, year);
     }
 
     async getGivenSeason(
@@ -48,167 +40,18 @@ export class AccountingService implements IAccountingService {
     ): Promise<TimePeriodAccounting> {
         const dates = getSeasonWindow(seasonStartYear, 'inclusive');
 
-        return this.getSeason(userId, dates, seasonStartYear);
+        return this.getSeasonAccountingUsecase.execute(userId, dates, seasonStartYear);
     }
 
     async getAllTime(userId: UserId): Promise<TimePeriodAccounting> {
         const oldestMatchSale = await this.salesDbService.getOldestMatchSale(userId);
 
-        return this.getSeason(
+        return this.getSeasonAccountingUsecase.execute(
             userId,
             {
                 start: oldestMatchSale.Match.date,
             },
             null,
-        );
-    }
-
-    async getAccounting(
-        userId: UserId,
-        status: AccountingStatus,
-        date: {
-            start: Date;
-            end?: Date;
-        },
-    ): Promise<Accounting | null> {
-        const aggregate = await this.accountingDbService.getAccounting(
-            userId,
-            statusConverter(status),
-            date.start,
-            date.end,
-        );
-
-        if (!aggregate) {
-            return null;
-        }
-
-        const scope = {
-            statuses: statusConverter(status),
-            userId,
-            matchDateFrom: date.start,
-            ...(date.end ? { matchDateTo: date.end } : {}),
-        };
-
-        const [lowestMatch, highestMatch] = await Promise.all([
-            this.salesDbService.getOneByWithFullMatch({
-                profit: aggregate._min.profit,
-                ...scope,
-            }),
-            this.salesDbService.getOneByWithFullMatch({
-                profit: aggregate._max.profit,
-                ...scope,
-            }),
-        ]);
-
-        return formatAggregate({
-            sum: aggregate._sum,
-            avg: aggregate._avg,
-            min: {
-                ...aggregate._min,
-                match: {
-                    ...lowestMatch.Match,
-                    opponent: lowestMatch.Match.Opponent.name,
-                },
-            },
-            max: {
-                ...aggregate._max,
-                match: {
-                    ...highestMatch.Match,
-                    opponent: highestMatch.Match.Opponent.name,
-                },
-            },
-        });
-    }
-
-    async getSeason(
-        userId: UserId,
-        dates: {
-            start: Date;
-            end?: Date;
-        },
-        seasonStartYear: SeasonYear | null,
-    ): Promise<TimePeriodAccounting> {
-        const accounting = await this.redisService.get(
-            CACHE_KEYS.accounting(userId, dates.start, dates.end),
-            ONE_DAY_TTL,
-            async () => {
-                const [
-                    realizedAccounting,
-                    unrealizedAccounting,
-                    pendingAccounting,
-                    giftedAccounting,
-                    seasonPasses,
-                    allPasses,
-                    leadTimes,
-                ] = await Promise.all([
-                    this.getAccounting(userId, 'realized', dates),
-                    this.getAccounting(userId, 'unrealized', dates),
-                    this.getAccounting(userId, 'pending', dates),
-                    this.getAccounting(userId, 'gifted', dates),
-                    seasonStartYear !== null
-                        ? this.seasonPassesDbService.findBySeason(userId, seasonStartYear)
-                        : Promise.resolve([]),
-                    seasonStartYear === null
-                        ? this.seasonPassesDbService.findAll(userId)
-                        : Promise.resolve([]),
-                    this.accountingDbService.getSoldLeadTimes(
-                        userId,
-                        dates.start,
-                        dates.end,
-                    ),
-                ]);
-
-                const seasonInvestments: SeasonInvestment[] = seasonPasses.map(
-                    (pass) => ({
-                        id: pass.id,
-                        price: pass.price,
-                        seasonStartYear: pass.seasonStartYear,
-                        label: pass.label,
-                        category: pass.category,
-                        row: pass.row,
-                        seat: pass.seat,
-                    }),
-                );
-
-                // For the all-time view, only count passes for seasons that
-                // have already started — a future season's pass is paid but
-                // not yet "in use", so including it would understate the
-                // historical net.
-                const currentSeasonStartYear = seasonStartYearFromDate(new Date());
-                const totalSeasonInvestment =
-                    seasonStartYear === null
-                        ? allPasses
-                              .filter(
-                                  (pass) =>
-                                      pass.seasonStartYear <= currentSeasonStartYear,
-                              )
-                              .reduce((sum, pass) => sum + pass.price, 0)
-                        : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0);
-
-                const result: TimePeriodAccounting = {
-                    realized: realizedAccounting,
-                    unrealized: unrealizedAccounting,
-                    pending: pendingAccounting,
-                    gifted: giftedAccounting,
-                    seasonInvestments,
-                    totalSeasonInvestment,
-                    leadTime: computeLeadTime(leadTimes),
-                };
-
-                return result;
-            },
-        );
-
-        return (
-            accounting ?? {
-                realized: null,
-                pending: null,
-                unrealized: null,
-                gifted: null,
-                seasonInvestments: [],
-                totalSeasonInvestment: 0,
-                leadTime: null,
-            }
         );
     }
 
@@ -305,40 +148,6 @@ export class AccountingService implements IAccountingService {
 
         return result ?? emptyAmortization(seasonStartYear);
     }
-}
-
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
-function leadDays(soldAt: Date, matchDate: Date): LeadDays {
-    // Sale-after-kickoff is rejected at the api layer, so this is always ≥ 0;
-    // clamp defensively against legacy/backfilled rows.
-    return Math.max(
-        0,
-        Math.floor((matchDate.getTime() - soldAt.getTime()) / MS_PER_DAY),
-    ) as LeadDays;
-}
-
-function computeLeadTime(rows: SoldLeadTime[]): LeadTime | null {
-    if (rows.length === 0) {
-        return null;
-    }
-
-    const days = rows.map((row) => leadDays(row.soldAt, row.matchDate));
-    const sorted = [...days].sort((firstDay, secondDay) => firstDay - secondDay);
-    const sum = days.reduce((acc, day) => acc + day, 0);
-    const mid = Math.floor(sorted.length / 2);
-    // rows.length > 0 (checked above) guarantees sorted/days are non-empty,
-    // so every index below is in bounds.
-    const median =
-        sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-
-    return {
-        soldCount: rows.length as SoldCount,
-        avgLeadDays: (Math.round((sum / rows.length) * 10) / 10) as LeadDays,
-        medianLeadDays: (Math.round(median * 10) / 10) as LeadDays,
-        minLeadDays: sorted[0]!,
-        maxLeadDays: sorted[sorted.length - 1]!,
-    };
 }
 
 function emptyAmortization(seasonStartYear: number): Amortization {
