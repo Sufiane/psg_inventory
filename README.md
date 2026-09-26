@@ -124,6 +124,53 @@ npm run test          # unit tests
 npm run test:cov      # with coverage report
 ```
 
+## E2E Tests
+
+Playwright specs in [`e2e/`](e2e) cover the critical paths end to end: login, sale
+create/SOLD/GIFTED/delete, and season-pass create/update/delete. `e2e/` is its own npm
+package (own `package.json`, own lockfile) — install its dependencies separately from
+the root.
+
+Requires the local stack, a built+running backend, and a built+previewed frontend, all
+talking to each other on fixed ports. **`FRONTEND_ORIGIN` must be set to the frontend
+preview's origin (`:4173`), not left at its `:5173` dev-server default** — the backend's
+CORS check otherwise rejects every request from the e2e run.
+
+```bash
+# 1. Local stack + seed data
+npm run local:db:up
+npm run local:db:migrate
+npm run local:db:seed:e2e
+
+# 2. Backend, built and started in the background
+FRONTEND_ORIGIN=http://localhost:4173 npm run build
+FRONTEND_ORIGIN=http://localhost:4173 npm run start:prod &
+
+# 3. Frontend, built and previewed in the background (needs BACKEND_URL at runtime).
+# `vite preview`'s Miniflare emulation reads `.dev.vars`, not process env, so a plain
+# `BACKEND_URL=... npm run preview` is silently ignored in favor of wrangler.jsonc's
+# committed prod URL — write .dev.vars instead.
+cd web
+npm install
+echo "BACKEND_URL=http://localhost:7777" > .dev.vars  # must match the backend's default PORT (see "Running the App")
+npm run build
+npm run preview &
+cd ..
+
+# 4. Run the suite
+cd e2e
+npm install
+npx playwright install --with-deps chromium
+npm test
+```
+
+CI runs this same sequence automatically on every pull request as the required `E2E`
+check (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) — a failing e2e run
+blocks merge the same way a failing `checks` run does.
+
+On failure, inspect `e2e/playwright-report/` locally (open `index.html`), or download
+the `playwright-report` artifact from the failed CI run's Actions summary page.
+
 ## API Overview
 
 All endpoints except `POST /users` and `POST /users/login` require a `Bearer` JWT token.
