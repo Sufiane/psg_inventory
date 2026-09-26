@@ -68,8 +68,23 @@
                             method="POST"
                             action="?/update"
                             class="space-y-3"
-                            use:enhance={() => {
-                                submitting = `update:${pass.id}`;
+                            use:enhance={({ action, cancel }) => {
+                                if (submitting !== null) {
+                                    cancel();
+
+                                    return;
+                                }
+
+                                // Distinguish Save (?/update) from Delete
+                                // (?/remove). This runs inside enhance's submit
+                                // handling — never in the button's own onclick,
+                                // where a synchronous re-render would disable
+                                // the button before the browser performs its
+                                // submit activation behavior and the form
+                                // would silently never submit.
+                                submitting = action.search.includes('/remove')
+                                    ? `remove:${pass.id}`
+                                    : `update:${pass.id}`;
 
                                 return async ({ update }) => {
                                     await update();
@@ -169,7 +184,12 @@
                                             return;
                                         }
 
-                                        submitting = `remove:${pass.id}`;
+                                        // Do NOT touch `submitting` here: a
+                                        // synchronous state change disables this
+                                        // button mid-dispatch, before the browser
+                                        // runs its submit activation behavior, so
+                                        // the form would never submit. The enhance
+                                        // callback above sets the spinner instead.
                                     }}
                                 >
                                     {#if submitting === `remove:${pass.id}`}
