@@ -66,3 +66,47 @@ directory that today is always run in place.
 
 ---
 
+## 4. `emptyAmortization`'s `seasonStartYear` param is a plain `number`, not `SeasonYear`
+
+**Linear:** PSG-36
+
+**Found:** 2026-09-26, code review of the `get-amortization` usecase extraction (PSG-29).
+
+`get-amortization.usecase.ts`'s module-level `emptyAmortization(seasonStartYear: number)`
+takes a plain `number` while every other signature in the file (and the `Amortization` type
+it returns) uses the branded `SeasonYear` type. Pre-existing — moved verbatim from
+`AccountingService`, not introduced by the extraction.
+
+**Why deferred:** the extraction was scoped as a pure, byte-identical move; widening it to
+also fix an unrelated type-narrowing gap would have obscured the diff.
+
+**Cost to act:** trivial — change the parameter type to `SeasonYear` and confirm the single
+call site (`execute`, passing `seasonStartYear: SeasonYear`) still type-checks.
+
+**Recommendation:** fix opportunistically next time this file is touched.
+
+---
+
+## 5. `get-amortization.usecase.spec.ts` uses flat `it()` titles instead of nested `describe`-per-branch
+
+**Linear:** PSG-37
+
+**Found:** 2026-09-26, code review of the `get-amortization` usecase extraction (PSG-29).
+
+The CLAUDE.md Jest/Vitest convention requires a `describe` per conditional branch (`when
+X`), with `it` titles stating only the outcome. This spec instead encodes the condition
+directly in flat `it()` titles (e.g. `'caps progress at 1 and reports surplus on
+overshoot'`). Pre-existing — the same flat structure existed in `accounting.service.spec.ts`
+before the extraction; it was relocated, not introduced.
+
+**Why deferred:** restructuring the tests wasn't part of the pure-move scope for PSG-29 and
+would have inflated the diff of what's supposed to be a mechanical extraction.
+
+**Cost to act:** moderate — regroup the 8 `it`s under `describe` blocks per branch (no pass,
+below price, break-even crossing, overshoot, missing pass, cache hit, cache key/ttl, redis
+nullish fallback). No behavior change, pure test restructuring.
+
+**Recommendation:** fold into a future test-hygiene pass rather than doing alone.
+
+---
+
