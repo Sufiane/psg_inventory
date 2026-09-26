@@ -33,3 +33,114 @@ jobs:
       # `node dist/main` start command at deploy time only.
       - name: Verify the build emitted a runnable entrypoint
         run: test -f dist/main.js
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    needs: checks
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psg_inventory
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: e2e-ci-secret
+      JWT_EXPIRES: 1d
+      FOOTBALL_DATA_API_KEY: e2e-ci-dummy-key
+      FRONTEND_ORIGIN: http://localhost:4173
+      PORT: 7777
+      BACKEND_URL: http://localhost:7777
+      PLAYWRIGHT_BASE_URL: http://localhost:4173
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - run: npm ci
+
+      - run: npm ci
+        working-directory: web
+
+      - run: npm ci
+        working-directory: e2e
+
+      - name: Typecheck e2e specs
+        run: npm run typecheck
+        working-directory: e2e
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Start Postgres + Redis
+        run: npm run local:db:up
+
+      - run: npm run local:db:migrate
+
+      - run: npm run local:db:seed:e2e
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Start backend
+        run: nohup npm run start:prod > backend.log 2>&1 &
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:7777/health?db=true" > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend did not become ready in time"; cat backend.log; exit 1
+
+      - name: Write frontend BACKEND_URL override
+        run: echo "BACKEND_URL=${{ env.BACKEND_URL }}" > web/.dev.vars
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: web
+
+      - name: Start frontend preview
+        run: nohup npm run preview > preview.log 2>&1 &
+        working-directory: web
+
+      - name: Wait for frontend
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:4173/login" > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "frontend did not become ready in time"; cat web/preview.log; exit 1
+
+      - name: Run Playwright tests
+        run: npm test
+        working-directory: e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+
+      - name: Tear down containers
+        if: always()
+        run: npm run local:db:destroy
