@@ -62,3 +62,14 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Impeccable critique snapshots (auto-generated backlog, regenerated per-run)
 .impeccable/
+
+# Serena agent memories are versioned with the repo so every checkout and agent
+# session shares one set. Note this re-includes .serena/ against the blanket
+# `.serena/` rule in the global ~/.gitignore (core.excludesFile), which a
+# .gitignore file overrides. Only memories/ is kept: the rest of .serena/
+# (project.yml, project.local.yml, cache) is per-workspace state — committing
+# project.yml would collide with sibling Conductor workspaces that have their
+# own untracked copy.
+!/.serena/
+/.serena/*
+!/.serena/memories/
