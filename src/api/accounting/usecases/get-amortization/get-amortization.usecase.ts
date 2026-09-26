@@ -107,7 +107,7 @@ export class GetAmortizationUsecase implements IGetAmortizationUsecase {
     }
 }
 
-function emptyAmortization(seasonStartYear: number): Amortization {
+function emptyAmortization(seasonStartYear: SeasonYear): Amortization {
     return {
         seasonStartYear,
         passPrice: 0,
