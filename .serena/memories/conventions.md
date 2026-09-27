@@ -31,3 +31,5 @@
 ## Testing
 - Unit tests are colocated `*.spec.ts` next to the source; Vitest globals are on (`describe`/`it`/`expect` need no import), mocks via `vitest-mock-extended`.
 - Tests needing the DB run against the Docker stack — never a remote database.
+- Structure convention: one `describe('when <condition>')` per conditional branch; `it` titles state ONLY the outcome and never repeat the condition; shared setup lives in that `describe`'s own `beforeEach`. Stated verbatim in `docs/plans/*` headers (e.g. `docs/plans/2026-08-30-ask-a-question.md` line 22); reference implementations: `get-amortization.usecase.spec.ts` (PSG-37, commit 1ccc96d) and `import-passes.validator.spec.ts` (PSG-41). NOT enforced by any lint rule (no title-content ESLint rule exists).
+- Gotcha: `docs/tech-debt.md` entry 5 attributes the test convention to a `CLAUDE.md` that does not exist in this repo, and the entry itself is stale — PSG-37 shipped (commit 1ccc96d, PR #62) but the ledger entry was never deleted despite the file's "Delete it when it's done" rule. Check/fix on the next ledger cleanup.
