@@ -48,44 +48,58 @@ describe('ImportPassesValidator', () => {
         module.useLogger(false);
     });
 
-    it('returns the single season year when every pass is owned and same-season', async () => {
-        passesDb.findById.mockResolvedValue(passFixture());
+    describe('validate', () => {
+        describe('when every pass is owned and same-season', () => {
+            it('returns the single season year', async () => {
+                passesDb.findById.mockResolvedValue(passFixture());
 
-        await expect(validator.validate(userId, [passAId])).resolves.toBe(2025);
-    });
-
-    it('throws SEASON_PASS_NOT_FOUND when a pass does not exist', async () => {
-        passesDb.findById.mockResolvedValue(null);
-
-        await expect(validator.validate(userId, [passAId])).rejects.toMatchObject({
-            code: ErrorCode.SEASON_PASS_NOT_FOUND,
+                await expect(validator.validate(userId, [passAId])).resolves.toBe(2025);
+            });
         });
-    });
 
-    it('throws SEASON_PASS_FORBIDDEN when pass belongs to other user', async () => {
-        passesDb.findById.mockResolvedValue(
-            passFixture({ userId: 'other-user' as UserId }),
-        );
+        describe('when a pass does not exist', () => {
+            it('throws SEASON_PASS_NOT_FOUND', async () => {
+                passesDb.findById.mockResolvedValue(null);
 
-        await expect(validator.validate(userId, [passAId])).rejects.toMatchObject({
-            code: ErrorCode.SEASON_PASS_FORBIDDEN,
+                await expect(validator.validate(userId, [passAId])).rejects.toMatchObject(
+                    {
+                        code: ErrorCode.SEASON_PASS_NOT_FOUND,
+                    },
+                );
+            });
         });
-    });
 
-    it('throws IMPORT_PASSES_MIXED_SEASONS when passes differ in year', async () => {
-        passesDb.findById.mockImplementation(async (id) => {
-            if (id === passBId) {
-                return passFixture({
-                    id: passBId as SeasonPassId,
-                    seasonStartYear: 2024,
+        describe('when the pass belongs to another user', () => {
+            it('throws SEASON_PASS_FORBIDDEN', async () => {
+                passesDb.findById.mockResolvedValue(
+                    passFixture({ userId: 'other-user' as UserId }),
+                );
+
+                await expect(validator.validate(userId, [passAId])).rejects.toMatchObject(
+                    {
+                        code: ErrorCode.SEASON_PASS_FORBIDDEN,
+                    },
+                );
+            });
+        });
+
+        describe('when the passes differ in season year', () => {
+            it('throws IMPORT_PASSES_MIXED_SEASONS', async () => {
+                passesDb.findById.mockImplementation(async (id) => {
+                    if (id === passBId) {
+                        return passFixture({
+                            id: passBId as SeasonPassId,
+                            seasonStartYear: 2024,
+                        });
+                    }
+
+                    return passFixture({});
                 });
-            }
 
-            return passFixture({});
+                await expect(
+                    validator.validate(userId, [passAId, passBId]),
+                ).rejects.toMatchObject({ code: ErrorCode.IMPORT_PASSES_MIXED_SEASONS });
+            });
         });
-
-        await expect(
-            validator.validate(userId, [passAId, passBId]),
-        ).rejects.toMatchObject({ code: ErrorCode.IMPORT_PASSES_MIXED_SEASONS });
     });
 });
