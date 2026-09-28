@@ -10,7 +10,7 @@ export abstract class IUsersDbService {
         firstName: string;
         lastName: string;
         password: HashedPassword;
-    }): Promise<void>;
+    }): Promise<Users | null>;
     abstract findOneByEmail(email: Email): Promise<UserRecord | null>;
     abstract findById(id: UserId): Promise<UserRecord | null>;
 }
