@@ -110,3 +110,42 @@ nullish fallback). No behavior change, pure test restructuring.
 
 ---
 
+## 6. `sales-import.resolver.spec.ts` and `sales-import.service.spec.ts` have condition-in-title flat `it`s
+
+**Found:** 2026-09-27, while fixing PSG-42 (`sales-import.csv.spec.ts` branch nesting).
+
+Same class as §5: the house Jest/Vitest convention (restated in every plan doc's
+conventions section, e.g. `docs/plans/2026-08-30-ask-a-question.md`) wants one
+`describe('when …')` per conditional branch, with `it` titles stating only the outcome.
+
+- `sales-import.resolver.spec.ts`: 10 flat `it`s sit directly under
+  `describe('resolveDraftRows')` (lines 81-171, 275, 286), eight of them with the
+  condition in the title — `'flags a mismatched opponent as warn'`, `'errors on nb>1 with
+  multi-pass and leaves allocations empty'`, `'accepts an optional soldAt on or before the
+  match date'`, and five more. The other two (`'lists missing matches in coverage'`,
+  `'counts summary correctly'`) are outcome-only titles — still flat `it`s, just not
+  condition-in-title. Of the file's other groups, `gift recipient requirement` is
+  conformant, but `kickoff guard on soldAt` has residual condition-in-title `it`s of the
+  same class: four copies of `'flags a soldAt after the match date as
+  error:sold-after-kickoff'` (lines 185, 200, 242, 257), plus `'imports cleanly with a
+  soldAt on the match date'` (line 217) sitting under `describe('when the row status is
+  GIFTED')` with no describe for the soldAt condition itself. Tracked in PSG-44.
+- `sales-import.service.spec.ts`: flat `it`s under `describe('preview')`,
+  `describe('commit')` and `describe('revert')` — `'throws SEASON_PASS_FORBIDDEN when
+  pass belongs to other user'`, `'throws IMPORT_PASSES_MIXED_SEASONS when passes differ in
+  year'`, `'is idempotent when nothing matches'` — while `revert` also contains conformant
+  `when sales are deleted` / `when nothing matches` describes, the same partial state
+  PSG-42's file had. Tracked in PSG-43.
+
+**Why deferred:** PSG-42 is deliberately scoped to one spec file (single-file precedent:
+PSG-37, `c29bf5a`); restructuring two more files would turn an XS issue into a
+review-noise diff.
+
+**Cost to act:** moderate — same mechanical treatment as PSG-42: wrap each flat `it` in a
+`when …` describe, move the condition out of the title, leave bodies untouched. No
+behavior change; tests must stay green before and after.
+
+**Recommendation:** fold into a future test-hygiene pass rather than doing alone.
+
+---
+
