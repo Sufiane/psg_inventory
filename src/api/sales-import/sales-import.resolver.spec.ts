@@ -78,106 +78,122 @@ const passA = makePass('pass-a');
 const passB = makePass('pass-b');
 
 describe('resolveDraftRows', () => {
-    it('resolves a single match on a unique date', () => {
-        const rows = [makeRow({})];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille, lyon],
-            selectedPassIds: [passA.id],
-        });
+    describe('when the date uniquely matches one home match', () => {
+        it('resolves the match and marks the row ok', () => {
+            const rows = [makeRow({})];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille, lyon],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.matchId).toBe('m1');
-        expect(result.rows[0]!.rowStatus).toBe('ok');
-        expect(result.rows[0]!.allocations).toEqual([
-            { seasonPassId: 'pass-a', nbTickets: 1 },
-        ]);
+            expect(result.rows[0]!.matchId).toBe('m1');
+            expect(result.rows[0]!.rowStatus).toBe('ok');
+            expect(result.rows[0]!.allocations).toEqual([
+                { seasonPassId: 'pass-a', nbTickets: 1 },
+            ]);
+        });
     });
 
-    it('flags a mismatched opponent as warn', () => {
-        const rows = [makeRow({ opponent: 'Marsailles' })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id],
-        });
+    describe('when the opponent name is mismatched', () => {
+        it('flags the row as warn:opponent-mismatch', () => {
+            const rows = [makeRow({ opponent: 'Marsailles' })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.matchId).toBe('m1');
-        expect(result.rows[0]!.rowStatus).toBe('warn:opponent-mismatch');
+            expect(result.rows[0]!.matchId).toBe('m1');
+            expect(result.rows[0]!.rowStatus).toBe('warn:opponent-mismatch');
+        });
     });
 
-    it('flags an unknown date as error:match-missing', () => {
-        const rows = [makeRow({ date: '2025-12-25' })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id],
-        });
+    describe('when the date does not match any home match', () => {
+        it('flags the row as error:match-missing', () => {
+            const rows = [makeRow({ date: '2025-12-25' })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.matchId).toBeUndefined();
-        expect(result.rows[0]!.rowStatus).toBe('error:match-missing');
+            expect(result.rows[0]!.matchId).toBeUndefined();
+            expect(result.rows[0]!.rowStatus).toBe('error:match-missing');
+        });
     });
 
-    it('defaults nb=1 to first pass and marks ok', () => {
-        const rows = [makeRow({ nbTickets: 1 as TicketCount })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id, passB.id],
-        });
+    describe('when nbTickets is 1', () => {
+        it('defaults allocation to the first pass and marks the row ok', () => {
+            const rows = [makeRow({ nbTickets: 1 as TicketCount })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id, passB.id],
+            });
 
-        expect(result.rows[0]!.allocations).toEqual([
-            { seasonPassId: 'pass-a', nbTickets: 1 },
-        ]);
-        expect(result.rows[0]!.rowStatus).toBe('ok');
+            expect(result.rows[0]!.allocations).toEqual([
+                { seasonPassId: 'pass-a', nbTickets: 1 },
+            ]);
+            expect(result.rows[0]!.rowStatus).toBe('ok');
+        });
     });
 
-    it('warns on nb>1 with single pass and assigns everything to it', () => {
-        const rows = [makeRow({ nbTickets: 2 as TicketCount })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id],
-        });
+    describe('when nbTickets is greater than 1 with a single pass selected', () => {
+        it('assigns everything to that pass and warns', () => {
+            const rows = [makeRow({ nbTickets: 2 as TicketCount })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.allocations).toEqual([
-            { seasonPassId: 'pass-a', nbTickets: 2 },
-        ]);
-        expect(result.rows[0]!.rowStatus).toBe('warn:multi-ticket-single-pass');
+            expect(result.rows[0]!.allocations).toEqual([
+                { seasonPassId: 'pass-a', nbTickets: 2 },
+            ]);
+            expect(result.rows[0]!.rowStatus).toBe('warn:multi-ticket-single-pass');
+        });
     });
 
-    it('errors on nb>1 with multi-pass and leaves allocations empty', () => {
-        const rows = [makeRow({ nbTickets: 3 as TicketCount })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id, passB.id],
-        });
+    describe('when nbTickets is greater than 1 with multiple passes selected', () => {
+        it('leaves allocations empty and errors as unallocated', () => {
+            const rows = [makeRow({ nbTickets: 3 as TicketCount })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id, passB.id],
+            });
 
-        expect(result.rows[0]!.allocations).toEqual([]);
-        expect(result.rows[0]!.rowStatus).toBe('error:unallocated');
+            expect(result.rows[0]!.allocations).toEqual([]);
+            expect(result.rows[0]!.rowStatus).toBe('error:unallocated');
+        });
     });
 
-    it('flags invalid cells (nb=0, negative price)', () => {
-        const rows = [makeRow({ nbTickets: 0 as TicketCount })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id],
-        });
+    describe('when a cell is invalid (nb=0, negative price)', () => {
+        it('flags the row as error:invalid-cell', () => {
+            const rows = [makeRow({ nbTickets: 0 as TicketCount })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.rowStatus).toBe('error:invalid-cell');
+            expect(result.rows[0]!.rowStatus).toBe('error:invalid-cell');
+        });
     });
 
-    it('accepts an optional soldAt on or before the match date', () => {
-        const rows = [makeRow({ soldAt: '2025-09-10' as IsoDateString })];
-        const result = resolveDraftRows({
-            rawRows: rows,
-            homeMatches: [marseille],
-            selectedPassIds: [passA.id],
-        });
+    describe('when soldAt is on or before the match date', () => {
+        it('accepts the row as ok', () => {
+            const rows = [makeRow({ soldAt: '2025-09-10' as IsoDateString })];
+            const result = resolveDraftRows({
+                rawRows: rows,
+                homeMatches: [marseille],
+                selectedPassIds: [passA.id],
+            });
 
-        expect(result.rows[0]!.rowStatus).toBe('ok');
-        expect(result.rows[0]!.soldAt).toBe('2025-09-10');
+            expect(result.rows[0]!.rowStatus).toBe('ok');
+            expect(result.rows[0]!.soldAt).toBe('2025-09-10');
+        });
     });
 
     describe('kickoff guard on soldAt', () => {
@@ -214,21 +230,23 @@ describe('resolveDraftRows', () => {
                 expect(result.rows[0]!.rowStatus).toBe('error:sold-after-kickoff');
             });
 
-            it('imports cleanly with a soldAt on the match date', () => {
-                const rows = [
-                    makeRow({
-                        status: 'GIFTED',
-                        soldAt: '2025-09-14' as IsoDateString,
-                        recipient: 'Marc',
-                    }),
-                ];
-                const result = resolveDraftRows({
-                    rawRows: rows,
-                    homeMatches: [marseille],
-                    selectedPassIds: [passA.id],
-                });
+            describe('when soldAt is on the match date', () => {
+                it('imports cleanly', () => {
+                    const rows = [
+                        makeRow({
+                            status: 'GIFTED',
+                            soldAt: '2025-09-14' as IsoDateString,
+                            recipient: 'Marc',
+                        }),
+                    ];
+                    const result = resolveDraftRows({
+                        rawRows: rows,
+                        homeMatches: [marseille],
+                        selectedPassIds: [passA.id],
+                    });
 
-                expect(result.rows[0]!.rowStatus).toBe('ok');
+                    expect(result.rows[0]!.rowStatus).toBe('ok');
+                });
             });
         });
 
