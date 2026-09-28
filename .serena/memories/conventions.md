@@ -25,6 +25,7 @@
 - Feature verticals live in `src/api/<feature>/` (controller → service interface → service) with the data access counterpart in `src/db/<feature>/`. Both use matching folder names.
 - Business logic is being extracted into dedicated usecase modules (`<feature>/<verb>-<noun>.usecase.ts`); prefer adding a usecase over growing a service.
 - Domain errors: `src/common/exceptions/domain.exception.ts` + `error-codes.enum.ts`; HTTP mapping in `src/common/exceptions/http-exception.mapper.ts`. Throw domain errors, not raw `HttpException`.
+- Db-layer pattern (signal → data → throw): `*.db.ts` never throws `DomainException` — it catches ORM signals (Prisma `P2002`/`P2025`), logs them at `warn`, and returns plain data (`null` / `'written' | 'not_found'`); the calling service/usecase decides to throw. Enforced by dep-cruiser rule `no-domain-exception-in-db` (added for PSG-38).
 - Season maths are centralized in `src/shared/utils/season/utils.ts` — never re-derive a season window inline.
 - Money maths is branded: use the types from `@psg/shared/money` and `computeProfit` rather than raw arithmetic on `number`.
 
