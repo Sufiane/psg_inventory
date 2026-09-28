@@ -56,12 +56,25 @@ describe('UngiftSaleUsecase', () => {
     });
 
     describe('when the sale is GIFTED', () => {
-        it('delegates to the usecase db layer', async () => {
-            usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED));
+        it('delegates the loaded row to the usecase db layer', async () => {
+            const loaded = saleFixture(SaleStatus.GIFTED);
+            usecaseDb.loadSale.mockResolvedValueOnce(loaded);
+            usecaseDb.ungiftSale.mockResolvedValueOnce('written');
 
             await usecase.execute(userId, saleId);
 
-            expect(usecaseDb.ungiftSale).toHaveBeenCalledWith(userId, saleId);
+            expect(usecaseDb.ungiftSale).toHaveBeenCalledWith(userId, saleId, loaded);
+        });
+    });
+
+    describe('when the row is deleted between the load and the write', () => {
+        it('rejects with SALE_NOT_FOUND', async () => {
+            usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED));
+            usecaseDb.ungiftSale.mockResolvedValueOnce('not_found');
+
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
         });
     });
 
