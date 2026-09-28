@@ -28,6 +28,13 @@
 - Season maths are centralized in `src/shared/utils/season/utils.ts` — never re-derive a season window inline.
 - Money maths is branded: use the types from `@psg/shared/money` and `computeProfit` rather than raw arithmetic on `number`.
 
+## Branded types (PSG-36/PSG-39)
+- **Where the cast lives:** at the raw-data boundary — where the row *materializes* (the `*.db.ts` method), never inside `src/redis/CACHE_KEYS.ts` and never at a consuming sink. `users.db.ts` brands its `Users` rows once via `UserRecord = Users & { id: UserId; email: Email }` (users.db.interface.ts) so sinks (admin/auth/jwt) get brands for free; brand whole results with `as Promise<XRecord | null>` (no spread, no added `await`, zero emitted-JS change). Never cast to force an already-branded value to compile.
+- **One cast at the source beats N at the sinks** (same reasoning as PSG-39 D4's `updatedMatchIds: MatchId[]`). User review drove this: the first PSG-39 implementation cast in `admin.service.ts` and was rejected in favor of the db-layer brand.
+- Test literals get inline casts (`'sale-1' as SaleId`), matching repo convention.
+- Do NOT invent new brands to fill a gap without an explicit decision: `familyId`, refresh `secret`, and `hourBucket` on CACHE_KEYS deliberately stay `string` (PSG-39 D2). Note `RefreshToken` is the *combined* `${familyId}.${secret}` token — never reuse it for the parts.
+- Type-level refactors use `npm run typecheck` as the failing test (RED census of call sites); prove key templates stay byte-identical by diffing `grep -o`-extracted backtick templates between HEAD and the working tree.
+
 ## Testing
 - Unit tests are colocated `*.spec.ts` next to the source; Vitest globals are on (`describe`/`it`/`expect` need no import), mocks via `vitest-mock-extended`.
 - Tests needing the DB run against the Docker stack — never a remote database.
