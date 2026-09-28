@@ -86,59 +86,69 @@ describe('SalesImportService', () => {
     });
 
     describe('preview', () => {
-        it('returns annotated rows from CSV', async () => {
-            passesDb.findById.mockResolvedValue(passFixture({}));
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+        describe('when the CSV is valid', () => {
+            it('returns annotated rows from CSV', async () => {
+                passesDb.findById.mockResolvedValue(passFixture({}));
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
 
-            const csv = Buffer.from(
-                'date,opponent,listedPrice,nbTickets,status,invest\n2025-09-14,Marseille,120,1,SOLD,80\n',
-            );
-            const result = await service.preview(userId, csv, [passAId]);
+                const csv = Buffer.from(
+                    'date,opponent,listedPrice,nbTickets,status,invest\n2025-09-14,Marseille,120,1,SOLD,80\n',
+                );
+                const result = await service.preview(userId, csv, [passAId]);
 
-            expect(result.rows).toHaveLength(1);
-            expect(result.rows[0]!.rowStatus).toBe('ok');
-            expect(result.seasonStartYear).toBe(2025);
-        });
-
-        it('throws IMPORT_CSV_INVALID on parse error', async () => {
-            await expect(
-                service.preview(userId, Buffer.from(''), [passAId]),
-            ).rejects.toBeInstanceOf(DomainException);
-        });
-
-        it('throws SEASON_PASS_FORBIDDEN when pass belongs to other user', async () => {
-            passesDb.findById.mockResolvedValue(
-                passFixture({ userId: 'other-user' as UserId }),
-            );
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([]);
-
-            const csv = Buffer.from(
-                'date,opponent,listedPrice,nbTickets,status\n2025-09-14,Marseille,120,1,SOLD\n',
-            );
-            await expect(service.preview(userId, csv, [passAId])).rejects.toMatchObject({
-                code: ErrorCode.SEASON_PASS_FORBIDDEN,
+                expect(result.rows).toHaveLength(1);
+                expect(result.rows[0]!.rowStatus).toBe('ok');
+                expect(result.seasonStartYear).toBe(2025);
             });
         });
 
-        it('throws IMPORT_PASSES_MIXED_SEASONS when passes differ in year', async () => {
-            passesDb.findById.mockImplementation(async (id) => {
-                if (id === passBId) {
-                    return passFixture({
-                        id: passBId as SeasonPassId,
-                        seasonStartYear: 2024 as SeasonYear,
-                    });
-                }
-
-                return passFixture({});
+        describe('when the CSV fails to parse', () => {
+            it('throws IMPORT_CSV_INVALID', async () => {
+                await expect(
+                    service.preview(userId, Buffer.from(''), [passAId]),
+                ).rejects.toBeInstanceOf(DomainException);
             });
-            matchesDb.getHomeMatchesForSeason.mockResolvedValue([]);
+        });
 
-            const csv = Buffer.from(
-                'date,opponent,listedPrice,nbTickets,status\n2025-09-14,Marseille,120,1,SOLD\n',
-            );
-            await expect(
-                service.preview(userId, csv, [passAId, passBId]),
-            ).rejects.toMatchObject({ code: ErrorCode.IMPORT_PASSES_MIXED_SEASONS });
+        describe('when a pass belongs to another user', () => {
+            it('throws SEASON_PASS_FORBIDDEN', async () => {
+                passesDb.findById.mockResolvedValue(
+                    passFixture({ userId: 'other-user' as UserId }),
+                );
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([]);
+
+                const csv = Buffer.from(
+                    'date,opponent,listedPrice,nbTickets,status\n2025-09-14,Marseille,120,1,SOLD\n',
+                );
+                await expect(
+                    service.preview(userId, csv, [passAId]),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SEASON_PASS_FORBIDDEN,
+                });
+            });
+        });
+
+        describe('when passes differ in season year', () => {
+            it('throws IMPORT_PASSES_MIXED_SEASONS', async () => {
+                passesDb.findById.mockImplementation(async (id) => {
+                    if (id === passBId) {
+                        return passFixture({
+                            id: passBId as SeasonPassId,
+                            seasonStartYear: 2024 as SeasonYear,
+                        });
+                    }
+
+                    return passFixture({});
+                });
+                matchesDb.getHomeMatchesForSeason.mockResolvedValue([]);
+
+                const csv = Buffer.from(
+                    'date,opponent,listedPrice,nbTickets,status\n2025-09-14,Marseille,120,1,SOLD\n',
+                );
+                await expect(
+                    service.preview(userId, csv, [passAId, passBId]),
+                ).rejects.toMatchObject({ code: ErrorCode.IMPORT_PASSES_MIXED_SEASONS });
+            });
         });
     });
 
@@ -161,23 +171,15 @@ describe('SalesImportService', () => {
     });
 
     describe('revert', () => {
-        it('returns count of deleted sales', async () => {
-            importDb.deleteBatch.mockResolvedValue(3);
-
-            const result = await service.revert(userId, 'batch-1');
-
-            expect(result).toEqual({ deleted: 3 });
-        });
-
-        it('is idempotent when nothing matches', async () => {
-            importDb.deleteBatch.mockResolvedValue(0);
-
-            const result = await service.revert(userId, 'unknown');
-
-            expect(result).toEqual({ deleted: 0 });
-        });
-
         describe('when sales are deleted', () => {
+            it('returns the count of deleted sales', async () => {
+                importDb.deleteBatch.mockResolvedValue(3);
+
+                const result = await service.revert(userId, 'batch-1');
+
+                expect(result).toEqual({ deleted: 3 });
+            });
+
             it('invalidates the accounting and recipients caches', async () => {
                 importDb.deleteBatch.mockResolvedValue(3);
 
@@ -193,6 +195,14 @@ describe('SalesImportService', () => {
         });
 
         describe('when nothing matches', () => {
+            it('returns a deleted count of 0', async () => {
+                importDb.deleteBatch.mockResolvedValue(0);
+
+                const result = await service.revert(userId, 'unknown');
+
+                expect(result).toEqual({ deleted: 0 });
+            });
+
             it('does not invalidate any cache', async () => {
                 importDb.deleteBatch.mockResolvedValue(0);
 
