@@ -8,8 +8,6 @@ import { Injectable } from '@nestjs/common';
 import { ONE_HOUR_TTL } from '../../shared/constants';
 import { IUsersDbService } from './users.db.interface';
 import { Prisma } from '@prisma/client';
-import { DomainException } from '../../common/exceptions/domain.exception';
-import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 
 @Injectable()
 export class UsersDb implements IUsersDbService {
@@ -23,14 +21,20 @@ export class UsersDb implements IUsersDbService {
         firstName: string;
         lastName: string;
         password: HashedPassword;
-    }): Promise<void> {
+    }): Promise<Users | null> {
         try {
-            await this.prisma.users.create({ data: payload });
-        } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-                throw new DomainException(ErrorCode.EMAIL_ALREADY_EXISTS);
+            return await this.prisma.users.create({ data: payload });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002'
+            ) {
+                // Unique violation on email → no row created. The db reports
+                // the raw outcome; the service decides what it means.
+                return null;
             }
-            throw e;
+
+            throw error;
         }
     }
 
