@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { SoldCount } from '@psg/shared/counts';
 import type { UserId } from '@psg/shared/ids';
+import type { SeasonPassPrice } from '@psg/shared/money';
 import type { LeadDays, SeasonYear } from '@psg/shared/time';
 import { Accounting } from '../../types/accounting.type';
 import type { AccountingStatus } from '../../types/accounting-status.type';
@@ -85,7 +86,7 @@ export class GetSeasonAccountingUsecase implements IGetSeasonAccountingUsecase {
                 // not yet "in use", so including it would understate the
                 // historical net.
                 const currentSeasonStartYear = seasonStartYearFromDate(new Date());
-                const totalSeasonInvestment =
+                const totalSeasonInvestment = (
                     seasonStartYear === null
                         ? allPasses
                               .filter(
@@ -93,7 +94,8 @@ export class GetSeasonAccountingUsecase implements IGetSeasonAccountingUsecase {
                                       pass.seasonStartYear <= currentSeasonStartYear,
                               )
                               .reduce((sum, pass) => sum + pass.price, 0)
-                        : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0);
+                        : seasonInvestments.reduce((sum, pass) => sum + pass.price, 0)
+                ) as SeasonPassPrice;
 
                 const result: TimePeriodAccounting = {
                     realized: realizedAccounting,
@@ -116,7 +118,7 @@ export class GetSeasonAccountingUsecase implements IGetSeasonAccountingUsecase {
                 unrealized: null,
                 gifted: null,
                 seasonInvestments: [],
-                totalSeasonInvestment: 0,
+                totalSeasonInvestment: 0 as SeasonPassPrice,
                 leadTime: null,
             }
         );

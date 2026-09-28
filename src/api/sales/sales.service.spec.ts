@@ -29,6 +29,7 @@ import {
 import type { TicketCount } from '@psg/shared/counts';
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
 
 describe('SalesService', () => {
     let service: SalesService;
@@ -249,7 +250,7 @@ describe('SalesService', () => {
                 matchFixture(new Date('2024-09-15')),
             );
             seasonPassesDbService.findById.mockResolvedValueOnce(
-                passFixture({ seasonStartYear: 2023 }),
+                passFixture({ seasonStartYear: 2023 as SeasonYear }),
             );
 
             await expect(service.addSale(userId, validPayload)).rejects.toMatchObject({

@@ -1,10 +1,13 @@
+import type { SeasonPassPrice } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
+
 import { Accounting } from './accounting.type';
 import { LeadTime } from './lead-time.type';
 
 export type SeasonInvestment = {
     id: string;
-    price: number;
-    seasonStartYear: number;
+    price: SeasonPassPrice;
+    seasonStartYear: SeasonYear;
     label: string;
     category: string;
     row: string;
@@ -17,6 +20,6 @@ export type TimePeriodAccounting = {
     pending: Accounting | null;
     gifted: Accounting | null;
     seasonInvestments: SeasonInvestment[];
-    totalSeasonInvestment: number;
+    totalSeasonInvestment: SeasonPassPrice;
     leadTime: LeadTime | null;
 };

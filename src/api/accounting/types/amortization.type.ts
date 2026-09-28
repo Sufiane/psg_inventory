@@ -1,4 +1,6 @@
 import type { MatchId, SeasonPassId } from '@psg/shared/ids';
+import type { Profit, SeasonPassPrice } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
 
 export type AmortizationMatchRow = {
     matchId: MatchId;
@@ -21,14 +23,14 @@ export type AmortizationBreakEven = {
 export type AmortizationPass = {
     id: SeasonPassId;
     label: string;
-    price: number;
+    price: SeasonPassPrice;
 };
 
 export type Amortization = {
-    seasonStartYear: number;
-    passPrice: number;
+    seasonStartYear: SeasonYear;
+    passPrice: SeasonPassPrice;
     hasPass: boolean;
-    totalRealized: number;
+    totalRealized: Profit;
     progress: number;
     remaining: number;
     surplus: number;

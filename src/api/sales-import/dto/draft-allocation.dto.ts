@@ -1,3 +1,4 @@
+import type { TicketCount } from '@psg/shared/counts';
 import { IsInt, IsUUID, Min } from 'class-validator';
 
 export class DraftAllocationDto {
@@ -6,5 +7,5 @@ export class DraftAllocationDto {
 
     @IsInt()
     @Min(1)
-    nbTickets!: number;
+    nbTickets!: TicketCount;
 }

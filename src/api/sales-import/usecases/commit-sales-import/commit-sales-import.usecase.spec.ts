@@ -10,6 +10,7 @@ import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { CommitRequestDto } from '../../dto/commit-request.dto';
+import type { DraftRowDto } from '../../dto/draft-row.dto';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
 import type { Match } from '../../../../db/matches/types/match.type';
 import type { SeasonPass } from '../../../../db/season-passes/type/season-pass.type';
@@ -66,7 +67,7 @@ describe('CommitSalesImportUsecase', () => {
                 matchId,
                 allocations: [{ seasonPassId: passAId, nbTickets: 1 }],
                 rowStatus: 'ok',
-            },
+            } as DraftRowDto,
         ],
     };
 

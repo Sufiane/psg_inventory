@@ -19,7 +19,7 @@ export class ImportPassesValidator {
         const passes = await Promise.all(
             selectedPassIds.map((id) => this.seasonPassesDb.findById(id as SeasonPassId)),
         );
-        const years = new Set<number>();
+        const years = new Set<SeasonYear>();
 
         for (const pass of passes) {
             if (pass == null) {
@@ -37,6 +37,6 @@ export class ImportPassesValidator {
             throw new DomainException(ErrorCode.IMPORT_PASSES_MIXED_SEASONS);
         }
 
-        return [...years][0]! as SeasonYear;
+        return [...years][0]!;
     }
 }
