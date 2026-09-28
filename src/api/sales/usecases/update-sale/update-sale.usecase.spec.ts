@@ -760,10 +760,66 @@ describe('UpdateSaleUsecase', () => {
                 } as UpdateSaleDto);
 
                 expect(db.updateSale).toHaveBeenCalledWith(
-                    expect.objectContaining({ status: 'SOLD' }),
+                    expect.objectContaining({
+                        status: 'SOLD',
+                        currentSale: expect.objectContaining({ id: saleId }),
+                    }),
                 );
                 expect(db.giftSale).not.toHaveBeenCalled();
             });
+        });
+    });
+
+    describe('when the sale row is deleted between the load and the write', () => {
+        it('rejects with SALE_NOT_FOUND for the plain update', async () => {
+            db.getOneSale.mockResolvedValueOnce(
+                saleFixture(new Date(Date.now() + 60 * 60_000)),
+            );
+            db.updateSale.mockResolvedValueOnce('not_found');
+
+            await expect(
+                usecase.execute(userId, { saleId, status: 'SOLD' } as UpdateSaleDto),
+            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+
+            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+        });
+
+        it('rejects with SALE_NOT_FOUND when the gift write reports the row is gone', async () => {
+            db.getOneSale.mockResolvedValueOnce(
+                saleFixture(new Date(Date.now() + 60 * 60_000), SaleStatus.PENDING),
+            );
+            db.giftSale.mockResolvedValueOnce(null);
+
+            await expect(
+                usecase.execute(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto),
+            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+
+            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+        });
+
+        it('rejects with SALE_NOT_FOUND when the gift-update write reports the row is gone', async () => {
+            db.getOneSale.mockResolvedValueOnce(
+                saleFixture(
+                    new Date(Date.now() + 60 * 60_000),
+                    SaleStatus.GIFTED,
+                    giftFixture({ recipientId: 'recipient-0' as RecipientId }),
+                ),
+            );
+            db.updateGift.mockResolvedValueOnce(null);
+
+            await expect(
+                usecase.execute(userId, {
+                    saleId,
+                    status: 'GIFTED',
+                    recipientName: 'Marc',
+                } as UpdateSaleDto),
+            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+
+            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
         });
     });
 
