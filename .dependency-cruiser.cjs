@@ -63,6 +63,14 @@ module.exports = {
             },
             to: {},
         },
+        {
+            name: 'no-domain-exception-in-db',
+            comment:
+                'db files return raw query results or null; deciding to throw a DomainException belongs to the service/usecase (CLAUDE.md hexagonal split).',
+            severity: 'error',
+            from: { path: ['^src/db/', '\\.db\\.ts$'], pathNot: ['\\.spec\\.ts$'] },
+            to: { path: ['^src/common/exceptions/(domain\\.exception|error-codes\\.enum)\\.ts$'] },
+        },
     ],
     options: {
         doNotFollow: { path: 'node_modules' },
