@@ -249,7 +249,9 @@ export class SalesDb implements ISalesDbService {
         const userIds = [...new Set(affected.map((s) => s.userId as UserId))];
 
         await Promise.allSettled([
-            ...affected.map((s) => this.redisService.invalidate(CACHE_KEYS.sale(s.id))),
+            ...affected.map((s) =>
+                this.redisService.invalidate(CACHE_KEYS.sale(s.id as SaleId)),
+            ),
             ...userIds.map((id) =>
                 this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(id)),
             ),

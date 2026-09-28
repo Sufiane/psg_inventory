@@ -59,7 +59,7 @@ export class AuthService implements IAuthService {
 
         const safe = omit(user, ['password', 'updatedAt']);
 
-        return { ...safe, id: safe.id as UserId, email: safe.email as Email };
+        return safe;
     }
 
     async login(user: AuthenticatedUser & { role?: string }): Promise<TokenPair> {
@@ -105,12 +105,7 @@ export class AuthService implements IAuthService {
             throw new UnauthorizedException('user no longer exists');
         }
 
-        return this.issueTokenPair(
-            user.id as UserId,
-            user.email as Email,
-            undefined,
-            familyId,
-        );
+        return this.issueTokenPair(user.id, user.email, undefined, familyId);
     }
 
     async logout(userId: UserId, refreshToken: RefreshToken): Promise<void> {

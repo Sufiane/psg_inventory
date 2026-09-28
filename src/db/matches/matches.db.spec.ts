@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
+import type { MatchId } from '@psg/shared/ids';
 import type { OpponentName } from '@psg/shared/strings';
 
 describe('MatchesDb', () => {
@@ -58,10 +59,10 @@ describe('MatchesDb', () => {
                 await service.loadMatches([formattedMatch]);
 
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.match('existing-match-id', true),
+                    CACHE_KEYS.match('existing-match-id' as MatchId, true),
                 );
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.match('existing-match-id', false),
+                    CACHE_KEYS.match('existing-match-id' as MatchId, false),
                 );
             });
 
@@ -142,10 +143,10 @@ describe('MatchesDb', () => {
                 ).rejects.toThrow('db exploded');
 
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.match('first-match-id', true),
+                    CACHE_KEYS.match('first-match-id' as MatchId, true),
                 );
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.match('first-match-id', false),
+                    CACHE_KEYS.match('first-match-id' as MatchId, false),
                 );
             });
 

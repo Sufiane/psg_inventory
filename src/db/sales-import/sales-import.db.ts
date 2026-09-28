@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SaleStatus } from '@prisma/client';
-import type { UserId } from '@psg/shared/ids';
+import type { SaleId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../prisma.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { RedisService } from '../../redis/redis.service';
@@ -107,7 +107,7 @@ export class SalesImportDb implements ISalesImportDbService {
             return 0;
         }
 
-        const saleIds = targets.map((sale) => sale.id);
+        const saleIds = targets.map((sale) => sale.id as SaleId);
 
         await this.prisma.$transaction([
             this.prisma.gifts.deleteMany({

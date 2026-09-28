@@ -35,6 +35,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
         const safe = omit(user, ['password', 'updatedAt']);
 
-        return { ...safe, id: safe.id as UserId, email: safe.email as Email };
+        return safe;
     }
 }
