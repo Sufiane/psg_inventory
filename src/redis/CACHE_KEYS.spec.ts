@@ -1,3 +1,5 @@
+import type { MatchId, UserId } from '@psg/shared/ids';
+
 import CACHE_KEYS from './CACHE_KEYS';
 
 describe('CACHE_KEYS', () => {
@@ -21,8 +23,8 @@ describe('CACHE_KEYS', () => {
     describe('match', () => {
         describe('when withResult differs', () => {
             it('produces distinct keys for the same match id', () => {
-                const withResult = CACHE_KEYS.match('match-id', true);
-                const withoutResult = CACHE_KEYS.match('match-id', false);
+                const withResult = CACHE_KEYS.match('match-id' as MatchId, true);
+                const withoutResult = CACHE_KEYS.match('match-id' as MatchId, false);
 
                 expect(withResult).not.toBe(withoutResult);
             });
@@ -31,19 +33,25 @@ describe('CACHE_KEYS', () => {
 
     describe('invalidateSales', () => {
         it('produces a pattern that covers the key the sales list is cached under', () => {
-            const key = CACHE_KEYS.sales('user-id');
-            const prefix = CACHE_KEYS.invalidateSales('user-id').replace('*', '');
+            const key = CACHE_KEYS.sales('user-id' as UserId);
+            const prefix = CACHE_KEYS.invalidateSales('user-id' as UserId).replace(
+                '*',
+                '',
+            );
 
             expect(key.startsWith(prefix)).toBe(true);
         });
 
         it('produces a pattern that covers the key a ranged sales query is cached under', () => {
             const key = CACHE_KEYS.salesByRange(
-                'user-id',
+                'user-id' as UserId,
                 new Date('2025-08-01T00:00:00.000Z'),
                 new Date('2026-08-01T00:00:00.000Z'),
             );
-            const prefix = CACHE_KEYS.invalidateSales('user-id').replace('*', '');
+            const prefix = CACHE_KEYS.invalidateSales('user-id' as UserId).replace(
+                '*',
+                '',
+            );
 
             expect(key.startsWith(prefix)).toBe(true);
         });

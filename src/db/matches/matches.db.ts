@@ -82,7 +82,7 @@ export class MatchesDb implements IMatchesDbService {
         // because if a mid-loop transaction throws, its return value never
         // runs — these arrays are the only way the `finally` block below still
         // sees the ids/unknowns accumulated before the throw.
-        const updatedMatchIds: string[] = [];
+        const updatedMatchIds: MatchId[] = [];
         const unknownCompetitions: string[] = [];
 
         try {
@@ -111,7 +111,7 @@ export class MatchesDb implements IMatchesDbService {
     // comment at the call site in loadMatches for why.
     private async syncMatches(
         matches: FormattedMatch[],
-        updatedMatchIds: string[],
+        updatedMatchIds: MatchId[],
         unknownCompetitions: string[],
     ): Promise<void> {
         for (const match of matches) {
@@ -185,7 +185,7 @@ export class MatchesDb implements IMatchesDbService {
                         },
                     });
 
-                    updatedMatchIds.push(existing.id);
+                    updatedMatchIds.push(existing.id as MatchId);
 
                     return;
                 }

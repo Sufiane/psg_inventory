@@ -3,7 +3,7 @@ import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { Mock } from 'vitest';
 import { Prisma, SaleStatus } from '@prisma/client';
 
-import type { MatchId, RecipientId, UserId } from '@psg/shared/ids';
+import type { MatchId, RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import type { TicketCount } from '@psg/shared/counts';
 import { SalesImportDb } from './sales-import.db';
@@ -226,10 +226,10 @@ describe('SalesImportDb', () => {
                 await service.deleteBatch(userId, 'batch-1');
 
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.sale('sale-1'),
+                    CACHE_KEYS.sale('sale-1' as SaleId),
                 );
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.sale('sale-2'),
+                    CACHE_KEYS.sale('sale-2' as SaleId),
                 );
                 expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                     CACHE_KEYS.invalidateSales(userId),

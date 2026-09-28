@@ -5,7 +5,7 @@ import { FootballDataService } from '../../football-data/football-data.service';
 import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { UsersDb } from '../../db/users/users.db';
-import { IUsersDbService } from '../../db/users/users.db.interface';
+import { IUsersDbService, UserRecord } from '../../db/users/users.db.interface';
 import { RedisService } from '../../redis/redis.service';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { DomainException } from '../../common/exceptions/domain.exception';
@@ -13,7 +13,6 @@ import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { PSG_ID } from '../../shared/constants';
 import type { Email } from '@psg/shared/strings';
-import type { Users } from '@prisma/client';
 
 describe('AdminService', () => {
     let service: AdminService;
@@ -137,7 +136,7 @@ describe('AdminService', () => {
 
     describe('flushUserCache', () => {
         const email = 'user@example.com' as Email;
-        const user = { id: 'user-1', email } as unknown as Users;
+        const user = { id: 'user-1', email } as unknown as UserRecord;
 
         describe('when the user does not exist', () => {
             it('should throw a domain exception', async () => {

@@ -1,12 +1,11 @@
 import type { UserId } from '@psg/shared/ids';
 import type { Email, HashedPassword } from '@psg/shared/strings';
 import { PrismaService } from '../prisma.service';
-import { Users } from '@prisma/client';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { Injectable } from '@nestjs/common';
 import { ONE_HOUR_TTL } from '../../shared/constants';
-import { IUsersDbService } from './users.db.interface';
+import { IUsersDbService, UserRecord } from './users.db.interface';
 import { Prisma } from '@prisma/client';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
@@ -34,17 +33,19 @@ export class UsersDb implements IUsersDbService {
         }
     }
 
-    async findOneByEmail(email: Email): Promise<Users | null> {
+    async findOneByEmail(email: Email): Promise<UserRecord | null> {
         return this.redisService.get(CACHE_KEYS.userByEmail(email), ONE_HOUR_TTL, () =>
             this.prisma.users.findUnique({
                 where: {
                     email,
                 },
             }),
-        );
+        ) as Promise<UserRecord | null>;
     }
 
-    async findById(id: UserId): Promise<Users | null> {
-        return this.prisma.users.findUnique({ where: { id } });
+    async findById(id: UserId): Promise<UserRecord | null> {
+        return this.prisma.users.findUnique({
+            where: { id },
+        }) as Promise<UserRecord | null>;
     }
 }
