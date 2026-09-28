@@ -80,10 +80,15 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         if (target === 'GIFTED' && existing.status !== 'GIFTED') {
             // Entry always moves a gift count — the sale had no gift a moment
             // ago — so the resolved id is not needed to decide anything here.
-            await this.db.giftSale({
+            const gift = await this.db.giftSale({
                 ...fieldPatch,
+                currentSale: existing,
                 recipient: await this.resolveNewGiftRecipient(userId, payload),
             });
+
+            if (gift == null) {
+                throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            }
 
             await this.salesCacheInvalidator.afterWrite(userId, {
                 recipientChanged: true,
@@ -94,10 +99,16 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
 
         if (targetsExistingGift) {
             const recipient = await this.resolveExistingGiftRecipient(userId, payload);
-            const { recipientId } = await this.db.updateGift({
+            const gift = await this.db.updateGift({
                 ...fieldPatch,
+                currentSale: existing,
                 ...(recipient != null ? { recipient } : {}),
             });
+
+            if (gift == null) {
+                throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            }
+            const { recipientId } = gift;
 
             await this.salesCacheInvalidator.afterWrite(userId, {
                 recipientChanged: recipientId !== (existing.Gift?.recipientId ?? null),
@@ -106,10 +117,15 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
             return;
         }
 
-        await this.db.updateSale({
+        const outcome = await this.db.updateSale({
             ...fieldPatch,
+            currentSale: existing,
             ...(target !== undefined ? { status: target as 'PENDING' | 'SOLD' } : {}),
         });
+
+        if (outcome === 'not_found') {
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+        }
 
         await this.salesCacheInvalidator.afterWrite(userId, { recipientChanged: false });
     }

@@ -1,12 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
 import type { TicketCount } from '@psg/shared/counts';
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
-import { DomainException } from '../../../../common/exceptions/domain.exception';
-import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
 import {
     GiftRecipientInput,
@@ -25,6 +23,17 @@ function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
     ) as TicketCount;
 }
 
+export type SaleRowSnapshot = {
+    id: string;
+    status: SaleStatus;
+    listedPrice: number;
+    profit: number;
+};
+
+// The db reports what physically happened — plain data, no domain
+// imports (spec D1 Part B; keeps the D4 dependency-cruiser rule valid).
+export type SaleWriteOutcome = 'written' | 'not_found';
+
 export abstract class IUpdateSaleUsecaseDb {
     abstract getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null>;
 
@@ -41,7 +50,8 @@ export abstract class IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         status?: 'PENDING' | 'SOLD';
         allocations?: SaleAllocationInput[];
-    }): Promise<void>;
+        currentSale: SaleRowSnapshot;
+    }): Promise<SaleWriteOutcome>;
 
     // PENDING -> GIFTED. Sets the status and inserts the gift row in one
     // transaction, in that order — the composite foreign key rejects the
@@ -54,7 +64,8 @@ export abstract class IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         recipient: GiftRecipientInput;
         allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }>;
+        currentSale: SaleRowSnapshot;
+    }): Promise<{ recipientId: RecipientId } | null>;
 
     // GIFTED -> GIFTED. Attaches, corrects or reuses the recipient on an
     // existing gift row. Writes no status at all. `recipient` omitted is the
@@ -67,11 +78,14 @@ export abstract class IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         recipient?: GiftRecipientInput;
         allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }>;
+        currentSale: SaleRowSnapshot;
+    }): Promise<{ recipientId: RecipientId } | null>;
 }
 
 @Injectable()
 export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
+    private readonly logger = new Logger(UpdateSaleUsecaseDb.name);
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
@@ -89,12 +103,7 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
     // write they wrap it with.
     private async applySaleWrite(
         tx: Prisma.TransactionClient,
-        currentSale: {
-            id: string;
-            status: SaleStatus;
-            listedPrice: number;
-            profit: number;
-        },
+        currentSale: SaleRowSnapshot,
         payload: {
             saleId: SaleId;
             userId: UserId;
@@ -203,24 +212,25 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
         return resolved.id;
     }
 
-    private async loadSaleRowOrThrow(
-        userId: UserId,
-        saleId: SaleId,
-    ): Promise<{ id: string; status: SaleStatus; listedPrice: number; profit: number }> {
-        const currentSale = await this.prisma.sales.findUnique({
-            where: { userId, id: saleId },
-        });
-
-        if (!currentSale) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
-        }
-
-        return currentSale;
-    }
-
     private async invalidateSaleCaches(userId: UserId, saleId: SaleId): Promise<void> {
         await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
         await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
+    }
+
+    // A caught P2025 is returned as the not-found outcome, which a caller
+    // cannot tell apart from a real miss — so log the original error's
+    // code/message/meta to keep an unexpected P2025 source (e.g. the
+    // gift-row lookups) observable server-side instead of silently
+    // becoming a 404 (spec behaviour item 3).
+    private logP2025(
+        operation: string,
+        error: Prisma.PrismaClientKnownRequestError,
+    ): void {
+        this.logger.warn(`${operation}: P2025 mapped to the not-found outcome`, {
+            code: error.code,
+            message: error.message,
+            meta: error.meta,
+        });
     }
 
     async updateSale(payload: {
@@ -231,14 +241,33 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         status?: 'PENDING' | 'SOLD';
         allocations?: SaleAllocationInput[];
-    }): Promise<void> {
-        const currentSale = await this.loadSaleRowOrThrow(payload.userId, payload.saleId);
+        currentSale: SaleRowSnapshot;
+    }): Promise<SaleWriteOutcome> {
+        try {
+            await this.prisma.$transaction(async (tx) => {
+                await this.applySaleWrite(tx, payload.currentSale, payload);
+            });
 
-        await this.prisma.$transaction(async (tx) => {
-            await this.applySaleWrite(tx, currentSale, payload);
-        });
+            await this.invalidateSaleCaches(payload.userId, payload.saleId);
 
-        await this.invalidateSaleCaches(payload.userId, payload.saleId);
+            return 'written';
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2025'
+            ) {
+                // The row the usecase loaded was deleted before this write;
+                // Prisma rolled the transaction back. The only write that can
+                // raise P2025 here is tx.sales.update (allocations/history are
+                // creates, so they never do). The db reports what happened as
+                // data — the usecase decides what it means.
+                this.logP2025('updateSale', error);
+
+                return 'not_found';
+            }
+
+            throw error;
+        }
     }
 
     async giftSale(payload: {
@@ -249,41 +278,56 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         recipient: GiftRecipientInput;
         allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }> {
-        const currentSale = await this.loadSaleRowOrThrow(payload.userId, payload.saleId);
+        currentSale: SaleRowSnapshot;
+    }): Promise<{ recipientId: RecipientId } | null> {
+        try {
+            // Prisma's interactive transaction hands back whatever the callback
+            // returns, which keeps the resolved id out of a mutable outer binding.
+            const recipientId = await this.prisma.$transaction(async (tx) => {
+                // Status first: the (sale_id, sale_status) foreign key means a gift
+                // row can only be inserted against a sale that is *already* GIFTED.
+                // The order is the database's rule, not a convention (spec D15).
+                await this.applySaleWrite(tx, payload.currentSale, {
+                    ...payload,
+                    status: SaleStatus.GIFTED,
+                });
 
-        // Prisma's interactive transaction hands back whatever the callback
-        // returns, which keeps the resolved id out of a mutable outer binding.
-        const recipientId = await this.prisma.$transaction(async (tx) => {
-            // Status first: the (sale_id, sale_status) foreign key means a gift
-            // row can only be inserted against a sale that is *already* GIFTED.
-            // The order is the database's rule, not a convention (spec D15).
-            await this.applySaleWrite(tx, currentSale, {
-                ...payload,
-                status: SaleStatus.GIFTED,
+                const resolvedRecipientId = await this.resolveRecipientId(
+                    tx,
+                    payload.userId,
+                    payload.recipient,
+                );
+
+                await tx.gifts.create({
+                    data: {
+                        saleId: payload.saleId,
+                        saleStatus: SaleStatus.GIFTED,
+                        recipientId: resolvedRecipientId,
+                        giftedAt: new Date(),
+                    },
+                });
+
+                return resolvedRecipientId;
             });
 
-            const resolvedRecipientId = await this.resolveRecipientId(
-                tx,
-                payload.userId,
-                payload.recipient,
-            );
+            await this.invalidateSaleCaches(payload.userId, payload.saleId);
 
-            await tx.gifts.create({
-                data: {
-                    saleId: payload.saleId,
-                    saleStatus: SaleStatus.GIFTED,
-                    recipientId: resolvedRecipientId,
-                    giftedAt: new Date(),
-                },
-            });
+            return { recipientId };
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2025'
+            ) {
+                // tx.sales.update ran first inside applySaleWrite, so a vanished
+                // sale reports here before any gift/recipient work. Same signal →
+                // data pipeline as UsersDb.create's P2002 → null (spec D1/D3).
+                this.logP2025('giftSale', error);
 
-            return resolvedRecipientId;
-        });
+                return null;
+            }
 
-        await this.invalidateSaleCaches(payload.userId, payload.saleId);
-
-        return { recipientId };
+            throw error;
+        }
     }
 
     async updateGift(payload: {
@@ -294,39 +338,55 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
         listedPrice?: ListedPrice;
         recipient?: GiftRecipientInput;
         allocations?: SaleAllocationInput[];
-    }): Promise<{ recipientId: RecipientId }> {
-        const currentSale = await this.loadSaleRowOrThrow(payload.userId, payload.saleId);
+        currentSale: SaleRowSnapshot;
+    }): Promise<{ recipientId: RecipientId } | null> {
+        try {
+            const recipientId = await this.prisma.$transaction(async (tx) => {
+                // No status write at all: the sale is already GIFTED and stays
+                // GIFTED, so there is no transition to make (spec D5's exemption).
+                await this.applySaleWrite(tx, payload.currentSale, payload);
 
-        const recipientId = await this.prisma.$transaction(async (tx) => {
-            // No status write at all: the sale is already GIFTED and stays
-            // GIFTED, so there is no transition to make (spec D5's exemption).
-            await this.applySaleWrite(tx, currentSale, payload);
+                if (payload.recipient == null) {
+                    const existingGift = await tx.gifts.findUniqueOrThrow({
+                        where: { saleId: payload.saleId },
+                        select: { recipientId: true },
+                    });
 
-            if (payload.recipient == null) {
-                const existingGift = await tx.gifts.findUniqueOrThrow({
+                    return existingGift.recipientId as RecipientId;
+                }
+
+                const resolvedRecipientId = await this.resolveRecipientId(
+                    tx,
+                    payload.userId,
+                    payload.recipient,
+                );
+
+                await tx.gifts.update({
                     where: { saleId: payload.saleId },
-                    select: { recipientId: true },
+                    data: { recipientId: resolvedRecipientId },
                 });
 
-                return existingGift.recipientId as RecipientId;
-            }
-
-            const resolvedRecipientId = await this.resolveRecipientId(
-                tx,
-                payload.userId,
-                payload.recipient,
-            );
-
-            await tx.gifts.update({
-                where: { saleId: payload.saleId },
-                data: { recipientId: resolvedRecipientId },
+                return resolvedRecipientId;
             });
 
-            return resolvedRecipientId;
-        });
+            await this.invalidateSaleCaches(payload.userId, payload.saleId);
 
-        await this.invalidateSaleCaches(payload.userId, payload.saleId);
+            return { recipientId };
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2025'
+            ) {
+                // tx.sales.update ran first inside applySaleWrite; a vanished sale
+                // reports as null here. (A P2025 from the gift-row lookups — a
+                // GIFTED sale without a gift row — reports the same way; that
+                // state is unreachable through the API, spec behaviour item 3.)
+                this.logP2025('updateGift', error);
 
-        return { recipientId };
+                return null;
+            }
+
+            throw error;
+        }
     }
 }
