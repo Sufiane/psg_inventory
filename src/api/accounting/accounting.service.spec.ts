@@ -10,6 +10,7 @@ import { OldestMatchSale } from '../../db/sales/type/oldest-match-sale.type';
 import { IGetSeasonAccountingUsecase } from './usecases/get-season-accounting/get-season-accounting.usecase';
 import { IGetAmortizationUsecase } from './usecases/get-amortization/get-amortization.usecase';
 import type { UserId } from '@psg/shared/ids';
+import type { SeasonPassPrice } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 // Only getCurrentSeasonDate needs mocking (to control "now") — seasonStartYearFromDate
@@ -69,7 +70,7 @@ describe('AccountingService', () => {
                 pending: null,
                 gifted: null,
                 seasonInvestments: [],
-                totalSeasonInvestment: 0,
+                totalSeasonInvestment: 0 as SeasonPassPrice,
                 leadTime: null,
             };
 
@@ -104,7 +105,7 @@ describe('AccountingService', () => {
                 pending: null,
                 gifted: null,
                 seasonInvestments: [],
-                totalSeasonInvestment: 0,
+                totalSeasonInvestment: 0 as SeasonPassPrice,
                 leadTime: null,
             };
 
@@ -136,7 +137,7 @@ describe('AccountingService', () => {
                 pending: null,
                 gifted: null,
                 seasonInvestments: [],
-                totalSeasonInvestment: 0,
+                totalSeasonInvestment: 0 as SeasonPassPrice,
                 leadTime: null,
             };
 

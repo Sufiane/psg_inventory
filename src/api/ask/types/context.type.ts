@@ -1,5 +1,10 @@
 import type { TicketCount } from '@psg/shared/counts';
-import type { Profit, TotalInvestment, TotalListedValue } from '@psg/shared/money';
+import type {
+    Profit,
+    SeasonPassPrice,
+    TotalInvestment,
+    TotalListedValue,
+} from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 export type AskExtreme = {
@@ -36,11 +41,12 @@ export type AskLeadTime = {
 export type AskSeasonPass = {
     label: string;
     category: string;
-    price: number;
-    // Unbranded to match its actual upstream source (TimePeriodAccounting's
-    // seasonInvestments, itself seasonStartYear: number) — see the same
-    // reasoning on AskAmortization.remaining below.
-    seasonStartYear: number;
+    price: SeasonPassPrice;
+    // Carries its upstream brand: TimePeriodAccounting's seasonInvestments
+    // was branded in PSG-40, so these fields map straight through from it
+    // with no cast (same reasoning as AskAmortization.remaining below,
+    // whose upstream is still unbranded).
+    seasonStartYear: SeasonYear;
 };
 
 export type AskPeriod = {

@@ -12,6 +12,7 @@ import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { DomainException } from '../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import type { MatchId, OpponentId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import type { Match } from '../../db/matches/types/match.type';
 import type { SeasonPass } from '../../db/season-passes/type/season-pass.type';
 import { SalesImportService } from './sales-import.service';
@@ -124,7 +125,7 @@ describe('SalesImportService', () => {
                 if (id === passBId) {
                     return passFixture({
                         id: passBId as SeasonPassId,
-                        seasonStartYear: 2024,
+                        seasonStartYear: 2024 as SeasonYear,
                     });
                 }
 

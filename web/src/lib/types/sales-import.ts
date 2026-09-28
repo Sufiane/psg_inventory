@@ -1,7 +1,7 @@
 import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, SeasonPassId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
-import type { IsoDateString } from '@psg/shared/time';
+import type { IsoDateString, SeasonYear } from '@psg/shared/time';
 
 export type SaleStatus = 'PENDING' | 'SOLD' | 'CANCELLED' | 'GIFTED';
 
@@ -52,7 +52,7 @@ export type PreviewResponse = {
     rows: DraftRow[];
     summary: PreviewSummary;
     missingMatches: MissingMatch[];
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
 };
 
 export type CommitResult = {

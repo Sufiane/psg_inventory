@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { SaleStatus } from '@prisma/client';
 import type { UserId } from '@psg/shared/ids';
+import type { SeasonPassPrice } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 import { GetSeasonAccountingUsecase } from './get-season-accounting.usecase';
@@ -228,7 +229,7 @@ describe('GetSeasonAccountingUsecase', () => {
                     pending,
                     gifted,
                     seasonInvestments: [],
-                    totalSeasonInvestment: 0,
+                    totalSeasonInvestment: 0 as SeasonPassPrice,
                     leadTime: null,
                 };
 

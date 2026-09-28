@@ -1,4 +1,3 @@
-import type { Invest, ListedPrice } from '@psg/shared/money';
 import type { TicketCount } from '@psg/shared/counts';
 import type { IsoDateString } from '@psg/shared/time';
 import type { Match } from '../../db/matches/types/match.type';
@@ -148,7 +147,7 @@ function resolveMatch(
 }
 
 function buildAllocations(
-    nbTickets: number,
+    nbTickets: TicketCount,
     selectedPassIds: string[],
 ): {
     allocations: DraftRowDto['allocations'];
@@ -162,7 +161,7 @@ function buildAllocations(
 
     if (nbTickets === 1) {
         return {
-            allocations: [{ seasonPassId: firstPassId, nbTickets: 1 }],
+            allocations: [{ seasonPassId: firstPassId, nbTickets: 1 as TicketCount }],
             status: null,
         };
     }
@@ -200,9 +199,9 @@ export function validateCommitRows(input: ValidateInput): ValidateOutput {
             rowIndex: row.rowIndex,
             date: row.date,
             opponent: row.opponent,
-            listedPrice: row.listedPrice as ListedPrice,
-            nbTickets: row.nbTickets as TicketCount,
-            invest: row.invest as Invest,
+            listedPrice: row.listedPrice,
+            nbTickets: row.nbTickets,
+            invest: row.invest,
             status: row.status,
             soldAt: (row.soldAt ?? null) as IsoDateString | null,
             recipient: (row.recipient ?? null) as string | null,

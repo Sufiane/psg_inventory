@@ -1,3 +1,5 @@
+import type { SeasonYear } from '@psg/shared/time';
+
 import { DraftRowDto } from './draft-row.dto';
 
 export type PreviewResponse = {
@@ -12,5 +14,5 @@ export type PreviewResponse = {
         date: string;
         opponentName: string;
     }[];
-    seasonStartYear: number;
+    seasonStartYear: SeasonYear;
 };

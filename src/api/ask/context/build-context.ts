@@ -87,11 +87,12 @@ function toNetProfit(
 
 function toPeriod(period: TimePeriodAccounting): AskPeriod {
     const realized = toAccounting(period.realized);
-    // totalSeasonInvestment is a plain number upstream (TimePeriodAccounting
-    // has no brand for it) — cast once here, where it's read off the raw
-    // service result, rather than at every place AskContext's value is later
-    // consumed.
-    const totalSeasonInvestment = period.totalSeasonInvestment as TotalInvestment;
+    // Upstream is now SeasonPassPrice (PSG-40); AskPeriod's semantic brand
+    // for this figure is TotalInvestment. The two brands have no direct
+    // relationship, so a double step is required — same reasoning as
+    // totalSales → TotalListedValue in toAccounting above.
+    const totalSeasonInvestment =
+        period.totalSeasonInvestment as unknown as TotalInvestment;
 
     return {
         realized,

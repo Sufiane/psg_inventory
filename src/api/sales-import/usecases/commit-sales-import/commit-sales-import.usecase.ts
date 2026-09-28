@@ -1,9 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 
-import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
-import type { Invest, ListedPrice } from '@psg/shared/money';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import type { BulkSaleGiftInput } from '../../../../db/sales-import/sales-import.db.interface';
@@ -59,10 +57,10 @@ export class CommitSalesImportUsecase implements ICommitSalesImportUsecase {
         const batchId = randomUUID();
         const sales = validated.rows.map((row) => ({
             matchId: row.matchId! as MatchId,
-            listedPrice: row.listedPrice as ListedPrice,
-            invest: row.invest as Invest,
-            profit: computeProfit(row.listedPrice as ListedPrice),
-            nbTickets: row.nbTickets as TicketCount,
+            listedPrice: row.listedPrice,
+            invest: row.invest,
+            profit: computeProfit(row.listedPrice),
+            nbTickets: row.nbTickets,
             status: row.status,
             soldAt:
                 row.status === 'SOLD' && row.soldAt != null
@@ -71,7 +69,7 @@ export class CommitSalesImportUsecase implements ICommitSalesImportUsecase {
             gift: this.buildGiftInput(row, matchDates),
             allocations: row.allocations.map((allocation) => ({
                 seasonPassId: allocation.seasonPassId as SeasonPassId,
-                nbTickets: allocation.nbTickets as TicketCount,
+                nbTickets: allocation.nbTickets,
             })),
         }));
 

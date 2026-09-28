@@ -1,5 +1,6 @@
 import { buildAskContext } from './build-context';
 import type { BuildAskContextInput } from './build-context';
+import type { SeasonPassPrice } from '@psg/shared/money';
 import type { TimePeriodAccounting } from '../../accounting/types/time-period-accounting.type';
 import type { Amortization } from '../../accounting/types/amortization.type';
 import type { FormattedMatch } from '../../matches/types/formatted-match.type';
@@ -234,7 +235,11 @@ describe('buildAskContext', () => {
         const input = makeInput({
             currentSeason: emptyPeriod,
             allTime: emptyPeriod,
-            amortization: { ...amortization, hasPass: false, passPrice: 0 },
+            amortization: {
+                ...amortization,
+                hasPass: false,
+                passPrice: 0 as SeasonPassPrice,
+            },
         });
 
         it('reports null accounting blocks rather than zeroed ones', () => {
