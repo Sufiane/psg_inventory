@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import { Mock } from 'vitest';
 import { Prisma, SaleStatus } from '@prisma/client';
@@ -7,16 +8,31 @@ import { UngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 import { PrismaService } from '../../../../db/prisma.service';
 import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
-import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import type { SaleId, UserId } from '@psg/shared/ids';
 
 describe('UngiftSaleUsecaseDb', () => {
     let usecaseDb: UngiftSaleUsecaseDb;
     let prisma: DeepMockProxy<PrismaService>;
     let redisService: DeepMockProxy<RedisService>;
+    let warnSpy: Mock<typeof Logger.prototype.warn>;
 
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
+
+    const currentSale = {
+        id: saleId,
+        userId,
+        status: SaleStatus.GIFTED,
+        listedPrice: 100,
+        profit: 90,
+        invest: 50,
+        nbTickets: 1,
+        matchId: 'match-uuid',
+        createdAt: new Date('2026-01-01'),
+        updatedAt: new Date('2026-01-02'),
+        soldAt: null,
+        cancelledAt: null,
+    };
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -32,6 +48,8 @@ describe('UngiftSaleUsecaseDb', () => {
         redisService = module.get(RedisService);
 
         module.useLogger(false);
+
+        warnSpy = vi.spyOn(Logger.prototype, 'warn').mockClear();
     });
 
     function mockTransaction(): DeepMockProxy<Prisma.TransactionClient> {
@@ -44,9 +62,21 @@ describe('UngiftSaleUsecaseDb', () => {
         return tx;
     }
 
+    function p2025RecordGone(): Prisma.PrismaClientKnownRequestError {
+        return new Prisma.PrismaClientKnownRequestError('Record to update not found.', {
+            code: 'P2025',
+            clientVersion: '6.0.1',
+        });
+    }
+
     describe('loadSale', () => {
-        it('queries prisma.sales.findUnique with userId and saleId', async () => {
-            const expected = { id: saleId, status: SaleStatus.GIFTED };
+        it('queries prisma.sales.findUnique with userId, saleId and the snapshot fields', async () => {
+            const expected = {
+                id: saleId,
+                status: SaleStatus.GIFTED,
+                listedPrice: 100,
+                profit: 90,
+            };
             prisma.sales.findUnique.mockResolvedValueOnce(expected as never);
 
             const result = await usecaseDb.loadSale(userId, saleId);
@@ -54,7 +84,7 @@ describe('UngiftSaleUsecaseDb', () => {
             expect(result).toEqual(expected);
             expect(prisma.sales.findUnique).toHaveBeenCalledWith({
                 where: { userId, id: saleId },
-                select: { id: true, status: true },
+                select: { id: true, status: true, listedPrice: true, profit: true },
             });
         });
 
@@ -68,37 +98,10 @@ describe('UngiftSaleUsecaseDb', () => {
     });
 
     describe('ungiftSale', () => {
-        const currentSale = {
-            id: saleId,
-            userId,
-            status: SaleStatus.GIFTED,
-            listedPrice: 100,
-            profit: 90,
-            invest: 50,
-            nbTickets: 1,
-            matchId: 'match-uuid',
-            createdAt: new Date('2026-01-01'),
-            updatedAt: new Date('2026-01-02'),
-            soldAt: null,
-            cancelledAt: null,
-        };
-
-        beforeEach(() => {
-            prisma.sales.findUnique.mockResolvedValue(currentSale as never);
-        });
-
-        it('throws SALE_NOT_FOUND when the sale does not exist', async () => {
-            prisma.sales.findUnique.mockResolvedValueOnce(null);
-
-            await expect(usecaseDb.ungiftSale(userId, saleId)).rejects.toMatchObject({
-                code: ErrorCode.SALE_NOT_FOUND,
-            });
-        });
-
         it('deletes gift rows, resets sale to PENDING, and creates history in one transaction', async () => {
             const tx = mockTransaction();
 
-            await usecaseDb.ungiftSale(userId, saleId);
+            const result = await usecaseDb.ungiftSale(userId, saleId, currentSale);
 
             // Gift rows deleted first (Postgres order constraint D15)
             expect(tx.gifts.deleteMany).toHaveBeenCalledWith({ where: { saleId } });
@@ -121,12 +124,13 @@ describe('UngiftSaleUsecaseDb', () => {
                     status: currentSale.status,
                 },
             });
+            expect(result).toBe('written');
         });
 
         it('invalidates all four cache namespaces', async () => {
             mockTransaction();
 
-            await usecaseDb.ungiftSale(userId, saleId);
+            await usecaseDb.ungiftSale(userId, saleId, currentSale);
 
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
@@ -138,6 +142,59 @@ describe('UngiftSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateRecipients(userId),
             );
+        });
+
+        it('does not re-read the sale row — the usecase already loaded it', async () => {
+            mockTransaction();
+
+            await usecaseDb.ungiftSale(userId, saleId, currentSale);
+
+            expect(prisma.sales.findUnique).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('when the sale row is deleted between the load and the write', () => {
+        it('reports not_found, skips cache invalidation and re-reads nothing', async () => {
+            const tx = mockTransaction();
+            tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
+
+            const result = await usecaseDb.ungiftSale(userId, saleId, currentSale);
+
+            expect(result).toBe('not_found');
+            expect(prisma.sales.findUnique).not.toHaveBeenCalled();
+            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            expect(redisService.invalidate).not.toHaveBeenCalled();
+        });
+
+        it('logs the caught P2025 before returning not_found', async () => {
+            const tx = mockTransaction();
+            tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
+
+            const result = await usecaseDb.ungiftSale(userId, saleId, currentSale);
+
+            expect(result).toBe('not_found');
+            expect(warnSpy).toHaveBeenCalledWith(
+                expect.stringContaining('P2025'),
+                expect.objectContaining({
+                    code: 'P2025',
+                    message: expect.any(String),
+                }),
+            );
+        });
+    });
+
+    describe('when the transaction rejects with an unexpected error', () => {
+        it('ungiftSale rethrows it unchanged and does not invalidate the caches', async () => {
+            const tx = mockTransaction();
+            const failure = new Error('connection lost');
+            tx.sales.update.mockRejectedValueOnce(failure);
+
+            await expect(usecaseDb.ungiftSale(userId, saleId, currentSale)).rejects.toBe(
+                failure,
+            );
+
+            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
     });
 });

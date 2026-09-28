@@ -27,6 +27,10 @@ export class UngiftSaleUsecase implements IUngiftSaleUsecase {
             throw new DomainException(ErrorCode.SALE_INVALID_STATUS_TRANSITION);
         }
 
-        await this.usecaseDb.ungiftSale(userId, saleId);
+        const outcome = await this.usecaseDb.ungiftSale(userId, saleId, existing);
+
+        if (outcome === 'not_found') {
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+        }
     }
 }
