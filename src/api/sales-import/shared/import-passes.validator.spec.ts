@@ -5,6 +5,7 @@ import { ImportPassesValidator } from './import-passes.validator';
 import { ISeasonPassesDbService } from '../../../db/season-passes/season-passes.db.interface';
 import { ErrorCode } from '../../../common/exceptions/error-codes.enum';
 import type { SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import type { SeasonPass } from '../../../db/season-passes/type/season-pass.type';
 
 describe('ImportPassesValidator', () => {
@@ -77,7 +78,7 @@ describe('ImportPassesValidator', () => {
             if (id === passBId) {
                 return passFixture({
                     id: passBId as SeasonPassId,
-                    seasonStartYear: 2024,
+                    seasonStartYear: 2024 as SeasonYear,
                 });
             }
 

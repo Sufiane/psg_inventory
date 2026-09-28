@@ -11,6 +11,8 @@ import {
     Min,
     ValidateNested,
 } from 'class-validator';
+import type { TicketCount } from '@psg/shared/counts';
+import type { Invest, ListedPrice } from '@psg/shared/money';
 import { DraftAllocationDto } from './draft-allocation.dto';
 import { SALE_ROW_STATUSES, type SaleRowStatus } from '../sales-import.csv';
 import { DATE_ONLY_REGEX } from '../utils/date-only.util';
@@ -43,15 +45,15 @@ export class DraftRowDto {
 
     @IsInt()
     @Min(0)
-    listedPrice!: number;
+    listedPrice!: ListedPrice;
 
     @IsInt()
     @Min(1)
-    nbTickets!: number;
+    nbTickets!: TicketCount;
 
     @IsInt()
     @Min(0)
-    invest!: number;
+    invest!: Invest;
 
     @IsIn(SALE_ROW_STATUSES)
     status!: SaleRowStatus;

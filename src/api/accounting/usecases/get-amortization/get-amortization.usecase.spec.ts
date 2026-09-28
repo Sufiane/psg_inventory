@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 import type { MatchId, SeasonPassId, UserId } from '@psg/shared/ids';
+import type { SeasonPassPrice } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 import { GetAmortizationUsecase } from './get-amortization.usecase';
@@ -38,7 +39,7 @@ describe('GetAmortizationUsecase', () => {
             id: 'pass-id' as SeasonPassId,
             userId,
             seasonStartYear,
-            price,
+            price: price as SeasonPassPrice,
             label: 'Pass',
             category: '-',
             row: '-',

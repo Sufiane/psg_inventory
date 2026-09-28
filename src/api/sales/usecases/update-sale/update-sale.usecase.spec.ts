@@ -29,6 +29,7 @@ import {
 import type { TicketCount } from '@psg/shared/counts';
 import type { RecipientId } from '@psg/shared/ids';
 import type { ListedPrice } from '@psg/shared/money';
+import type { SeasonYear } from '@psg/shared/time';
 
 describe('UpdateSaleUsecase', () => {
     let usecase: IUpdateSaleUsecase;
@@ -906,7 +907,7 @@ describe('UpdateSaleUsecase', () => {
                     matchFixture(new Date('2024-09-15')),
                 );
                 seasonPassesDbService.findById.mockResolvedValue(
-                    passFixture({ seasonStartYear: 2023 }),
+                    passFixture({ seasonStartYear: 2023 as SeasonYear }),
                 );
             });
 

@@ -3,6 +3,7 @@ import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
 
 import type { TicketCount } from '@psg/shared/counts';
 import type { SeasonPassId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 import { SaleAllocationsValidator } from './sale-allocations.validator';
 import { IMatchesDbService } from '../../../db/matches/matches.db.interface';
 import { ISeasonPassesDbService } from '../../../db/season-passes/season-passes.db.interface';
@@ -38,7 +39,7 @@ describe('SaleAllocationsValidator', () => {
             matchFixture(new Date('2024-09-15T00:00:00.000Z')),
         );
         seasonPassesDbService.findById.mockResolvedValue(
-            passFixture({ seasonStartYear: 2024 }),
+            passFixture({ seasonStartYear: 2024 as SeasonYear }),
         );
     });
 
@@ -91,7 +92,7 @@ describe('SaleAllocationsValidator', () => {
             seasonPassesDbService.findById.mockResolvedValue(
                 passFixture({
                     userId: 'other-user' as typeof userId,
-                    seasonStartYear: 2024,
+                    seasonStartYear: 2024 as SeasonYear,
                 }),
             );
 
@@ -123,7 +124,7 @@ describe('SaleAllocationsValidator', () => {
         it('looks up each allocated season pass by id', async () => {
             const otherPassId = 'pass-uuid-2' as SeasonPassId;
             seasonPassesDbService.findById.mockResolvedValue(
-                passFixture({ seasonStartYear: 2024 }),
+                passFixture({ seasonStartYear: 2024 as SeasonYear }),
             );
 
             await validator.validate(userId, matchId, [

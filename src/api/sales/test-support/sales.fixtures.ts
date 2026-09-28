@@ -74,5 +74,5 @@ export function passFixture(overrides: Partial<SeasonPass> = {}): SeasonPass {
         createdAt: new Date(),
         updatedAt: new Date(),
         ...overrides,
-    };
+    } as SeasonPass;
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { UserId } from '@psg/shared/ids';
+import type { Profit, SeasonPassPrice } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 import { getSeasonWindow } from '../../../../shared/utils/season.utils';
 import { RedisService } from '../../../../redis/redis.service';
@@ -32,7 +33,10 @@ export class GetAmortizationUsecase implements IGetAmortizationUsecase {
                 ]);
 
                 const hasPass = passes.length > 0;
-                const passPrice = passes.reduce((sum, pass) => sum + pass.price, 0);
+                const passPrice = passes.reduce(
+                    (sum, pass) => sum + pass.price,
+                    0,
+                ) as SeasonPassPrice;
                 const passSummaries = passes.map((pass) => ({
                     id: pass.id,
                     label: pass.label,
@@ -67,7 +71,7 @@ export class GetAmortizationUsecase implements IGetAmortizationUsecase {
                     };
                 });
 
-                const totalRealized = cumulative;
+                const totalRealized = cumulative as Profit;
                 const breakEvenRow = perMatch.find((row) => row.isBreakEven) ?? null;
 
                 const amortization: Amortization = {
@@ -110,9 +114,9 @@ export class GetAmortizationUsecase implements IGetAmortizationUsecase {
 function emptyAmortization(seasonStartYear: SeasonYear): Amortization {
     return {
         seasonStartYear,
-        passPrice: 0,
+        passPrice: 0 as SeasonPassPrice,
         hasPass: false,
-        totalRealized: 0,
+        totalRealized: 0 as Profit,
         progress: 0,
         remaining: 0,
         surplus: 0,

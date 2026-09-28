@@ -28,6 +28,10 @@
 - Season maths are centralized in `src/shared/utils/season/utils.ts` — never re-derive a season window inline.
 - Money maths is branded: use the types from `@psg/shared/money` and `computeProfit` rather than raw arithmetic on `number`.
 
+## Branded types (PSG-40)
+- Numeric domains are branded in `@psg/shared` (`SeasonYear`, `SeasonPassPrice`, `Profit`, `Invest`, `ListedPrice`, `TicketCount`); API-output types, db row types (`Override<>` pattern), and the frontend mirror (`web/src/lib/types.ts`) all carry the brands. Scope rule when adding fields: mirror parity — brand every numeric field whose mirror or direct upstream is branded; deliberate plain-`number` survivors are listed in `docs/specs/2026-09-27-psg-40-branded-api-output-types-design.md` Non-goals (LLM-facing `Ask*` fields, `CACHE_KEYS` params, Svelte props) — don't "fix" them.
+- Cast convention: cast ONCE where a value is first produced (reduce, zero literal, raw-year derivation) — never at consumers; the only sanctioned non-type edit is deleting now-identity casts. NB: eslint only extends `recommended`, so `no-unnecessary-type-assertion` is OFF — identity casts at consumers compile and lint green; reviewers must grep for them manually.
+
 ## Testing
 - Unit tests are colocated `*.spec.ts` next to the source; Vitest globals are on (`describe`/`it`/`expect` need no import), mocks via `vitest-mock-extended`.
 - Tests needing the DB run against the Docker stack — never a remote database.
