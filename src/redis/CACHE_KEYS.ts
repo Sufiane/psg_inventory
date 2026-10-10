@@ -33,7 +33,8 @@ export default {
         `matches:start:${from.toISOString()}:end:${to?.toISOString()}:withResult:${withResult}` as CacheKey<
             Match[]
         >,
-    sale: (saleId: SaleId): CacheKey<Sale> => `sale:id:${saleId}` as CacheKey<Sale>,
+    sale: (userId: UserId, saleId: SaleId): CacheKey<Sale> =>
+        `user:id:${userId}:sales:id:${saleId}` as CacheKey<Sale>,
     sales: (userId: UserId): CacheKey<Sale[]> =>
         `user:id:${userId}:sales` as CacheKey<Sale[]>,
     salesByMatch: (userId: UserId, matchId: MatchId): CacheKey<Sale[]> =>

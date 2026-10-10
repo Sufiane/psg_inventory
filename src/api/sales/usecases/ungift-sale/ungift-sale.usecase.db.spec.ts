@@ -135,7 +135,9 @@ describe('UngiftSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
             );
-            expect(redisService.invalidate).toHaveBeenCalledWith(CACHE_KEYS.sale(saleId));
+            expect(redisService.invalidate).toHaveBeenCalledWith(
+                CACHE_KEYS.sale(userId, saleId),
+            );
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateAccounting(userId),
             );

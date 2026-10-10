@@ -31,7 +31,7 @@ export class SalesDb implements ISalesDbService {
 
     async getOneSale(userId: UserId, saleId: SaleId): Promise<Sale | null> {
         return this.redisService.get(
-            CACHE_KEYS.sale(saleId),
+            CACHE_KEYS.sale(userId, saleId),
             ONE_HOUR_TTL,
             () =>
                 this.prisma.sales.findUnique({
@@ -246,11 +246,13 @@ export class SalesDb implements ISalesDbService {
             },
         });
 
-        const userIds = [...new Set(affected.map((s) => s.userId as UserId))];
+        const userIds = [...new Set(affected.map((sale) => sale.userId as UserId))];
 
         await Promise.allSettled([
-            ...affected.map((s) =>
-                this.redisService.invalidate(CACHE_KEYS.sale(s.id as SaleId)),
+            ...affected.map((sale) =>
+                this.redisService.invalidate(
+                    CACHE_KEYS.sale(sale.userId as UserId, sale.id as SaleId),
+                ),
             ),
             ...userIds.map((id) =>
                 this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(id)),

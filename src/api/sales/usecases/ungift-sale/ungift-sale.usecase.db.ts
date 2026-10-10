@@ -77,7 +77,7 @@ export class UngiftSaleUsecaseDb implements IUngiftSaleUsecaseDb {
             // of us, and the pre-fix throw also fired before any invalidation
             // (spec D2 / behaviour item 4).
             await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-            await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
+            await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
             await this.redisService.invalidatePattern(
                 CACHE_KEYS.invalidateAccounting(userId),
             );

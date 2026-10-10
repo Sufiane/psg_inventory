@@ -226,10 +226,10 @@ describe('SalesImportDb', () => {
                 await service.deleteBatch(userId, 'batch-1');
 
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.sale('sale-1' as SaleId),
+                    CACHE_KEYS.sale(userId, 'sale-1' as SaleId),
                 );
                 expect(redisService.invalidate).toHaveBeenCalledWith(
-                    CACHE_KEYS.sale('sale-2' as SaleId),
+                    CACHE_KEYS.sale(userId, 'sale-2' as SaleId),
                 );
                 expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                     CACHE_KEYS.invalidateSales(userId),
