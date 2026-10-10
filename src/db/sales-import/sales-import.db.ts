@@ -129,7 +129,9 @@ export class SalesImportDb implements ISalesImportDbService {
         // detail entry from before the revert, plus the user's list/range
         // cache.
         await Promise.allSettled([
-            ...saleIds.map((id) => this.redisService.invalidate(CACHE_KEYS.sale(id))),
+            ...saleIds.map((id) =>
+                this.redisService.invalidate(CACHE_KEYS.sale(userId, id)),
+            ),
             this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId)),
         ]);
 

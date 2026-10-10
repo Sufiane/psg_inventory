@@ -125,7 +125,9 @@ describe('UpdateSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
             );
-            expect(redisService.invalidate).toHaveBeenCalledWith(CACHE_KEYS.sale(saleId));
+            expect(redisService.invalidate).toHaveBeenCalledWith(
+                CACHE_KEYS.sale(userId, saleId),
+            );
         });
 
         it('does not re-read the sale row — the usecase already loaded it', async () => {
@@ -264,7 +266,9 @@ describe('UpdateSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
             );
-            expect(redisService.invalidate).toHaveBeenCalledWith(CACHE_KEYS.sale(saleId));
+            expect(redisService.invalidate).toHaveBeenCalledWith(
+                CACHE_KEYS.sale(userId, saleId),
+            );
         });
     });
 
@@ -331,7 +335,9 @@ describe('UpdateSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
             );
-            expect(redisService.invalidate).toHaveBeenCalledWith(CACHE_KEYS.sale(saleId));
+            expect(redisService.invalidate).toHaveBeenCalledWith(
+                CACHE_KEYS.sale(userId, saleId),
+            );
         });
     });
 

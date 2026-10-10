@@ -214,7 +214,7 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
 
     private async invalidateSaleCaches(userId: UserId, saleId: SaleId): Promise<void> {
         await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-        await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
+        await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
     }
 
     // A caught P2025 is returned as the not-found outcome, which a caller

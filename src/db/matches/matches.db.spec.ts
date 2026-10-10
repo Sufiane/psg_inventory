@@ -1,13 +1,14 @@
+import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { Mock } from 'vitest';
+import { Mock, MockInstance } from 'vitest';
 import { Prisma } from '@prisma/client';
 import { MatchesDb } from './matches.db';
 import { PrismaService } from '../prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
 import { FormattedMatch } from '../../shared/types/formatted-match.type';
-import type { MatchId } from '@psg/shared/ids';
+import type { MatchId, UserId } from '@psg/shared/ids';
 import type { OpponentName } from '@psg/shared/strings';
 
 describe('MatchesDb', () => {
@@ -36,6 +37,10 @@ describe('MatchesDb', () => {
             atHome: true,
             opponent: 'Marseille' as OpponentName,
         };
+
+        beforeEach(() => {
+            prismaService.sales.findMany.mockResolvedValue([] as never);
+        });
 
         function mockTransaction(existingMatchId: string | null): void {
             const tx = mockDeep<Prisma.TransactionClient>();
@@ -71,7 +76,8 @@ describe('MatchesDb', () => {
 
                 // Only the one namespace-wide flush below — no per-match
                 // invalidatePattern call, which is what used to force an
-                // extra full-keyspace SCAN per updated match.
+                // extra full-keyspace SCAN per updated match. Holds when the
+                // updated match has no sales.
                 expect(redisService.invalidatePattern).toHaveBeenCalledTimes(1);
             });
 
@@ -101,6 +107,170 @@ describe('MatchesDb', () => {
                 expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                     CACHE_KEYS.invalidateMatches(),
                 );
+            });
+        });
+
+        describe('when updated matches have sales owned by several users', () => {
+            const firstUser = 'user-1' as UserId;
+            const secondUser = 'user-2' as UserId;
+
+            beforeEach(() => {
+                mockTransaction('existing-match-id');
+                prismaService.sales.findMany.mockResolvedValue([
+                    { userId: firstUser },
+                    { userId: secondUser },
+                ] as never);
+            });
+
+            it('looks up distinct owners of the updated matches', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(prismaService.sales.findMany).toHaveBeenCalledWith({
+                    where: { matchId: { in: ['existing-match-id'] } },
+                    select: { userId: true },
+                    distinct: ['userId'],
+                });
+            });
+
+            it('invalidates the sales cache of each owner', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateSales(firstUser),
+                );
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateSales(secondUser),
+                );
+            });
+
+            it('invalidates the accounting cache of each owner', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateAccounting(firstUser),
+                );
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateAccounting(secondUser),
+                );
+            });
+
+            it('flushes the matches namespace once plus two patterns per owner', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledTimes(5);
+            });
+        });
+
+        describe('when the per-match cache deletes fail', () => {
+            beforeEach(() => {
+                mockTransaction('existing-match-id');
+                prismaService.sales.findMany.mockResolvedValue([
+                    { userId: 'user-1' },
+                ] as never);
+                redisService.invalidate.mockRejectedValue(new Error('redis down'));
+            });
+
+            it('still invalidates the owners sales cache before them', async () => {
+                await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
+                    'redis down',
+                );
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateSales('user-1' as UserId),
+                );
+            });
+        });
+
+        describe('when no match was updated', () => {
+            beforeEach(() => {
+                mockTransaction(null);
+            });
+
+            it('does not query sales', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(prismaService.sales.findMany).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('when updated matches have no sales', () => {
+            beforeEach(() => {
+                mockTransaction('existing-match-id');
+                prismaService.sales.findMany.mockResolvedValue([] as never);
+            });
+
+            it('invalidates no per-user cache', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledTimes(1);
+            });
+        });
+
+        describe('when the sales lookup throws', () => {
+            let errorSpy: MockInstance;
+
+            beforeEach(() => {
+                errorSpy = vi
+                    .spyOn(Logger.prototype, 'error')
+                    .mockImplementation(() => undefined);
+                prismaService.sales.findMany.mockRejectedValue(
+                    new Error('lookup failed'),
+                );
+            });
+
+            afterEach(() => {
+                errorSpy.mockRestore();
+            });
+
+            describe('and the sync already failed', () => {
+                beforeEach(() => {
+                    const tx = mockDeep<Prisma.TransactionClient>();
+
+                    tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
+                    tx.matches.findFirst.mockResolvedValue({
+                        id: 'first-match-id',
+                    } as never);
+
+                    let callCount = 0;
+
+                    (prismaService.$transaction as Mock).mockImplementation(
+                        (callback: (tx: Prisma.TransactionClient) => unknown) => {
+                            callCount += 1;
+
+                            if (callCount === 2) {
+                                return Promise.reject(new Error('db exploded'));
+                            }
+
+                            return callback(tx);
+                        },
+                    );
+                });
+
+                it('propagates the sync error, not the lookup error', async () => {
+                    await expect(
+                        service.loadMatches([formattedMatch, formattedMatch]),
+                    ).rejects.toThrow('db exploded');
+                });
+
+                it('logs the lookup error', async () => {
+                    await expect(
+                        service.loadMatches([formattedMatch, formattedMatch]),
+                    ).rejects.toThrow('db exploded');
+
+                    expect(errorSpy).toHaveBeenCalledTimes(1);
+                });
+            });
+
+            describe('and the sync succeeded', () => {
+                beforeEach(() => {
+                    mockTransaction('existing-match-id');
+                });
+
+                it('propagates the lookup error', async () => {
+                    await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
+                        'lookup failed',
+                    );
+                });
             });
         });
 
@@ -158,6 +328,32 @@ describe('MatchesDb', () => {
                 expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                     CACHE_KEYS.invalidateMatches(),
                 );
+            });
+
+            describe('and the committed match has sales', () => {
+                beforeEach(() => {
+                    prismaService.sales.findMany.mockResolvedValue([
+                        { userId: 'user-1' },
+                    ] as never);
+                });
+
+                it('still invalidates sales and accounting caches of its owners', async () => {
+                    await expect(
+                        service.loadMatches([firstMatch, secondMatch]),
+                    ).rejects.toThrow('db exploded');
+
+                    expect(prismaService.sales.findMany).toHaveBeenCalledWith({
+                        where: { matchId: { in: ['first-match-id'] } },
+                        select: { userId: true },
+                        distinct: ['userId'],
+                    });
+                    expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                        CACHE_KEYS.invalidateSales('user-1' as UserId),
+                    );
+                    expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                        CACHE_KEYS.invalidateAccounting('user-1' as UserId),
+                    );
+                });
             });
 
             it('propagates the transaction error to the caller', async () => {

@@ -102,7 +102,9 @@ describe('DeleteSaleUsecaseDb', () => {
             expect(redisService.invalidatePattern).toHaveBeenCalledWith(
                 CACHE_KEYS.invalidateSales(userId),
             );
-            expect(redisService.invalidate).toHaveBeenCalledWith(CACHE_KEYS.sale(saleId));
+            expect(redisService.invalidate).toHaveBeenCalledWith(
+                CACHE_KEYS.sale(userId, saleId),
+            );
         });
 
         it('invalidates the recipients cache when the sale was GIFTED', async () => {

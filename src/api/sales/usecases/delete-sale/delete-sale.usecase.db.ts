@@ -49,7 +49,7 @@ export class DeleteSaleUsecaseDb implements IDeleteSaleUsecaseDb {
 
         // Invalidate all sale-level caches.
         await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-        await this.redisService.invalidate(CACHE_KEYS.sale(saleId));
+        await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
         // Accounting cache always.
         await this.redisService.invalidatePattern(
             CACHE_KEYS.invalidateAccounting(userId),

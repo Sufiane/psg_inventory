@@ -1,4 +1,4 @@
-import type { MatchId, UserId } from '@psg/shared/ids';
+import type { MatchId, SaleId, UserId } from '@psg/shared/ids';
 
 import CACHE_KEYS from './CACHE_KEYS';
 
@@ -54,6 +54,42 @@ describe('CACHE_KEYS', () => {
             );
 
             expect(key.startsWith(prefix)).toBe(true);
+        });
+
+        describe('sale key', () => {
+            const userId = 'user-id' as UserId;
+            const saleId = 'sale-id' as SaleId;
+
+            it('is covered by the invalidateSales pattern of the same user', () => {
+                const prefix = CACHE_KEYS.invalidateSales(userId).replace('*', '');
+
+                expect(CACHE_KEYS.sale(userId, saleId).startsWith(prefix)).toBe(true);
+            });
+
+            it('is not covered by the invalidateSales pattern of another user', () => {
+                const prefix = CACHE_KEYS.invalidateSales('other-user' as UserId).replace(
+                    '*',
+                    '',
+                );
+
+                expect(CACHE_KEYS.sale(userId, saleId).startsWith(prefix)).toBe(false);
+            });
+
+            it('differs from the other sales keys of the same user', () => {
+                const key = CACHE_KEYS.sale(userId, saleId);
+
+                expect(key).not.toBe(CACHE_KEYS.sales(userId));
+                expect(key).not.toBe(
+                    CACHE_KEYS.salesByMatch(userId, 'sale-id' as MatchId),
+                );
+                expect(key).not.toBe(
+                    CACHE_KEYS.salesByRange(
+                        userId,
+                        new Date('2025-08-01T00:00:00.000Z'),
+                        new Date('2026-08-01T00:00:00.000Z'),
+                    ),
+                );
+            });
         });
     });
 });

@@ -3,10 +3,10 @@ import { FormattedMatch } from '../../shared/types/formatted-match.type';
 import { convertStringToCompetition } from './matches.utils';
 import { Competition } from '@prisma/client';
 import { Prisma } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../redis/redis.service';
 import CACHE_KEYS from '../../redis/CACHE_KEYS';
-import type { MatchId } from '@psg/shared/ids';
+import type { MatchId, UserId } from '@psg/shared/ids';
 import type { SeasonYear } from '@psg/shared/time';
 import { matchQuery } from './matches.query';
 import { Match } from './types/match.type';
@@ -16,6 +16,8 @@ import { IMatchesDbService, LoadMatchesResult } from './matches.db.interface';
 
 @Injectable()
 export class MatchesDb implements IMatchesDbService {
+    private readonly logger = new Logger(MatchesDb.name);
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly redisService: RedisService,
@@ -85,13 +87,21 @@ export class MatchesDb implements IMatchesDbService {
         const updatedMatchIds: MatchId[] = [];
         const unknownCompetitions: string[] = [];
 
+        let syncFailed = false;
+
         try {
             await this.syncMatches(matches, updatedMatchIds, unknownCompetitions);
+        } catch (error) {
+            syncFailed = true;
+
+            throw error;
         } finally {
             // Runs even if a mid-loop transaction throws, so matches
             // committed by earlier iterations never serve stale cache data
             // for the rest of the TTL.
             await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
+
+            await this.invalidateSalesCachesForMatches(updatedMatchIds, syncFailed);
 
             for (const matchId of updatedMatchIds) {
                 // Direct deletes of the 2 known key shapes instead of a
@@ -105,6 +115,45 @@ export class MatchesDb implements IMatchesDbService {
         }
 
         return { unknownCompetitions: [...new Set(unknownCompetitions)] };
+    }
+
+    private async invalidateSalesCachesForMatches(
+        matchIds: MatchId[],
+        syncFailed: boolean,
+    ): Promise<void> {
+        if (matchIds.length === 0) {
+            return;
+        }
+
+        try {
+            const owners = await this.prisma.sales.findMany({
+                where: { matchId: { in: matchIds } },
+                select: { userId: true },
+                distinct: ['userId'],
+            });
+
+            for (const owner of owners) {
+                const userId = owner.userId as UserId;
+
+                await this.redisService.invalidatePattern(
+                    CACHE_KEYS.invalidateSales(userId),
+                );
+                await this.redisService.invalidatePattern(
+                    CACHE_KEYS.invalidateAccounting(userId),
+                );
+            }
+        } catch (invalidationError) {
+            // Runs inside a finally: throwing while the sync error is
+            // propagating would replace it, so only rethrow if sync succeeded.
+            if (!syncFailed) {
+                throw invalidationError;
+            }
+
+            this.logger.error(
+                `sales cache invalidation failed for ${matchIds.length} matches (swallowed, sync error takes precedence)`,
+                invalidationError,
+            );
+        }
     }
 
     // updatedMatchIds is an out-parameter, not a return value — see the
