@@ -14,6 +14,15 @@ import { ONE_HOUR_TTL } from '../../shared/constants';
 import { getSeasonWindow } from '../../shared/utils/season.utils';
 import { IMatchesDbService, LoadMatchesResult } from './matches.db.interface';
 
+// syncMatches mutates this rather than returning values, because if a
+// mid-loop transaction throws, its return value never runs — this is the only
+// way the `finally` in loadMatches still sees what earlier iterations did.
+interface SyncProgress {
+    updatedMatchIds: MatchId[];
+    dateChangedMatchIds: MatchId[];
+    unknownCompetitions: string[];
+}
+
 @Injectable()
 export class MatchesDb implements IMatchesDbService {
     private readonly logger = new Logger(MatchesDb.name);
@@ -80,17 +89,16 @@ export class MatchesDb implements IMatchesDbService {
     }
 
     async loadMatches(matches: FormattedMatch[]): Promise<LoadMatchesResult> {
-        // syncMatches mutates these arrays in place rather than returning one,
-        // because if a mid-loop transaction throws, its return value never
-        // runs — these arrays are the only way the `finally` block below still
-        // sees the ids/unknowns accumulated before the throw.
-        const updatedMatchIds: MatchId[] = [];
-        const unknownCompetitions: string[] = [];
+        const progress: SyncProgress = {
+            updatedMatchIds: [],
+            dateChangedMatchIds: [],
+            unknownCompetitions: [],
+        };
 
         let syncFailed = false;
 
         try {
-            await this.syncMatches(matches, updatedMatchIds, unknownCompetitions);
+            await this.syncMatches(matches, progress);
         } catch (error) {
             syncFailed = true;
 
@@ -101,9 +109,12 @@ export class MatchesDb implements IMatchesDbService {
             // for the rest of the TTL.
             await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
 
-            await this.invalidateSalesCachesForMatches(updatedMatchIds, syncFailed);
+            await this.invalidateSalesCachesForMatches(
+                progress.dateChangedMatchIds,
+                syncFailed,
+            );
 
-            for (const matchId of updatedMatchIds) {
+            for (const matchId of progress.updatedMatchIds) {
                 // Direct deletes of the 2 known key shapes instead of a
                 // pattern scan per match id — invalidatePattern's MATCH
                 // option only filters what SCAN returns, it still walks the
@@ -114,7 +125,7 @@ export class MatchesDb implements IMatchesDbService {
             }
         }
 
-        return { unknownCompetitions: [...new Set(unknownCompetitions)] };
+        return { unknownCompetitions: [...new Set(progress.unknownCompetitions)] };
     }
 
     private async invalidateSalesCachesForMatches(
@@ -156,18 +167,15 @@ export class MatchesDb implements IMatchesDbService {
         }
     }
 
-    // updatedMatchIds is an out-parameter, not a return value — see the
-    // comment at the call site in loadMatches for why.
     private async syncMatches(
         matches: FormattedMatch[],
-        updatedMatchIds: MatchId[],
-        unknownCompetitions: string[],
+        progress: SyncProgress,
     ): Promise<void> {
         for (const match of matches) {
             const competition = convertStringToCompetition(match.competition);
 
             if (competition === null) {
-                unknownCompetitions.push(match.competition);
+                progress.unknownCompetitions.push(match.competition);
 
                 continue;
             }
@@ -200,7 +208,7 @@ export class MatchesDb implements IMatchesDbService {
                 // (TBD placeholder -> real kickoff); without this, every revision
                 // creates a duplicate row.
                 const existing = await tx.matches.findFirst({
-                    select: { id: true },
+                    select: { id: true, date: true },
                     where: {
                         opponentId,
                         date: { gte: dayStart, lte: dayEnd },
@@ -234,7 +242,12 @@ export class MatchesDb implements IMatchesDbService {
                         },
                     });
 
-                    updatedMatchIds.push(existing.id as MatchId);
+                    progress.updatedMatchIds.push(existing.id as MatchId);
+
+                    // Date-only on purpose: competition/atHome edits don't flush sale caches.
+                    if (existing.date.getTime() !== matchDate.getTime()) {
+                        progress.dateChangedMatchIds.push(existing.id as MatchId);
+                    }
 
                     return;
                 }
