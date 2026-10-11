@@ -107,64 +107,83 @@ export class MatchesDb implements IMatchesDbService {
             // Runs even if a mid-loop transaction throws, so matches
             // committed by earlier iterations never serve stale cache data
             // for the rest of the TTL.
-            await this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches());
+            const failures = await this.runCleanup(progress);
 
-            await this.invalidateSalesCachesForMatches(
-                progress.dateChangedMatchIds,
-                syncFailed,
-            );
-
-            for (const matchId of progress.updatedMatchIds) {
-                // Direct deletes of the 2 known key shapes instead of a
-                // pattern scan per match id — invalidatePattern's MATCH
-                // option only filters what SCAN returns, it still walks the
-                // entire keyspace, so N updated matches used to mean N
-                // full-keyspace scans.
-                await this.redisService.invalidate(CACHE_KEYS.match(matchId, true));
-                await this.redisService.invalidate(CACHE_KEYS.match(matchId, false));
-            }
+            this.reportCleanupFailures(failures, syncFailed);
         }
 
         return { unknownCompetitions: [...new Set(progress.unknownCompetitions)] };
     }
 
-    private async invalidateSalesCachesForMatches(
-        matchIds: MatchId[],
-        syncFailed: boolean,
-    ): Promise<void> {
+    private async runCleanup(progress: SyncProgress): Promise<unknown[]> {
+        const steps: Promise<unknown>[] = [
+            this.redisService.invalidatePattern(CACHE_KEYS.invalidateMatches()),
+            this.invalidateSalesCachesForMatches(progress.dateChangedMatchIds),
+        ];
+
+        for (const matchId of progress.updatedMatchIds) {
+            // Direct deletes of the 2 known key shapes instead of a
+            // pattern scan per match id — invalidatePattern's MATCH
+            // option only filters what SCAN returns, it still walks the
+            // entire keyspace, so N updated matches used to mean N
+            // full-keyspace scans.
+            steps.push(
+                this.redisService.invalidate(CACHE_KEYS.match(matchId, true)),
+                this.redisService.invalidate(CACHE_KEYS.match(matchId, false)),
+            );
+        }
+
+        const results = await Promise.allSettled(steps);
+        const failures: unknown[] = [];
+
+        for (const result of results) {
+            if (result.status === 'rejected') {
+                failures.push(result.reason);
+            }
+        }
+
+        return failures;
+    }
+
+    // Runs inside a finally: throwing while the sync error is propagating
+    // would replace it, so only rethrow if sync succeeded.
+    private reportCleanupFailures(failures: unknown[], syncFailed: boolean): void {
+        for (const failure of failures) {
+            this.logger.error('cache cleanup step failed', failure);
+        }
+
+        if (syncFailed || failures.length === 0) {
+            return;
+        }
+
+        throw failures[0];
+    }
+
+    private async invalidateSalesCachesForMatches(matchIds: MatchId[]): Promise<void> {
         if (matchIds.length === 0) {
             return;
         }
 
-        try {
-            const owners = await this.prisma.sales.findMany({
-                where: { matchId: { in: matchIds } },
-                select: { userId: true },
-                distinct: ['userId'],
-            });
+        const owners = await this.prisma.sales.findMany({
+            where: { matchId: { in: matchIds } },
+            select: { userId: true },
+            distinct: ['userId'],
+        });
 
-            for (const owner of owners) {
+        await Promise.all(
+            owners.flatMap((owner) => {
                 const userId = owner.userId as UserId;
 
-                await this.redisService.invalidatePattern(
-                    CACHE_KEYS.invalidateSales(userId),
-                );
-                await this.redisService.invalidatePattern(
-                    CACHE_KEYS.invalidateAccounting(userId),
-                );
-            }
-        } catch (invalidationError) {
-            // Runs inside a finally: throwing while the sync error is
-            // propagating would replace it, so only rethrow if sync succeeded.
-            if (!syncFailed) {
-                throw invalidationError;
-            }
-
-            this.logger.error(
-                `sales cache invalidation failed for ${matchIds.length} matches (swallowed, sync error takes precedence)`,
-                invalidationError,
-            );
-        }
+                return [
+                    this.redisService.invalidatePattern(
+                        CACHE_KEYS.invalidateSales(userId),
+                    ),
+                    this.redisService.invalidatePattern(
+                        CACHE_KEYS.invalidateAccounting(userId),
+                    ),
+                ];
+            }),
+        );
     }
 
     private async syncMatches(
