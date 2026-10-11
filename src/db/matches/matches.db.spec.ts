@@ -62,6 +62,30 @@ describe('MatchesDb', () => {
             );
         }
 
+        function mockSecondTransactionFailure(): void {
+            const tx = mockDeep<Prisma.TransactionClient>();
+
+            tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
+            tx.matches.findFirst.mockResolvedValue({
+                id: 'first-match-id',
+                date: previousDate,
+            } as never);
+
+            let callCount = 0;
+
+            (prismaService.$transaction as Mock).mockImplementation(
+                (callback: (tx: Prisma.TransactionClient) => unknown) => {
+                    callCount += 1;
+
+                    if (callCount === 2) {
+                        return Promise.reject(new Error('db exploded'));
+                    }
+
+                    return callback(tx);
+                },
+            );
+        }
+
         describe('when the match already exists', () => {
             beforeEach(() => {
                 mockTransaction('existing-match-id');
@@ -277,7 +301,7 @@ describe('MatchesDb', () => {
                 redisService.invalidate.mockRejectedValue(new Error('redis down'));
             });
 
-            it('still invalidates the owners sales cache before them', async () => {
+            it('still invalidates the owners sales cache', async () => {
                 await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
                     'redis down',
                 );
@@ -377,6 +401,240 @@ describe('MatchesDb', () => {
                 it('propagates the lookup error', async () => {
                     await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
                         'lookup failed',
+                    );
+                });
+
+                it('logs the lookup error', async () => {
+                    await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
+                        'lookup failed',
+                    );
+
+                    expect(errorSpy).toHaveBeenCalledTimes(1);
+                });
+            });
+        });
+
+        describe('when cleanup steps reject', () => {
+            let errorSpy: MockInstance;
+
+            beforeEach(() => {
+                errorSpy = vi
+                    .spyOn(Logger.prototype, 'error')
+                    .mockImplementation(() => undefined);
+            });
+
+            afterEach(() => {
+                errorSpy.mockRestore();
+            });
+
+            describe('when the namespace flush rejects', () => {
+                beforeEach(() => {
+                    redisService.invalidatePattern.mockImplementation(
+                        (pattern: string) =>
+                            pattern === CACHE_KEYS.invalidateMatches()
+                                ? Promise.reject(new Error('redis down'))
+                                : Promise.resolve(),
+                    );
+                });
+
+                describe('and the sync already failed', () => {
+                    beforeEach(() => {
+                        mockSecondTransactionFailure();
+                    });
+
+                    it('propagates the sync error', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+                    });
+
+                    it('still deletes the per-match keys', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+
+                        expect(redisService.invalidate).toHaveBeenCalledWith(
+                            CACHE_KEYS.match('first-match-id' as MatchId, true),
+                        );
+                        expect(redisService.invalidate).toHaveBeenCalledWith(
+                            CACHE_KEYS.match('first-match-id' as MatchId, false),
+                        );
+                    });
+
+                    it('still runs the sales step', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+
+                        expect(prismaService.sales.findMany).toHaveBeenCalledTimes(1);
+                    });
+
+                    it('logs the flush failure', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+
+                        expect(errorSpy).toHaveBeenCalledTimes(1);
+                    });
+                });
+
+                describe('and the sync succeeded', () => {
+                    beforeEach(() => {
+                        mockTransaction('existing-match-id', previousDate);
+                    });
+
+                    it('rejects with the redis error', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('redis down');
+                    });
+
+                    it('still deletes the per-match keys and runs the sales step', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('redis down');
+
+                        expect(redisService.invalidate).toHaveBeenCalledTimes(2);
+                        expect(prismaService.sales.findMany).toHaveBeenCalledTimes(1);
+                    });
+                });
+            });
+
+            describe('when one per-match delete rejects', () => {
+                beforeEach(() => {
+                    redisService.invalidate.mockRejectedValueOnce(
+                        new Error('delete down'),
+                    );
+                });
+
+                describe('and the sync already failed', () => {
+                    beforeEach(() => {
+                        mockSecondTransactionFailure();
+                    });
+
+                    it('propagates the sync error', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+                    });
+
+                    it('still runs the other steps', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+
+                        expect(redisService.invalidate).toHaveBeenCalledTimes(2);
+                        expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                            CACHE_KEYS.invalidateMatches(),
+                        );
+                        expect(prismaService.sales.findMany).toHaveBeenCalledTimes(1);
+                    });
+                });
+
+                describe('and the sync succeeded', () => {
+                    beforeEach(() => {
+                        mockTransaction('existing-match-id', previousDate);
+                    });
+
+                    it('rejects with the delete error', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('delete down');
+                    });
+
+                    it('still runs the other steps', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('delete down');
+
+                        expect(redisService.invalidate).toHaveBeenCalledTimes(2);
+                        expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                            CACHE_KEYS.invalidateMatches(),
+                        );
+                        expect(prismaService.sales.findMany).toHaveBeenCalledTimes(1);
+                    });
+                });
+            });
+
+            describe('when several steps reject', () => {
+                beforeEach(() => {
+                    redisService.invalidatePattern.mockRejectedValue(
+                        new Error('flush down'),
+                    );
+                    prismaService.sales.findMany.mockRejectedValue(
+                        new Error('lookup down'),
+                    );
+                });
+
+                describe('and the sync succeeded', () => {
+                    beforeEach(() => {
+                        mockTransaction('existing-match-id', previousDate);
+                    });
+
+                    it('rejects with the first failure by step order', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('flush down');
+                    });
+
+                    it('logs every failure', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch]),
+                        ).rejects.toThrow('flush down');
+
+                        expect(errorSpy).toHaveBeenCalledTimes(2);
+                    });
+                });
+
+                describe('and the sync already failed', () => {
+                    beforeEach(() => {
+                        mockSecondTransactionFailure();
+                    });
+
+                    it('propagates the sync error', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+                    });
+
+                    it('logs every failure', async () => {
+                        await expect(
+                            service.loadMatches([formattedMatch, formattedMatch]),
+                        ).rejects.toThrow('db exploded');
+
+                        expect(errorSpy).toHaveBeenCalledTimes(2);
+                    });
+                });
+            });
+
+            describe("when one owner's pattern invalidation rejects", () => {
+                const firstUser = 'user-1' as UserId;
+                const secondUser = 'user-2' as UserId;
+
+                beforeEach(() => {
+                    mockTransaction('existing-match-id', previousDate);
+                    prismaService.sales.findMany.mockResolvedValue([
+                        { userId: firstUser },
+                        { userId: secondUser },
+                    ] as never);
+                    redisService.invalidatePattern.mockImplementation(
+                        (pattern: string) =>
+                            pattern === CACHE_KEYS.invalidateSales(firstUser)
+                                ? Promise.reject(new Error('owner down'))
+                                : Promise.resolve(),
+                    );
+                });
+
+                it('still invalidates the other owner patterns', async () => {
+                    await expect(service.loadMatches([formattedMatch])).rejects.toThrow(
+                        'owner down',
+                    );
+
+                    expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                        CACHE_KEYS.invalidateSales(secondUser),
+                    );
+                    expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                        CACHE_KEYS.invalidateAccounting(secondUser),
                     );
                 });
             });
