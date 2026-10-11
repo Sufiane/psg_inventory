@@ -149,6 +149,8 @@ export class MatchesDb implements IMatchesDbService {
     // would replace it, so only rethrow if sync succeeded.
     private reportCleanupFailures(failures: unknown[], syncFailed: boolean): void {
         for (const failure of failures) {
+            // Log every failure, not just the rethrown one: the others are
+            // otherwise lost, and when the sync failed none are rethrown.
             this.logger.error('cache cleanup step failed', failure);
         }
 
