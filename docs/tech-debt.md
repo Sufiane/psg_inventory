@@ -149,28 +149,6 @@ behavior change; tests must stay green before and after.
 
 ---
 
-## 7. `loadMatches` invalidates each affected user with two sequential SCANs per pull
-
-**Found:** 2026-10-10, while fixing PSG-45. Tracked as PSG-46.
-
-After a football-data pull, `MatchesDb.invalidateSalesCachesForMatches` awaits
-`invalidatePattern` for the sales and accounting patterns of every user owning a sale on
-any updated match, one user at a time. Every pull re-updates every existing fixture, so
-every user with any sale costs two full-keyspace SCANs per pull, serially, and a single
-failing user aborts the rest.
-
-**Why deferred:** fine at the current user count, and narrowing needs `syncMatches` to
-select the old date and return a separate list of matches whose date actually changed,
-which widens the PSG-45 fix.
-
-**Cost to act:** moderate. Select the previous date in `syncMatches`, collect only ids
-whose date changed, and pass those to the lookup. Optionally bound the concurrency.
-
-**Recommendation:** do it when the user count makes pulls slow, or if pull latency shows
-up in the admin endpoint.
-
----
-
 ## 8. Redis failures early in `loadMatches`' `finally` can mask the original sync error
 
 **Found:** 2026-10-10, while fixing PSG-45. Tracked as PSG-47.

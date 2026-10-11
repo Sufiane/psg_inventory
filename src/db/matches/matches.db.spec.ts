@@ -38,16 +38,23 @@ describe('MatchesDb', () => {
             opponent: 'Marseille' as OpponentName,
         };
 
+        const previousDate = new Date('2026-09-13T15:00:00.000Z');
+
         beforeEach(() => {
             prismaService.sales.findMany.mockResolvedValue([] as never);
         });
 
-        function mockTransaction(existingMatchId: string | null): void {
+        function mockTransaction(
+            existingMatchId: string | null,
+            existingDate: Date = new Date(formattedMatch.date),
+        ): void {
             const tx = mockDeep<Prisma.TransactionClient>();
 
             tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
             tx.matches.findFirst.mockResolvedValue(
-                existingMatchId ? ({ id: existingMatchId } as never) : null,
+                existingMatchId
+                    ? ({ id: existingMatchId, date: existingDate } as never)
+                    : null,
             );
 
             (prismaService.$transaction as Mock).mockImplementation(
@@ -90,6 +97,106 @@ describe('MatchesDb', () => {
             });
         });
 
+        describe('when the existing match date is unchanged', () => {
+            beforeEach(() => {
+                mockTransaction('existing-match-id');
+            });
+
+            it('does not query sales', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(prismaService.sales.findMany).not.toHaveBeenCalled();
+            });
+
+            it('flushes only the matches namespace pattern', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledTimes(1);
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateMatches(),
+                );
+            });
+
+            it('still deletes both per-match keys', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(redisService.invalidate).toHaveBeenCalledWith(
+                    CACHE_KEYS.match('existing-match-id' as MatchId, true),
+                );
+                expect(redisService.invalidate).toHaveBeenCalledWith(
+                    CACHE_KEYS.match('existing-match-id' as MatchId, false),
+                );
+            });
+        });
+
+        describe('when the existing match date changed', () => {
+            beforeEach(() => {
+                mockTransaction('existing-match-id', previousDate);
+            });
+
+            it('looks up sale owners of the changed match', async () => {
+                await service.loadMatches([formattedMatch]);
+
+                expect(prismaService.sales.findMany).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        where: { matchId: { in: ['existing-match-id'] } },
+                    }),
+                );
+            });
+        });
+
+        describe('when several fixtures sync and only one changed its date', () => {
+            const unchangedMatch: FormattedMatch = {
+                ...formattedMatch,
+                opponent: 'Lyon' as OpponentName,
+            };
+            const changedMatch: FormattedMatch = {
+                ...formattedMatch,
+                opponent: 'Nice' as OpponentName,
+            };
+
+            beforeEach(() => {
+                const tx = mockDeep<Prisma.TransactionClient>();
+
+                tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
+                tx.matches.findFirst
+                    .mockResolvedValueOnce({
+                        id: 'unchanged-match-id',
+                        date: new Date(formattedMatch.date),
+                    } as never)
+                    .mockResolvedValueOnce({
+                        id: 'changed-match-id',
+                        date: previousDate,
+                    } as never);
+
+                (prismaService.$transaction as Mock).mockImplementation(
+                    (callback: (tx: Prisma.TransactionClient) => unknown) => callback(tx),
+                );
+            });
+
+            it('looks up sale owners of the changed match only', async () => {
+                await service.loadMatches([unchangedMatch, changedMatch]);
+
+                expect(prismaService.sales.findMany).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        where: { matchId: { in: ['changed-match-id'] } },
+                    }),
+                );
+            });
+
+            it('deletes per-match keys for both matches', async () => {
+                await service.loadMatches([unchangedMatch, changedMatch]);
+
+                expect(redisService.invalidate).toHaveBeenCalledTimes(4);
+                expect(redisService.invalidate).toHaveBeenCalledWith(
+                    CACHE_KEYS.match('unchanged-match-id' as MatchId, true),
+                );
+                expect(redisService.invalidate).toHaveBeenCalledWith(
+                    CACHE_KEYS.match('changed-match-id' as MatchId, false),
+                );
+            });
+        });
+
         describe('when the match is newly created', () => {
             beforeEach(() => {
                 mockTransaction(null);
@@ -115,7 +222,7 @@ describe('MatchesDb', () => {
             const secondUser = 'user-2' as UserId;
 
             beforeEach(() => {
-                mockTransaction('existing-match-id');
+                mockTransaction('existing-match-id', previousDate);
                 prismaService.sales.findMany.mockResolvedValue([
                     { userId: firstUser },
                     { userId: secondUser },
@@ -163,7 +270,7 @@ describe('MatchesDb', () => {
 
         describe('when the per-match cache deletes fail', () => {
             beforeEach(() => {
-                mockTransaction('existing-match-id');
+                mockTransaction('existing-match-id', previousDate);
                 prismaService.sales.findMany.mockResolvedValue([
                     { userId: 'user-1' },
                 ] as never);
@@ -195,7 +302,7 @@ describe('MatchesDb', () => {
 
         describe('when updated matches have no sales', () => {
             beforeEach(() => {
-                mockTransaction('existing-match-id');
+                mockTransaction('existing-match-id', previousDate);
                 prismaService.sales.findMany.mockResolvedValue([] as never);
             });
 
@@ -229,6 +336,7 @@ describe('MatchesDb', () => {
                     tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
                     tx.matches.findFirst.mockResolvedValue({
                         id: 'first-match-id',
+                        date: previousDate,
                     } as never);
 
                     let callCount = 0;
@@ -263,7 +371,7 @@ describe('MatchesDb', () => {
 
             describe('and the sync succeeded', () => {
                 beforeEach(() => {
-                    mockTransaction('existing-match-id');
+                    mockTransaction('existing-match-id', previousDate);
                 });
 
                 it('propagates the lookup error', async () => {
@@ -290,6 +398,7 @@ describe('MatchesDb', () => {
                 tx.opponents.upsert.mockResolvedValue({ id: 'opponent-id' } as never);
                 tx.matches.findFirst.mockResolvedValue({
                     id: 'first-match-id',
+                    date: previousDate,
                 } as never);
 
                 let callCount = 0;
