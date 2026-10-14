@@ -1,6 +1,7 @@
 import globals from 'globals';
 import pluginJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import sonarjs from 'eslint-plugin-sonarjs';
 
 export default [
     {
@@ -26,6 +27,14 @@ export default [
                 'error',
                 { allowTypedFunctionExpressions: true },
             ],
+        },
+    },
+    {
+        files: ['src/**/*.ts', 'scripts/**/*.ts'],
+        ignores: ['**/*.spec.ts'],
+        plugins: { sonarjs },
+        rules: {
+            'sonarjs/cognitive-complexity': ['error', 27],
         },
     },
 ];
