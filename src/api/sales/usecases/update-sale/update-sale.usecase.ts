@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 
-import type { RecipientId, UserId } from '@psg/shared/ids';
+import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { RawSaleStatus } from '../../../accounting/types/accounting-status.type';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
-import { GiftRecipientInput } from '../../../../db/sales/sales.db.interface';
+import {
+    GiftRecipientInput,
+    SaleAllocationInput,
+} from '../../../../db/sales/sales.db.interface';
 import { Sale } from '../../../../db/sales/type/sale.type';
 import { normalizeRecipientName } from '../../../../shared/utils/recipient-name.util';
 import { SaleStatusTarget, UpdateSaleDto } from '../../dto/update-sale.dto';
@@ -13,6 +17,24 @@ import { SaleAllocationsValidator } from '../../shared/sale-allocations.validato
 import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import { computeProfit } from '../../shared/profit.util';
 import { IUpdateSaleUsecaseDb } from './update-sale.usecase.db';
+
+type UpdateIntent = 'enter_gift' | 'update_gift' | 'plain';
+
+type FieldPatch = {
+    saleId: SaleId;
+    userId: UserId;
+    profit: Profit | undefined;
+    invest?: Invest;
+    listedPrice?: ListedPrice;
+    allocations?: SaleAllocationInput[];
+};
+
+type UpdateContext = {
+    userId: UserId;
+    payload: UpdateSaleDto;
+    existing: Sale;
+    fieldPatch: FieldPatch;
+};
 
 export abstract class IUpdateSaleUsecase {
     abstract execute(userId: UserId, payload: UpdateSaleDto): Promise<void>;
@@ -47,7 +69,35 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
             );
         }
 
-        const fieldPatch = {
+        const context: UpdateContext = {
+            userId,
+            payload,
+            existing,
+            fieldPatch: this.buildFieldPatch(userId, payload),
+        };
+        const intent = this.classifyIntent(existing, payload);
+
+        // Three intents, three db methods. Which one runs is decided here, once,
+        // from the pair (current status, target status) — and each of them writes
+        // the sale and its gift row in a single transaction (spec D15).
+        switch (intent) {
+            case 'enter_gift':
+                await this.enterGift(context);
+
+                break;
+            case 'update_gift':
+                await this.updateExistingGift(context);
+
+                break;
+            case 'plain':
+                await this.updatePlainSale(context);
+
+                break;
+        }
+    }
+
+    private buildFieldPatch(userId: UserId, payload: UpdateSaleDto): FieldPatch {
+        return {
             saleId: payload.saleId,
             userId,
             profit: payload.listedPrice ? computeProfit(payload.listedPrice) : undefined,
@@ -57,6 +107,10 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
                 : {}),
             ...(payload.allocations ? { allocations: payload.allocations } : {}),
         };
+    }
+
+    private classifyIntent(existing: Sale, payload: UpdateSaleDto): UpdateIntent {
+        const target = payload.status;
 
         // A recipient sent for an already-GIFTED sale is a gift update whether
         // or not `status` came along: `status` is optional, and an absent one
@@ -74,49 +128,59 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
             throw new DomainException(ErrorCode.SALE_GIFT_RECIPIENT_NOT_APPLICABLE);
         }
 
-        // Three intents, three db methods. Which one runs is decided here, once,
-        // from the pair (current status, target status) — and each of them writes
-        // the sale and its gift row in a single transaction (spec D15).
         if (target === 'GIFTED' && existing.status !== 'GIFTED') {
-            // Entry always moves a gift count — the sale had no gift a moment
-            // ago — so the resolved id is not needed to decide anything here.
-            const gift = await this.db.giftSale({
-                ...fieldPatch,
-                currentSale: existing,
-                recipient: await this.resolveNewGiftRecipient(userId, payload),
-            });
-
-            if (gift == null) {
-                throw new DomainException(ErrorCode.SALE_NOT_FOUND);
-            }
-
-            await this.salesCacheInvalidator.afterWrite(userId, {
-                recipientChanged: true,
-            });
-
-            return;
+            return 'enter_gift';
         }
 
         if (targetsExistingGift) {
-            const recipient = await this.resolveExistingGiftRecipient(userId, payload);
-            const gift = await this.db.updateGift({
-                ...fieldPatch,
-                currentSale: existing,
-                ...(recipient != null ? { recipient } : {}),
-            });
-
-            if (gift == null) {
-                throw new DomainException(ErrorCode.SALE_NOT_FOUND);
-            }
-            const { recipientId } = gift;
-
-            await this.salesCacheInvalidator.afterWrite(userId, {
-                recipientChanged: recipientId !== (existing.Gift?.recipientId ?? null),
-            });
-
-            return;
+            return 'update_gift';
         }
 
+        return 'plain';
+    }
+
+    private async enterGift(context: UpdateContext): Promise<void> {
+        const { userId, payload, existing, fieldPatch } = context;
+
+        // Entry always moves a gift count — the sale had no gift a moment
+        // ago — so the resolved id is not needed to decide anything here.
+        const gift = await this.db.giftSale({
+            ...fieldPatch,
+            currentSale: existing,
+            recipient: await this.resolveNewGiftRecipient(userId, payload),
+        });
+
+        if (gift == null) {
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+        }
+
+        await this.salesCacheInvalidator.afterWrite(userId, {
+            recipientChanged: true,
+        });
+    }
+
+    private async updateExistingGift(context: UpdateContext): Promise<void> {
+        const { userId, payload, existing, fieldPatch } = context;
+        const recipient = await this.resolveExistingGiftRecipient(userId, payload);
+        const gift = await this.db.updateGift({
+            ...fieldPatch,
+            currentSale: existing,
+            ...(recipient != null ? { recipient } : {}),
+        });
+
+        if (gift == null) {
+            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+        }
+        const { recipientId } = gift;
+
+        await this.salesCacheInvalidator.afterWrite(userId, {
+            recipientChanged: recipientId !== (existing.Gift?.recipientId ?? null),
+        });
+    }
+
+    private async updatePlainSale(context: UpdateContext): Promise<void> {
+        const { userId, payload, existing, fieldPatch } = context;
+        const target = payload.status;
         const outcome = await this.db.updateSale({
             ...fieldPatch,
             currentSale: existing,
