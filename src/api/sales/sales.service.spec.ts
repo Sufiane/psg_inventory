@@ -176,6 +176,21 @@ describe('SalesService', () => {
         });
     });
 
+    describe('formatting a sale', () => {
+        describe('when a sale is formatted', () => {
+            it('keeps the matchId', async () => {
+                salesDbService.getSalesGrouped.mockResolvedValue({
+                    pending: [saleFixture(new Date('2026-09-01'), SaleStatus.PENDING)],
+                    terminal: [],
+                });
+
+                const result = await service.getSalesGrouped(userId);
+
+                expect(result.pending[0]?.matchId).toBe(matchId);
+            });
+        });
+    });
+
     describe('updateSale', () => {
         it('delegates to UpdateSaleUsecase.execute', async () => {
             const payload: UpdateSaleDto = {

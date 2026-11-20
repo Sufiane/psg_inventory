@@ -7,7 +7,7 @@ import { UpdateSaleDto } from '../dto/update-sale.dto';
 
 // The wire shape is the stored shape: a sale carries its gift as the joined
 // `Gift` row, null when it has none.
-export type FormattedSale = Omit<Sale, 'Match' | 'userId' | 'matchId'> & {
+export type FormattedSale = Omit<Sale, 'Match' | 'userId'> & {
     opponent: { id: OpponentId; name: string };
     matchDate: Date;
 };

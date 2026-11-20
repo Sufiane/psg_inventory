@@ -98,6 +98,7 @@ export type SaleAllocation = {
  */
 export type MatchSale = {
     id: SaleId;
+    matchId: MatchId;
     listedPrice: ListedPrice;
     profit: Profit;
     invest: Invest;
@@ -118,6 +119,7 @@ export type MatchSale = {
 
 export type SaleListItem = {
     id: SaleId;
+    matchId: MatchId;
     listedPrice: ListedPrice;
     profit: Profit;
     invest: Invest;
