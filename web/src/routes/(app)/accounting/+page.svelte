@@ -1,171 +1,250 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import { fade } from 'svelte/transition';
-    import { cubicOut } from 'svelte/easing';
+    import type { TimePeriodAccounting } from '$lib/types';
+    import { page } from '$app/state';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
-    import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
-    import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
-    import AmortizationCard from '$lib/ui/AmortizationCard.svelte';
-    import AmortizationCardSkeleton from '$lib/ui/AmortizationCardSkeleton.svelte';
     import LeadTimeStrip from '$lib/ui/LeadTimeStrip.svelte';
+    import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
+    import Skeleton from '$lib/ui/Skeleton.svelte';
+    import MathBlock from '$lib/ui/MathBlock.svelte';
+    import AmortisationBlock from '$lib/ui/AmortisationBlock.svelte';
+    import MatchdayStrip from '$lib/ui/MatchdayStrip.svelte';
+    import SeasonMatchTable from '$lib/ui/SeasonMatchTable.svelte';
     import { money, signedMoney } from '$lib/format';
-    import { seasonStartYearFromDate } from '$lib/season';
+    import { groupSalesByMatch, summarizeSales } from '$lib/sale-math';
+    import { stripSegments, tableGroups } from '$lib/accounting-view';
+    import { carrySeason } from '$lib/season';
 
     let { data }: { data: PageData } = $props();
 
-    let tab = $derived(data.view);
+    const isAll = $derived(data.season === 'all');
+
+    function figuresOf(accounting: TimePeriodAccounting): {
+        realizedProceeds: number;
+        realizedInvest: number;
+        seasonInvest: number;
+        netProfit: number;
+    } {
+        const realizedProceeds = accounting.realized?.totalProfit ?? 0;
+        const realizedInvest = accounting.realized?.totalInvest ?? 0;
+        const seasonInvest = accounting.totalSeasonInvestment;
+
+        return {
+            realizedProceeds,
+            realizedInvest,
+            seasonInvest,
+            netProfit: realizedProceeds - realizedInvest - seasonInvest,
+        };
+    }
+
+    function netTone(value: number): string {
+        if (value < 0) {
+            return 'text-negative-strong';
+        }
+
+        if (value > 0) {
+            return 'text-positive-strong';
+        }
+
+        return 'text-ink';
+    }
+
+    function proceedsTone(value: number): string {
+        if (value < 0) {
+            return 'text-negative';
+        }
+
+        if (value > 0) {
+            return 'text-positive';
+        }
+
+        return 'text-ink';
+    }
 </script>
 
-<div class="flex flex-wrap items-end justify-between gap-4 mb-6">
-    <h1 class="text-2xl font-semibold tracking-tight text-ink">Accounting</h1>
+<div class="mb-6">
+    <h1 class="text-2xl font-display font-semibold tracking-tight text-ink">
+        {isAll ? 'Accounting' : 'Season accounting'}
+    </h1>
 </div>
 
 {#await data.accounting}
-    <div class="grid gap-4 mb-6 lg:grid-cols-2 lg:items-start">
-        <NetProfitSkeleton />
-        {#if tab !== 'all-time'}
-            <AmortizationCardSkeleton />
-        {/if}
-    </div>
-    <div class="mb-4">
-        <AccountingCardSkeleton title="Realized" />
-    </div>
-    <div class="grid sm:grid-cols-2 gap-4">
-        <AccountingCardSkeleton title="Unrealized" variant="compact" />
-        <AccountingCardSkeleton title="Pending" variant="compact" />
-    </div>
+    <NetProfitSkeleton />
 {:then accounting}
-    {@const realizedProceeds = accounting.realized?.totalProfit ?? 0}
-    {@const realizedInvest = accounting.realized?.totalInvest ?? 0}
-    {@const seasonInvest = accounting.totalSeasonInvestment}
-    {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
-    {@const showSeason = tab === 'all-time'}
+    {@const figures = figuresOf(accounting)}
+    <section aria-labelledby="figures-heading" class="mb-6">
+        <h2 id="figures-heading" class="text-sm font-medium text-ink-muted">Season figures</h2>
 
-    <div in:fade={{ duration: 120, easing: cubicOut }}>
-    <div class="grid gap-4 mb-6 lg:grid-cols-2 lg:items-start">
-    <section
-        class="bg-surface rounded-lg border border-line p-5 max-w-lg"
-        aria-labelledby="net-profit-heading"
-    >
-        <h2 id="net-profit-heading" class="text-sm font-medium text-ink-muted">
-            Net realized profit
-        </h2>
-        <p
-            class="mt-1 font-mono text-3xl font-semibold tracking-tight {netProfit < 0
-                ? 'text-negative-strong'
-                : netProfit > 0
-                  ? 'text-positive-strong'
-                  : 'text-ink'}"
-        >
-            {signedMoney(netProfit)}
-        </p>
-
-        <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-            <dt class="text-ink-muted">Realized proceeds</dt>
-            <dd
-                class="text-right font-mono {realizedProceeds < 0
-                    ? 'text-negative'
-                    : realizedProceeds > 0
-                      ? 'text-positive'
-                      : 'text-ink'}"
-            >
-                {signedMoney(realizedProceeds)}
-            </dd>
-
-            <dt class="text-ink-muted">
-                Ticket invest{tab === 'all-time' ? ' (all time)' : ''}
-            </dt>
-            <dd class="text-right font-mono text-ink-muted">
-                {signedMoney(-realizedInvest)}
-            </dd>
-
-            <dt class="text-ink-muted">
-                Season investment{tab === 'all-time' ? ' (all seasons)' : ''}
-            </dt>
-            <dd class="text-right font-mono text-ink-muted">
-                {signedMoney(-seasonInvest)}
-            </dd>
-        </dl>
-
-        {#if accounting.seasonInvestments.length > 0}
-            <ul class="mt-4 space-y-1 text-xs text-ink-muted">
-                {#each accounting.seasonInvestments as pass (pass.id)}
-                    <li>
-                        Season {pass.seasonStartYear} · {pass.label} · {pass.category}
-                        · Row {pass.row} · Seat {pass.seat}
-                    </li>
-                {/each}
-            </ul>
-        {:else if tab !== 'all-time'}
-            <p class="mt-4 text-xs text-ink-muted">
-                No season pass recorded.
-                <a
-                    href="/season?year={data.year ?? seasonStartYearFromDate(new Date())}"
-                    class="text-primary font-medium hover:text-primary-hover hover:underline"
-                    >Set it on the Season tab.</a
+        <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-lg border border-line bg-surface p-5 lg:col-span-full">
+                <h3 class="text-sm font-medium text-ink-muted">Net realized profit</h3>
+                <p
+                    class="mt-1 font-mono text-3xl font-display font-semibold tracking-tight {netTone(
+                        figures.netProfit,
+                    )}"
+                    data-numeric
                 >
-            </p>
-        {/if}
-    </section>
+                    {signedMoney(figures.netProfit)}
+                </p>
+            </div>
 
-    {#if tab !== 'all-time'}
-        {@const amortYear =
-            tab === 'season' && data.year
-                ? data.year
-                : seasonStartYearFromDate(new Date())}
-        {#await data.amortization}
-            <AmortizationCardSkeleton />
-        {:then amortization}
-            {#if amortization}
-                <AmortizationCard data={amortization} seasonStartYear={amortYear} />
-            {/if}
-        {:catch}
-            <!-- amortization is non-critical; net section already errored or will -->
-        {/await}
-    {/if}
-    </div>
+            <div class="rounded-lg border border-line bg-surface p-5">
+                <h3 class="text-sm font-medium text-ink-muted">Realized proceeds (SOLD)</h3>
+                <p
+                    class="mt-1 font-mono text-2xl font-semibold tracking-tight {proceedsTone(
+                        figures.realizedProceeds,
+                    )}"
+                    data-numeric
+                >
+                    {signedMoney(figures.realizedProceeds)}
+                </p>
+            </div>
 
-    {#if accounting.leadTime && accounting.leadTime.soldCount >= 3}
-        <div class="mb-6">
-            <LeadTimeStrip data={accounting.leadTime} />
+            <div class="rounded-lg border border-line bg-surface p-5">
+                <h3 class="text-sm font-medium text-ink-muted">Pending</h3>
+                <p
+                    class="mt-1 font-mono text-2xl font-semibold tracking-tight text-warning-strong"
+                    data-numeric
+                >
+                    {signedMoney(accounting.pending?.totalProfit ?? 0)}
+                </p>
+                <p class="mt-1 text-xs text-ink-muted" data-numeric>
+                    {accounting.pending?.totalSales ?? 0} tickets
+                </p>
+            </div>
+
+            <div class="rounded-lg border border-line bg-surface p-5">
+                <h3 class="text-sm font-medium text-ink-muted">Season pass cost</h3>
+                {#if figures.seasonInvest === 0 && !isAll}
+                    <p class="mt-1 text-sm text-ink">Not set</p>
+                    <p class="mt-1 text-xs text-ink-muted">
+                        <a
+                            href={carrySeason('/season', page.url)}
+                            class="text-primary font-medium hover:text-primary-hover hover:underline"
+                            >Set it on the Season page</a
+                        >
+                    </p>
+                {:else}
+                    <p
+                        class="mt-1 font-mono text-2xl font-semibold tracking-tight text-ink"
+                        data-numeric
+                    >
+                        {money(figures.seasonInvest)}
+                    </p>
+                {/if}
+            </div>
         </div>
-    {/if}
-
-    <div class="mb-4">
-        <AccountingCard
-            title="Realized"
-            data={accounting.realized}
-            {showSeason}
-            showDate={!showSeason}
-        />
-    </div>
-    <div class="grid sm:grid-cols-2 gap-4">
-        <AccountingCard
-            title="Unrealized"
-            subtitle="Cancelled, or given away."
-            data={accounting.unrealized}
-            footnote={accounting.gifted
-                ? `of which gifted ${money(accounting.gifted.totalProfit)}`
-                : undefined}
-            {showSeason}
-            variant="compact"
-            tone="sunk"
-        />
-        <AccountingCard
-            title="Pending"
-            subtitle="Listed, awaiting sale."
-            data={accounting.pending}
-            {showSeason}
-            variant="compact"
-            tone="warning"
-        />
-    </div>
-    </div>
+    </section>
 {:catch err}
     <p
         role="alert"
-        class="rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
+        class="mb-6 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
     >
         Failed to load accounting: {err?.message ?? 'unknown error'}
     </p>
+{/await}
+
+{#if !isAll}
+    {#await data.seasonView}
+        <div class="mb-6 space-y-4">
+            <Skeleton height="6rem" width="100%" rounded="rounded-lg" />
+            <Skeleton height="7rem" width="100%" rounded="rounded-lg" />
+        </div>
+    {:then view}
+        {@const salesByMatch = groupSalesByMatch(view.sales)}
+        <div class="mb-6 space-y-6">
+            {#if view.amortization}
+                <AmortisationBlock data={view.amortization} matchCount={view.matches.length} />
+            {/if}
+
+            {#if view.matches.length > 0}
+                <MatchdayStrip
+                    segments={stripSegments(
+                        view.matches,
+                        salesByMatch,
+                        view.amortization?.breakEven?.matchId ?? null,
+                    )}
+                />
+            {/if}
+        </div>
+    {:catch err}
+        <p
+            role="alert"
+            class="mb-6 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
+        >
+            Failed to load matchday details: {err?.message ?? 'unknown error'}
+        </p>
+    {/await}
+{/if}
+
+{#await data.accounting}
+    <div class="mb-6">
+        <Skeleton height="8rem" width="100%" rounded="rounded-lg" />
+    </div>
+{:then accounting}
+    {@const figures = figuresOf(accounting)}
+    <section aria-labelledby="waterfall-heading" class="mb-6 max-w-lg">
+        <h2 id="waterfall-heading" class="text-sm font-medium text-ink-muted">
+            How net profit is calculated
+        </h2>
+
+        <div class="mt-3 rounded-lg border border-line bg-surface p-5">
+            <MathBlock
+                lines={[
+                    {
+                        label: 'Realized proceeds (SOLD)',
+                        value: figures.realizedProceeds,
+                        sign: 'plus',
+                    },
+                    { label: 'Ticket invest', value: figures.realizedInvest, sign: 'minus' },
+                    { label: 'Season pass', value: figures.seasonInvest, sign: 'minus' },
+                ]}
+                resultLabel="Net realized profit"
+                result={figures.netProfit}
+            />
+        </div>
+    </section>
+{:catch}
+<!-- error banner rendered above -->
+{/await}
+
+{#if !isAll}
+    {#await data.seasonView}
+        <div class="mb-6">
+            <Skeleton height="12rem" width="100%" rounded="rounded-lg" />
+        </div>
+    {:then view}
+        <SeasonMatchTable
+            groups={tableGroups(view.matches, groupSalesByMatch(view.sales))}
+            summary={summarizeSales(view.sales)}
+        />
+    {:catch}
+    <!-- error banner rendered above -->
+    {/await}
+{/if}
+
+{#await data.accounting}
+    <div class="mb-6">
+        <Skeleton height="6rem" width="100%" rounded="rounded-lg" />
+    </div>
+{:then accounting}
+    <details class="mb-6 rounded-lg border border-line bg-surface">
+        <summary
+            class="cursor-pointer select-none px-5 py-3 text-sm font-medium text-ink hover:text-ink"
+            >Details</summary
+        >
+        <div class="space-y-4 border-t border-line px-5 py-4">
+            {#if accounting.leadTime && accounting.leadTime.soldCount >= 3}
+                <LeadTimeStrip data={accounting.leadTime} />
+            {/if}
+            <AccountingCard
+                title="Realized"
+                data={accounting.realized}
+                showSeason={isAll}
+                showDate={!isAll}
+            />
+        </div>
+    </details>
+{:catch}
+<!-- error banner rendered above -->
 {/await}
