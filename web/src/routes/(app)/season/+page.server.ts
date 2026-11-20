@@ -2,16 +2,10 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import type { SeasonPass } from '$lib/types';
-import { seasonStartYearFromDate } from '$lib/season';
-
-function currentSeasonStartYear(): number {
-    return seasonStartYearFromDate(new Date());
-}
+import { resolveSeasonYear } from '$lib/season';
 
 export const load: PageServerLoad = async (event) => {
-    const yearParam = event.url.searchParams.get('year');
-    const parsed = yearParam ? Number.parseInt(yearParam, 10) : null;
-    const year = parsed && Number.isFinite(parsed) ? parsed : currentSeasonStartYear();
+    const year = resolveSeasonYear(event.url);
 
     const [seasonPasses, passes] = await Promise.all([
         api<SeasonPass[]>(event, `/season-passes?season=${year}`),

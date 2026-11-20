@@ -2,25 +2,19 @@ import type { PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import type { Amortization, TimePeriodAccounting } from '$lib/types';
 import { seasonStartYearFromDate } from '$lib/season';
-
-function currentSeasonStartYear(): number {
-    return seasonStartYearFromDate(new Date());
-}
+import { resolveAccountingScope } from './accounting-scope';
 
 export const load: PageServerLoad = (event) => {
-    const view = event.url.searchParams.get('view') ?? 'current';
-    const yearParam = event.url.searchParams.get('year');
-    const year = yearParam ? Number.parseInt(yearParam, 10) : null;
-
+    const scope = resolveAccountingScope(event.url);
     let path = '/accounting/current-season';
-    let amortizationYear: number | null = currentSeasonStartYear();
+    let amortizationYear: number | null = seasonStartYearFromDate(new Date());
 
-    if (view === 'all-time') {
+    if (scope.view === 'all-time') {
         path = '/accounting/all-time';
         amortizationYear = null;
-    } else if (view === 'season' && year && Number.isFinite(year)) {
-        path = `/accounting/season/${year}`;
-        amortizationYear = year;
+    } else if (scope.view === 'season') {
+        path = `/accounting/season/${scope.year}`;
+        amortizationYear = scope.year;
     }
 
     // Return the promises unawaited so SvelteKit streams them.
@@ -32,5 +26,5 @@ export const load: PageServerLoad = (event) => {
             ? api<Amortization>(event, `/accounting/amortization/${amortizationYear}`)
             : Promise.resolve(null);
 
-    return { accounting, amortization, view, year };
+    return { accounting, amortization, view: scope.view, year: scope.year };
 };

@@ -1,9 +1,10 @@
 import { fail, redirect } from '@sveltejs/kit';
+import type { SeasonYear } from '@psg/shared/time';
 import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
-import { parseSeasonYearParam, seasonStartYearFromDate } from '$lib/season';
+import { resolveSeason, seasonOptions, seasonStartYearFromDate } from '$lib/season';
 import { readPayload } from './read-payload';
 import type {
     FormattedMatch,
@@ -17,18 +18,27 @@ import type {
 export const load: PageServerLoad = async (event) => {
     const editId = event.url.searchParams.get('edit');
     const isNew = event.url.searchParams.get('new') !== null;
-    // `?year=` is a seasonStartYear, so it maps straight onto the
-    // `/season/:seasonStartYear` routes for both sales and matches.
-    const seasonYear = parseSeasonYearParam(event.url);
+    const season = resolveSeason(event.url, true);
+    const currentSeason = seasonStartYearFromDate(new Date());
     let sales: SaleListItem[];
     let salesGroup: SalesGroupListItem | null = null;
+    let year: SeasonYear | null = null;
 
-    if (seasonYear === null) {
+    if (season === currentSeason) {
         const grouped = await api<SalesGroupListItem>(event, '/sales/grouped');
         sales = [...grouped.pending, ...grouped.terminal];
         salesGroup = grouped;
+    } else if (season === 'all') {
+        const perSeason = await Promise.all(
+            seasonOptions(new Date(), 6).map((option) =>
+                api<SaleListItem[]>(event, `/sales/season/${option.year}`),
+            ),
+        );
+
+        sales = perSeason.flat();
     } else {
-        sales = await api<SaleListItem[]>(event, `/sales/season/${seasonYear}`);
+        sales = await api<SaleListItem[]>(event, `/sales/season/${season}`);
+        year = season;
     }
 
     let editSale: SaleDetail | null = null;
@@ -56,13 +66,8 @@ export const load: PageServerLoad = async (event) => {
 
     // New sales are only ever logged against the current season: updateSale's
     // kickoff guard means a past-season sale could never be marked SOLD, and a
-    // future season has no fixtures to offer. `/matches/current-season` derives
-    // its season from seasonStartYearFromDate(new Date()) — the same function
-    // on the same clock as this line — so an exact match is the honest test.
-    // Computed server-side so it runs against the sanitized `seasonYear` rather
-    // than the raw `?year=` param.
-    const canCreate =
-        seasonYear === null || seasonYear === seasonStartYearFromDate(new Date());
+    // future season has no fixtures to offer.
+    const canCreate = season === 'all' || season === currentSeason;
 
     let matches: FormattedMatch[] = [];
     // Unfiltered on purpose: ImportSalesModal groups this list by season and
@@ -82,7 +87,8 @@ export const load: PageServerLoad = async (event) => {
     return {
         sales,
         salesGroup,
-        year: seasonYear,
+        year,
+        season,
         editSale,
         matches,
         isNew,

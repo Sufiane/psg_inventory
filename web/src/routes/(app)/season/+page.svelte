@@ -6,28 +6,12 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
     let seasonPasses = $derived(data.seasonPasses);
     let submitting = $state<string | null>(null);
 </script>
 
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Season passes</h1>
-
-    <form method="GET" class="flex items-center gap-2">
-        <label class="text-sm text-ink-muted" for="year">Season</label>
-        <select
-            id="year"
-            name="year"
-            class="rounded border border-line-strong bg-surface text-ink-muted px-2 py-1 text-sm hover:text-ink hover:border-ink transition-colors"
-            onchange={(event) => event.currentTarget.form?.requestSubmit()}
-        >
-            {#each years as year (year)}
-                <option value={year} selected={data.year === year}>{year}</option>
-            {/each}
-        </select>
-    </form>
 </div>
 
 {#if form?.success}

@@ -6,7 +6,9 @@
     import type { LayoutData } from './$types';
     import { browser, dev } from '$app/environment';
     import { page } from '$app/state';
-    import ThemeToggle from '$lib/ui/ThemeToggle.svelte';
+    import SeasonSelect from '$lib/ui/SeasonSelect.svelte';
+    import UserMenu from '$lib/ui/UserMenu.svelte';
+    import { carrySeason } from '$lib/season';
     import ToastHost from '$lib/ui/ToastHost.svelte';
 
     let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -49,7 +51,7 @@
         >
             <a
                 href="/dashboard"
-                class="font-semibold tracking-tight text-ink shrink-0 mr-auto sm:mr-0"
+                class="font-display font-semibold tracking-tight text-ink shrink-0 mr-auto sm:mr-0"
             >
                 PSG Inventory
             </a>
@@ -64,11 +66,11 @@
                     {#each nav as item (item.href)}
                         {@const active = item.match(path)}
                         <a
-                            href={item.href}
+                            href={carrySeason(item.href, page.url)}
                             aria-current={active ? 'page' : undefined}
-                            class="shrink-0 px-3 py-2 rounded transition-colors duration-150 {active
-                                ? 'text-ink font-medium bg-surface-strong/60'
-                                : 'text-ink-muted hover:text-ink'}"
+                            class="shrink-0 px-3 py-2 rounded-t border-b-2 transition-colors duration-150 {active
+                                ? 'text-ink font-medium bg-surface-strong border-brand'
+                                : 'text-ink-muted hover:text-ink border-transparent'}"
                         >
                             {item.label}
                         </a>
@@ -76,19 +78,9 @@
                 </nav>
             </div>
 
-            <div class="order-2 sm:order-3 flex items-center gap-3 text-sm text-ink-muted">
-                <ThemeToggle />
-                <span class="hidden md:inline truncate max-w-[16ch]" title={user.email}>
-                    {user.email}
-                </span>
-                <form method="POST" action="/logout">
-                    <button
-                        type="submit"
-                        class="text-primary font-medium hover:text-primary-hover hover:underline px-1 py-2"
-                    >
-                        Sign out
-                    </button>
-                </form>
+            <div class="order-2 sm:order-3 flex items-center gap-3 text-sm">
+                <SeasonSelect />
+                <UserMenu email={user.email} />
             </div>
         </div>
     </header>

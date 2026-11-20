@@ -16,22 +16,111 @@ export function seasonLabel(year: SeasonYear): string {
     return `${year}/${year + 1}`;
 }
 
-/**
- * Reads and sanitizes the `?year=` query param, shared by every page that
- * accepts a season-start-year filter. `?year=` is a seasonStartYear, and the
- * backend only accepts a 4-digit one (`/^\d{4}$/`) — `Number.isFinite` alone
- * lets 0 (and other non-4-digit values) through, which 404s against
- * `/matches/season/:year` and `/sales/season/:year`. Returns `null` (fall
- * back to current-season) for anything missing, non-numeric, or outside the
- * 4-digit range.
- */
-export function parseSeasonYearParam(url: URL): SeasonYear | null {
-    const yearParam = url.searchParams.get('year');
-    const parsed = yearParam ? Number.parseInt(yearParam, 10) : null;
+// The backend only accepts a 4-digit start year (`/^\d{4}$/`) on its season routes.
+const SEASON_PARAM = /^\d{4}$/;
+const RETAINED_PARAMS = ['venue', 'competition', 'status'] as const;
+const SEASON_ONLY_PATHS = new Set(['/dashboard', '/matches', '/season']);
+const SEASON_OR_ALL_PATHS = new Set(['/sales', '/accounting']);
 
-    return parsed !== null && Number.isFinite(parsed) && parsed > 999 && parsed < 10000
-        ? (parsed as SeasonYear)
-        : null;
+export type SeasonScope = 'none' | 'season' | 'season-or-all';
+
+export function parseSeasonParam(url: URL): SeasonYear | 'all' | null {
+    const raw = url.searchParams.get('year');
+
+    if (raw === 'all') {
+        return 'all';
+    }
+
+    if (raw !== null && SEASON_PARAM.test(raw)) {
+        return Number.parseInt(raw, 10) as SeasonYear;
+    }
+
+    return null;
+}
+
+export function parseSeasonYearParam(url: URL): SeasonYear | null {
+    const parsed = parseSeasonParam(url);
+
+    return parsed === 'all' ? null : parsed;
+}
+
+export function resolveSeason(
+    url: URL,
+    allowAll: boolean,
+    now: Date = new Date(),
+): SeasonYear | 'all' {
+    const parsed = parseSeasonParam(url);
+
+    if (parsed === 'all' && allowAll) {
+        return 'all';
+    }
+
+    return parsed === null || parsed === 'all' ? seasonStartYearFromDate(now) : parsed;
+}
+
+export function resolveSeasonYear(url: URL, now: Date = new Date()): SeasonYear {
+    return resolveSeason(url, false, now) as SeasonYear;
+}
+
+export function seasonScope(pathname: string): SeasonScope {
+    const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+
+    if (SEASON_ONLY_PATHS.has(path)) {
+        return 'season';
+    }
+
+    return SEASON_OR_ALL_PATHS.has(path) ? 'season-or-all' : 'none';
+}
+
+export function carrySeason(href: string, from: URL): string {
+    const year = parseSeasonParam(from);
+
+    if (year === null) {
+        return href;
+    }
+
+    const [beforeHash, ...hashParts] = href.split('#');
+    const [path, ...queryParts] = beforeHash.split('?');
+    const scope = seasonScope(path);
+
+    if (scope === 'none' || (year === 'all' && scope !== 'season-or-all')) {
+        return href;
+    }
+
+    const params = new URLSearchParams(queryParts.join('?'));
+    const hash = hashParts.length > 0 ? `#${hashParts.join('#')}` : '';
+
+    params.set('year', String(year));
+
+    return `${path}?${params.toString()}${hash}`;
+}
+
+export function retainedParams(url: URL): [string, string][] {
+    const pairs: [string, string][] = [];
+
+    for (const name of RETAINED_PARAMS) {
+        const value = url.searchParams.get(name);
+
+        if (value !== null) {
+            pairs.push([name, value]);
+        }
+    }
+
+    return pairs;
+}
+
+export function seasonChoices(
+    now: Date,
+    count: number,
+    selected: SeasonYear | null,
+): { year: SeasonYear; label: string }[] {
+    const choices = seasonOptions(now, count);
+
+    if (selected !== null && !choices.some((choice) => choice.year === selected)) {
+        choices.push({ year: selected, label: seasonLabel(selected) });
+    }
+
+    return choices;
 }
 
 /**
