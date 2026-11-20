@@ -1,15 +1,19 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
+    import { page } from '$app/state';
     import { fade } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
-    import AccountingCard from '$lib/ui/AccountingCard.svelte';
     import AskCard from '$lib/ui/AskCard.svelte';
+    import BreakEvenBar from '$lib/ui/BreakEvenBar.svelte';
     import Button from '$lib/ui/Button.svelte';
-    import AccountingCardSkeleton from '$lib/ui/AccountingCardSkeleton.svelte';
+    import MathBlock from '$lib/ui/MathBlock.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
+    import RecentSales from '$lib/ui/RecentSales.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
-    import { competitionLabel, dateTime, money, signedMoney } from '$lib/format';
-    import { splitByKickoff } from '$lib/matches';
+    import { money, signedMoney } from '$lib/format';
+    import { breakEvenCaption, netTone, recentSales } from '$lib/dashboard';
+    import { cancelledFrom } from '$lib/sale-math';
+    import { carrySeason, seasonLabel } from '$lib/season';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -18,254 +22,216 @@
     const askQuestion = $derived(
         askAnswer ? askAnswer.question : form && 'question' in form ? form.question : '',
     );
-
-    function netTone(value: number): string {
-        if (value < 0) {
-            return 'text-negative-strong';
-        }
-
-        if (value > 0) {
-            return 'text-positive-strong';
-        }
-
-        return 'text-ink';
-    }
-
-    function proceedsTone(value: number): string {
-        if (value < 0) {
-            return 'text-negative';
-        }
-
-        if (value > 0) {
-            return 'text-positive';
-        }
-
-        return 'text-ink';
-    }
 </script>
 
-<style>
-    .dashboard-glossary > summary {
-        list-style: none;
-    }
-
-    .dashboard-glossary > summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .dashboard-glossary .glossary-marker {
-        display: inline-block;
-        transition: transform 150ms ease-out;
-    }
-
-    .dashboard-glossary[open] .glossary-marker {
-        transform: rotate(90deg);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .dashboard-glossary .glossary-marker {
-            transition: none;
-        }
-    }
-</style>
+{#snippet failure(thing: string, err: { message?: string } | null)}
+    <p
+        role="alert"
+        class="rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
+    >
+        Failed to load {thing}: {err?.message ?? 'unknown error'}
+    </p>
+{/snippet}
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
-    <h1 class="text-2xl font-semibold tracking-tight text-ink">Current season</h1>
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-ink">Dashboard</h1>
+        <p class="text-sm text-ink-muted">{seasonLabel(data.season)}</p>
+    </div>
 
-    <Button href="/sales/new">New sale</Button>
-</div>
-
-<div class="mb-6">
-    <AskCard answer={askAnswer} message={askMessage} question={askQuestion} />
+    <Button href="/sales/new">Log sale</Button>
 </div>
 
 {#await data.accounting}
     <NetProfitSkeleton />
+
+    <div class="grid gap-4 sm:grid-cols-3 mb-6">
+        {#each Array(3) as _, i (i)}
+            <div class="bg-surface rounded-lg border border-line p-4 space-y-2">
+                <Skeleton width="40%" height="0.85rem" />
+                <Skeleton width="60%" height="1.5rem" />
+                <Skeleton width="30%" height="0.75rem" />
+            </div>
+        {/each}
+    </div>
 {:then accounting}
     {@const realizedProceeds = accounting.realized?.totalProfit ?? 0}
     {@const realizedInvest = accounting.realized?.totalInvest ?? 0}
     {@const seasonInvest = accounting.totalSeasonInvestment}
+    {@const hasPass = accounting.seasonInvestments.length > 0}
     {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
+    {@const cancelled = cancelledFrom(accounting.unrealized, accounting.gifted)}
+    {@const giftedCount = accounting.gifted?.totalSales ?? 0}
+    {@const pendingCount = accounting.pending?.totalSales ?? 0}
 
     <section
         in:fade={{ duration: 120, easing: cubicOut }}
-        class="bg-surface rounded-lg border border-line p-5 mb-6 max-w-lg"
+        class="bg-surface rounded-lg border border-line p-6 mb-6"
         aria-labelledby="dashboard-net-heading"
     >
         <h2 id="dashboard-net-heading" class="text-sm font-medium text-ink-muted">
             Net realized profit
         </h2>
         <p
-            class="mt-1 font-mono text-3xl font-semibold tracking-tight {netTone(
+            class="mt-1 mb-5 font-mono text-5xl font-semibold tracking-tight {netTone(
                 netProfit,
             )}"
+            data-numeric
         >
             {signedMoney(netProfit)}
         </p>
 
-        <dl class="mt-5 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-            <dt class="text-ink-muted">Realized proceeds</dt>
-            <dd class="text-right font-mono {proceedsTone(realizedProceeds)}">
-                {signedMoney(realizedProceeds)}
-            </dd>
+        <div class="max-w-md">
+            <MathBlock
+                lines={[
+                    {
+                        label: 'Realized proceeds (SOLD)',
+                        value: realizedProceeds,
+                        sign: 'plus',
+                    },
+                    { label: 'Ticket invest', value: realizedInvest, sign: 'minus' },
+                    ...(hasPass
+                        ? [
+                              {
+                                  label: 'Season pass',
+                                  value: seasonInvest,
+                                  sign: 'minus' as const,
+                              },
+                          ]
+                        : []),
+                ]}
+                resultLabel="Net realized profit"
+                result={netProfit}
+            />
+        </div>
 
-            <dt class="text-ink-muted">Ticket invest</dt>
-            <dd class="text-right font-mono text-ink-muted">
-                {signedMoney(-realizedInvest)}
-            </dd>
-
-            <dt class="text-ink-muted">Season investment</dt>
-            <dd class="text-right font-mono text-ink-muted">
-                {signedMoney(-seasonInvest)}
-            </dd>
-        </dl>
-
-        {#if accounting.seasonInvestments.length > 0}
-            <ul class="mt-4 space-y-1 text-xs text-ink-muted">
-                {#each accounting.seasonInvestments as pass (pass.id)}
-                    <li>
-                        Season {pass.seasonStartYear} · {pass.label} · {pass.category}
-                        · Row {pass.row} · Seat {pass.seat}
-                    </li>
-                {/each}
-            </ul>
-        {:else}
+        {#if !hasPass}
             <p class="mt-4 text-xs text-ink-muted">
                 No season pass recorded.
                 <a
-                    href="/season"
+                    href={carrySeason('/season', page.url)}
                     class="text-primary font-medium hover:text-primary-hover hover:underline"
                     >Set it on the Season tab.</a
                 >
             </p>
         {/if}
-
-        <details class="dashboard-glossary mt-4 text-xs text-ink-muted">
-            <summary
-                class="cursor-pointer select-none inline-flex items-center gap-1.5 text-ink-faint hover:text-ink transition-colors"
-            >
-                <span aria-hidden="true" class="glossary-marker">›</span>
-                What these mean
-            </summary>
-            <dl
-                class="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 pl-3 border-l border-line"
-            >
-                <dt class="font-medium text-ink">Realized</dt>
-                <dd>Sales that settled, with the cash collected.</dd>
-                <dt class="font-medium text-ink">Ticket invest</dt>
-                <dd>Per-ticket cost on the match day for the realized sales above.</dd>
-                <dt class="font-medium text-ink">Season investment</dt>
-                <dd>Season pass cost, amortized across the season.</dd>
-                <dt class="font-medium text-ink">Pending</dt>
-                <dd>Listed but not yet sold. Not in the realized net.</dd>
-                <dt class="font-medium text-ink">Unrealized</dt>
-                <dd>Cancelled and won't settle, tracked separately from the net.</dd>
-            </dl>
-        </details>
     </section>
+
+    <div in:fade={{ duration: 120, easing: cubicOut }} class="grid gap-4 sm:grid-cols-3 mb-6">
+        <section
+            class="bg-surface rounded-lg border border-line p-4"
+            aria-labelledby="dashboard-pending-heading"
+        >
+            <h2
+                id="dashboard-pending-heading"
+                class="text-sm font-medium text-warning-strong"
+            >
+                Pending
+            </h2>
+            <p class="mt-1 font-mono text-xl font-semibold text-warning-strong" data-numeric>
+                {money(accounting.pending?.totalProfit ?? 0)}
+            </p>
+            <p class="text-xs text-ink-muted">
+                {pendingCount}
+                {pendingCount === 1 ? 'sale' : 'sales'}
+            </p>
+        </section>
+
+        <section
+            class="bg-surface rounded-lg border border-line p-4"
+            aria-labelledby="dashboard-cancelled-heading"
+        >
+            <h2
+                id="dashboard-cancelled-heading"
+                class="text-sm font-medium text-sunk-strong"
+            >
+                Cancelled
+            </h2>
+            <p class="mt-1 font-mono text-xl font-semibold text-sunk-strong" data-numeric>
+                {money(cancelled.amount)}
+            </p>
+            <p class="text-xs text-ink-muted">
+                {cancelled.count}
+                {cancelled.count === 1 ? 'sale' : 'sales'}
+            </p>
+        </section>
+
+        <section
+            class="bg-surface rounded-lg border border-line p-4"
+            aria-labelledby="dashboard-gifted-heading"
+        >
+            <h2 id="dashboard-gifted-heading" class="text-sm font-medium text-gift-strong">
+                Gifted
+            </h2>
+            <p class="mt-1 font-mono text-xl font-semibold text-gift-strong" data-numeric>
+                {giftedCount}
+            </p>
+            <p class="text-xs text-ink-muted">
+                {giftedCount === 1 ? 'sale' : 'sales'}
+            </p>
+        </section>
+    </div>
+{:catch err}
+    <div class="mb-6">
+        {@render failure('accounting', err)}
+    </div>
 {/await}
 
-<div class="grid sm:grid-cols-2 gap-4 mb-8 max-w-lg">
-    {#await data.accounting}
-        <AccountingCardSkeleton title="Unrealized" variant="compact" />
-        <AccountingCardSkeleton title="Pending" variant="compact" />
-    {:then accounting}
-        <div in:fade={{ duration: 120, easing: cubicOut }}>
-            <AccountingCard
-                title="Unrealized"
-                subtitle="Cancelled, or given away."
-                data={accounting.unrealized}
-                footnote={accounting.gifted
-                    ? `of which gifted ${money(accounting.gifted.totalProfit)}`
-                    : undefined}
-                variant="compact"
-                tone="sunk"
-            />
-        </div>
-        <div in:fade={{ duration: 120, easing: cubicOut }}>
-            <AccountingCard
-                title="Pending"
-                subtitle="Listed, awaiting sale."
-                data={accounting.pending}
-                variant="compact"
-                tone="warning"
-            />
-        </div>
-    {:catch err}
-        <p
-            role="alert"
-            class="sm:col-span-2 rounded-lg border border-negative bg-negative/5 text-negative-strong text-sm px-4 py-3"
-        >
-            Failed to load accounting: {err?.message ?? 'unknown error'}
-        </p>
-    {/await}
-</div>
-
-<section class="bg-surface rounded-lg border border-line p-5">
-    <h2 class="text-base font-semibold tracking-tight text-ink mb-4">
-        Upcoming matches
+<section
+    class="bg-surface rounded-lg border border-line p-5 mb-6"
+    aria-labelledby="dashboard-breakeven-heading"
+>
+    <h2
+        id="dashboard-breakeven-heading"
+        class="text-base font-semibold tracking-tight text-ink mb-3"
+    >
+        Season pass recovery
     </h2>
 
-    {#await data.matches}
+    {#await data.amortization}
+        <Skeleton height="0.5rem" rounded="rounded-full" />
+        <div class="mt-3"><Skeleton width="40%" height="0.85rem" /></div>
+    {:then amortization}
+        {@const caption = breakEvenCaption(amortization)}
+        <div in:fade={{ duration: 120, easing: cubicOut }}>
+            <BreakEvenBar progress={amortization.progress} hasPass={amortization.hasPass} />
+            {#if caption}
+                <p class="mt-2 text-sm text-ink-muted">{caption}</p>
+            {/if}
+        </div>
+    {:catch err}
+        {@render failure('season pass recovery', err)}
+    {/await}
+</section>
+
+<section
+    class="bg-surface rounded-lg border border-line p-5 mb-6"
+    aria-labelledby="dashboard-recent-heading"
+>
+    <h2
+        id="dashboard-recent-heading"
+        class="text-base font-semibold tracking-tight text-ink mb-3"
+    >
+        Recent sales
+    </h2>
+
+    {#await data.sales}
         <ul class="divide-y divide-line">
-            {#each Array(3) as _, i (i)}
-                <li class="py-2 flex items-center gap-3 text-sm">
-                    <Skeleton width="9rem" height="0.85rem" />
-                    <span class="flex-1"><Skeleton width="60%" height="0.85rem" /></span>
-                    <Skeleton width="5rem" height="0.75rem" />
+            {#each Array(5) as _, i (i)}
+                <li class="py-3 flex items-center gap-3">
+                    <span class="flex-1"><Skeleton width="50%" height="0.85rem" /></span>
+                    <Skeleton width="4rem" height="1.25rem" />
+                    <Skeleton width="5rem" height="0.85rem" />
                 </li>
             {/each}
         </ul>
-    {:then matches}
-        {@const upcoming = splitByKickoff(matches, new Date()).upcoming.slice(0, 5)}
-        {#if matches.length === 0}
-            <p
-                in:fade={{ duration: 120, easing: cubicOut }}
-                class="text-ink-faint text-sm"
-            >
-                No fixtures for this season yet.
-            </p>
-        {:else if upcoming.length === 0}
-            <p
-                in:fade={{ duration: 120, easing: cubicOut }}
-                class="text-ink-faint text-sm"
-            >
-                No upcoming matches left this season.
-                <a
-                    href="/matches"
-                    class="text-primary font-medium hover:text-primary-hover hover:underline"
-                    >See the season's results</a
-                >
-            </p>
-        {:else}
-            <ul
-                in:fade={{ duration: 120, easing: cubicOut }}
-                class="divide-y divide-line"
-            >
-                {#each upcoming as match (match.id)}
-                    <li>
-                        <a
-                            href="/matches/{match.id}"
-                            class="py-2 flex items-center gap-3 text-sm hover:bg-surface-strong rounded-md px-2 -mx-2 transition-colors"
-                        >
-                            <span class="w-36 shrink-0 text-ink-muted"
-                                >{dateTime(match.date)}</span
-                            >
-                            <span class="flex-1 min-w-0 text-ink truncate">
-                                {match.atHome ? 'vs' : '@'}
-                                <strong>{match.opponent}</strong>
-                            </span>
-                            <span class="text-ink-faint text-xs shrink-0"
-                                >{competitionLabel(match.competition)}</span
-                            >
-                        </a>
-                    </li>
-                {/each}
-            </ul>
-        {/if}
+    {:then sales}
+        <div in:fade={{ duration: 120, easing: cubicOut }}>
+            <RecentSales sales={recentSales(sales, 5)} />
+        </div>
     {:catch err}
-        <p role="alert" class="text-negative-strong text-sm">
-            Failed to load matches: {err?.message ?? 'unknown error'}
-        </p>
+        {@render failure('recent sales', err)}
     {/await}
 </section>
+
+<AskCard answer={askAnswer} message={askMessage} question={askQuestion} />
