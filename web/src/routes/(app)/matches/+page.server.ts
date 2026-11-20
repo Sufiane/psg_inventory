@@ -1,8 +1,15 @@
 import type { PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
+import { groupSalesByMatch, realizedNet, summarizeSales } from '$lib/sale-math';
 import { parseSeasonYearParam, seasonStartYearFromDate } from '$lib/season';
-import { COMPETITIONS, type Competition, type FormattedMatch } from '$lib/types';
+import {
+    COMPETITIONS,
+    type Competition,
+    type FormattedMatch,
+    type SaleListItem,
+    type TimePeriodAccounting,
+} from '$lib/types';
 
 type Venue = 'both' | 'home' | 'away';
 
@@ -21,12 +28,24 @@ export const load: PageServerLoad = async (event) => {
     const competition: Competition | 'all' =
         competitionParam && isCompetition(competitionParam) ? competitionParam : 'all';
 
-    const path =
+    const matchesPath =
         seasonYear !== null
             ? `/matches/season/${seasonYear}?withResult=true`
             : '/matches/current-season?withResult=true';
+    const salesPath =
+        seasonYear !== null ? `/sales/season/${seasonYear}` : '/sales/current-season';
+    const accountingPath =
+        seasonYear !== null
+            ? `/accounting/season/${seasonYear}`
+            : '/accounting/current-season';
 
-    const all = await api<FormattedMatch[]>(event, path);
+    const [all, sales, accounting] = await Promise.all([
+        api<FormattedMatch[]>(event, matchesPath),
+        api<SaleListItem[]>(event, salesPath).catch((): SaleListItem[] => []),
+        api<TimePeriodAccounting>(event, accountingPath).catch(
+            (): TimePeriodAccounting | null => null,
+        ),
+    ]);
 
     const filtered = all.filter((match) => {
         if (venue === 'home' && !match.atHome) {
@@ -56,7 +75,15 @@ export const load: PageServerLoad = async (event) => {
     const isPastSeason =
         seasonYear !== null && seasonYear < seasonStartYearFromDate(new Date());
 
+    const salesSummary = summarizeSales(sales);
+
     return {
+        salesByMatch: groupSalesByMatch(sales),
+        playedCount: splitByKickoff(all, new Date()).past.length,
+        ticketsSold: salesSummary.ticketsByStatus.SOLD,
+        ticketsPending: salesSummary.ticketsByStatus.PENDING,
+        ticketsGifted: salesSummary.ticketsByStatus.GIFTED,
+        net: accounting === null ? null : realizedNet(accounting),
         upcoming,
         past,
         // Pre-filter length, so "this season has no matches" can be told apart
