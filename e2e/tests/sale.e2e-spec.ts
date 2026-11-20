@@ -44,7 +44,19 @@ test.describe('sale lifecycle', () => {
         await expect(row).toBeVisible();
         await expect(row).toContainText('PENDING');
 
-        await row.getByRole('link', { name: 'Edit' }).click();
+        const statusTabs = page.getByRole('navigation', { name: 'Status' });
+
+        await statusTabs.getByRole('link', { name: 'Pending' }).click();
+        await expect(saleRow(page, SOLD_PRICE)).toBeVisible();
+
+        await statusTabs.getByRole('link', { name: 'Sold' }).click();
+        await expect(saleRow(page, SOLD_PRICE)).toHaveCount(0);
+
+        await statusTabs.getByRole('link', { name: 'All', exact: true }).click();
+        await expect(saleRow(page, SOLD_PRICE)).toBeVisible();
+        await expect(page.getByRole('table')).toContainText('Net before season pass');
+
+        await saleRow(page, SOLD_PRICE).getByRole('link', { name: 'Edit' }).click();
 
         const drawer = page.getByRole('region', {
             name: new RegExp(`Edit sale vs ${E2E_OPPONENT_NAME}`),

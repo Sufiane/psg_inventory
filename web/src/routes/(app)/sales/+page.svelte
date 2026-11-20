@@ -10,12 +10,26 @@
         daysBetween,
         leadDaysLabel,
         money,
+        shortDate,
         signedMoney,
     } from '$lib/format';
     import { passesForMatch, passesForSale } from '$lib/sale-passes';
-    import { seasonLabelFromDate } from '$lib/season';
+    import { saleNet, summarizeSales } from '$lib/sale-math';
+    import { seasonLabel, seasonLabelFromDate } from '$lib/season';
     import { statusPill, profitTone } from '$lib/sale-helpers';
+    import {
+        filterByStatus,
+        parseStatusParam,
+        pendingFirst,
+        sortSales,
+        statusTabs,
+        type SaleSortDir,
+        type SaleSortKey,
+    } from '$lib/sales-view';
     import type { SaleListItem } from '$lib/types';
+    import SalesToolbar from '$lib/ui/SalesToolbar.svelte';
+    import SalesTotals from '$lib/ui/SalesTotals.svelte';
+    import StatusChip from '$lib/ui/StatusChip.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
     import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
     import { invalidateAll } from '$app/navigation';
@@ -44,22 +58,23 @@
         return null;
     }
 
+    function giftLabel(sale: SaleListItem): string {
+        return sale.Gift ? `Gifted to ${sale.Gift.Recipient.name}` : 'Gifted';
+    }
+
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    type SortKey = 'nbTickets' | 'listedPrice' | 'invest' | 'profit';
-    type SortDir = 'asc' | 'desc';
-
-    const SORT_LABELS: Record<SortKey, string> = {
+    const SORT_LABELS: Record<SaleSortKey, string> = {
         nbTickets: 'Tickets',
         listedPrice: 'Price',
         invest: 'Invest',
         profit: 'Profit',
     };
 
-    let sortKey = $state<SortKey | null>(null);
-    let sortDir = $state<SortDir>('desc');
+    let sortKey = $state<SaleSortKey | null>(null);
+    let sortDir = $state<SaleSortDir>('desc');
 
-    function toggleSort(key: SortKey): void {
+    function toggleSort(key: SaleSortKey): void {
         if (sortKey === key) {
             sortDir = sortDir === 'desc' ? 'asc' : 'desc';
 
@@ -70,7 +85,7 @@
         sortDir = 'desc';
     }
 
-    function ariaSort(key: SortKey): 'ascending' | 'descending' | 'none' {
+    function ariaSort(key: SaleSortKey): 'ascending' | 'descending' | 'none' {
         if (sortKey !== key) {
             return 'none';
         }
@@ -78,47 +93,7 @@
         return sortDir === 'asc' ? 'ascending' : 'descending';
     }
 
-    let sortedSales = $derived.by(() => {
-        if (sortKey === null) {
-            return data.sales;
-        }
-
-        const key = sortKey;
-        const factor = sortDir === 'asc' ? 1 : -1;
-
-        return [...data.sales].sort((firstSale, secondSale) => {
-            return (firstSale[key] - secondSale[key]) * factor;
-        });
-    });
-
-    // Grouped derivations for the current season. When `data.salesGroup` is
-    // non-null the backend returned pending/terminal arrays; when null the page
-    // falls back to the flat `sortedSales` above.
-    let pendingSales = $derived(
-        data.salesGroup
-            ? sortKey === null
-                ? data.salesGroup.pending
-                : [...data.salesGroup.pending].sort(
-                      (a, b) => (a[sortKey!] - b[sortKey!]) * (sortDir === 'asc' ? 1 : -1),
-                  )
-            : null,
-    );
-
-    let terminalSales = $derived(
-        data.salesGroup
-            ? sortKey === null
-                ? data.salesGroup.terminal
-                : [...data.salesGroup.terminal].sort(
-                      (a, b) => (a[sortKey!] - b[sortKey!]) * (sortDir === 'asc' ? 1 : -1),
-                  )
-            : null,
-    );
-
-    function sectionLabel(count: number, label: string): string {
-        return `${count} ${label}${count !== 1 ? 's' : ''}`;
-    }
-
-    function arrow(key: SortKey): string {
+    function arrow(key: SaleSortKey): string {
         if (sortKey !== key) {
             return '';
         }
@@ -129,11 +104,25 @@
     function onMobileSortChange(event: Event): void {
         const value = (event.currentTarget as HTMLSelectElement).value;
 
-        sortKey = value === '' ? null : (value as SortKey);
+        sortKey = value === '' ? null : (value as SaleSortKey);
     }
 
     // URL-driven expand state. `?edit={saleId}` opens the inline form for that row.
     let editId = $derived(page.url.searchParams.get('edit'));
+
+    let statusFilter = $derived(parseStatusParam(page.url));
+    let rows = $derived(
+        sortSales(pendingFirst(filterByStatus(data.sales, statusFilter, editId)), sortKey, sortDir),
+    );
+    let summary = $derived(
+        summarizeSales(filterByStatus(data.sales, statusFilter, null)),
+    );
+    let showSeason = $derived(data.season === 'all');
+    let columnCount = $derived(showSeason ? 8 : 7);
+    let seasonName = $derived(
+        data.season === 'all' ? 'all seasons' : seasonLabel(data.season),
+    );
+    let tabs = $derived(statusTabs(page.url));
     let editSale = $derived(data.editSale);
     let editMatchDate = $derived(editSale ? new Date(editSale.Match.date) : null);
     let isPastMatch = $derived(
@@ -876,14 +865,15 @@
         >
             <header class="flex items-baseline justify-between gap-3 mb-1">
                 <span class="font-medium text-ink truncate">{sale.opponent.name}</span>
-                <span
-                    class="shrink-0 inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
-                        sale.status,
-                    )}"
-                >
-                    {sale.status}
-                </span>
+                <StatusChip status={sale.status} />
             </header>
+            {#if sale.matchDate}
+                <p class="text-xs text-ink-faint">
+                    {shortDate(sale.matchDate)}{showSeason
+                        ? ` · ${seasonLabelFromDate(sale.matchDate)}`
+                        : ''}
+                </p>
+            {/if}
             {#if mobileNote}
                 <p class="mb-2 text-xs text-ink-faint">{mobileNote}</p>
             {/if}
@@ -891,25 +881,34 @@
                 <dt class="text-ink-muted">Tickets</dt>
                 <dd class="text-right font-mono text-ink">{sale.nbTickets}</dd>
 
-                <dt class="text-ink-muted">Price</dt>
-                <dd class="text-right font-mono text-ink">
-                    {money(sale.listedPrice)}
-                </dd>
+                {#if sale.status === 'GIFTED'}
+                    <dt class="text-ink-muted">Gift</dt>
+                    <dd class="text-right text-gift">{giftLabel(sale)}</dd>
+                {:else}
+                    <dt class="text-ink-muted">Price</dt>
+                    <dd class="text-right font-mono text-ink">
+                        {money(sale.listedPrice)}
+                    </dd>
 
-                <dt class="text-ink-muted">Invest</dt>
-                <dd class="text-right font-mono text-ink">
-                    {money(sale.invest)}
-                </dd>
+                    <dt class="text-ink-muted">Invest</dt>
+                    <dd class="text-right font-mono text-ink">
+                        {money(sale.invest)}
+                    </dd>
 
-                <dt class="text-ink-muted">Profit</dt>
-                <dd
-                    class="text-right font-mono {profitTone(
-                        sale.status,
-                        sale.profit,
-                    )}"
-                >
-                    {signedMoney(sale.profit)}
-                </dd>
+                    <dt class="text-ink-muted">Profit</dt>
+                    {#if sale.status === 'CANCELLED'}
+                        <dd class="text-right font-mono text-sunk">—</dd>
+                    {:else}
+                        <dd
+                            class="text-right font-mono {profitTone(
+                                sale.status,
+                                saleNet(sale),
+                            )}"
+                        >
+                            {signedMoney(saleNet(sale))}
+                        </dd>
+                    {/if}
+                {/if}
             </dl>
         </a>
 
@@ -925,38 +924,48 @@
     {@const isOpen = editId === sale.id}
     {@const desktopNote = lifecycleNote(sale)}
     <tr class={isOpen ? 'bg-surface-subtle' : ''}>
-        <td class="px-4 py-2 text-ink">{sale.opponent.name}</td>
+        <td class="px-4 py-2 text-ink">
+            {sale.opponent.name}
+            {#if sale.matchDate}
+                <div class="text-xs text-ink-faint">{shortDate(sale.matchDate)}</div>
+            {/if}
+        </td>
+        {#if showSeason}
+            <td class="px-4 py-2 text-ink-muted">{seasonLabelFromDate(sale.matchDate)}</td>
+        {/if}
         <td class="px-4 py-2 text-right font-mono text-ink">
             {sale.nbTickets}
         </td>
-        <td class="px-4 py-2 text-right font-mono text-ink">
-            {money(sale.listedPrice)}
-        </td>
-        <td class="px-4 py-2 text-right font-mono text-ink">
-            {money(sale.invest)}
-        </td>
-        <td
-            class="px-4 py-2 text-right font-mono {profitTone(
-                sale.status,
-                sale.profit,
-            )}"
-        >
-            {signedMoney(sale.profit)}
-        </td>
         <td class="px-4 py-2">
-            <span
-                class="inline-block px-2 py-0.5 rounded text-xs font-medium {statusPill(
-                    sale.status,
-                )}"
-            >
-                {sale.status}
-            </span>
+            <StatusChip status={sale.status} />
             {#if desktopNote}
                 <div class="mt-1 text-[0.65rem] text-ink-faint leading-snug">
                     {desktopNote}
                 </div>
             {/if}
         </td>
+        {#if sale.status === 'GIFTED'}
+            <td colspan="3" class="px-4 py-2 text-right text-gift">{giftLabel(sale)}</td>
+        {:else}
+            <td class="px-4 py-2 text-right font-mono text-ink">
+                {money(sale.listedPrice)}
+            </td>
+            <td class="px-4 py-2 text-right font-mono text-ink">
+                {money(sale.invest)}
+            </td>
+        {/if}
+        {#if sale.status === 'CANCELLED'}
+            <td class="px-4 py-2 text-right font-mono text-sunk">—</td>
+        {:else if sale.status !== 'GIFTED'}
+            <td
+                class="px-4 py-2 text-right font-mono {profitTone(
+                    sale.status,
+                    saleNet(sale),
+                )}"
+            >
+                {signedMoney(saleNet(sale))}
+            </td>
+        {/if}
         <td class="px-4 py-2 text-right">
             <a
                 href={urlWithEdit(isOpen ? null : sale.id)}
@@ -970,7 +979,7 @@
     </tr>
     {#if isOpen}
         <tr id="edit-{sale.id}">
-            <td colspan="7" class="p-0">
+            <td colspan={columnCount} class="p-0">
                 {@render editPanel(sale.id)}
             </td>
         </tr>
@@ -985,34 +994,13 @@
     {/each}
 </datalist>
 
-<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-    <h1 class="text-2xl font-semibold tracking-tight text-ink">Sales</h1>
-
-    <div class="flex items-center gap-3">
-        {#if !isNew}
-            <button
-                type="button"
-                onclick={() => (importOpen = true)}
-                class="rounded border border-line-strong bg-surface px-3 py-1.5 text-sm font-medium text-ink-muted hover:text-ink hover:border-ink transition-colors"
-            >
-                Import CSV
-            </button>
-            {#if data.canCreate}
-                <a
-                    href={urlWithNew(true)}
-                    class="rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover transition-colors"
-                >
-                    + New sale
-                </a>
-            {:else}
-                <span class="text-sm text-ink-faint">
-                    Can't add new sales for this season here — use Import CSV
-                    instead.
-                </span>
-            {/if}
-        {/if}
-    </div>
-</div>
+<SalesToolbar
+    {tabs}
+    canCreate={data.canCreate}
+    showActions={!isNew}
+    newHref={urlWithNew(true)}
+    onImport={() => (importOpen = true)}
+/>
 
 <ImportSalesModal
     open={importOpen}
@@ -1026,7 +1014,11 @@
 {/if}
 
 {#if data.sales.length === 0}
-    <p class="text-ink-faint text-sm">No sales in this season.</p>
+    <p class="text-ink-faint text-sm">No sales in {seasonName}.</p>
+{:else if rows.length === 0}
+    <p class="text-ink-faint text-sm">
+        No {statusFilter.toLowerCase()} sales in {seasonName}.
+    </p>
 {:else}
     <!-- Mobile sort bar -->
     <div class="flex items-center gap-2 mb-3 text-sm sm:hidden">
@@ -1055,45 +1047,24 @@
     </div>
 
     <!-- Mobile card list -->
-    {#if pendingSales !== null && terminalSales !== null}
-        {#if pendingSales.length > 0}
-            <div class="sm:hidden">
-                <h3 class="text-xs font-medium text-ink-muted uppercase tracking-wide px-1 mb-2">
-                    Pending — {sectionLabel(pendingSales.length, 'sale')}
-                </h3>
-                <ul class="grid gap-3">
-                    {#each pendingSales as sale (sale.id)}
-                        {@render saleCard(sale)}
-                    {/each}
-                </ul>
-            </div>
-        {/if}
-        {#if terminalSales.length > 0}
-            <div class="sm:hidden mt-6">
-                <h3 class="text-xs font-medium text-ink-muted uppercase tracking-wide px-1 mb-2">
-                    Completed — {sectionLabel(terminalSales.length, 'sale')}
-                </h3>
-                <ul class="grid gap-3">
-                    {#each terminalSales as sale (sale.id)}
-                        {@render saleCard(sale)}
-                    {/each}
-                </ul>
-            </div>
-        {/if}
-    {:else}
-        <ul class="grid gap-3 sm:hidden">
-            {#each sortedSales as sale (sale.id)}
-                {@render saleCard(sale)}
-            {/each}
-        </ul>
-    {/if}
+    <ul class="grid gap-3 sm:hidden">
+        {#each rows as sale (sale.id)}
+            {@render saleCard(sale)}
+        {/each}
+    </ul>
+    <div class="sm:hidden">
+        <SalesTotals {summary} variant="block" />
+    </div>
 
     <!-- Desktop / tablet table -->
     <div class="hidden sm:block bg-surface rounded-lg border border-line overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="bg-surface-subtle text-ink-muted text-xs">
                 <tr>
-                    <th class="text-left px-4 py-2 font-medium">Opponent</th>
+                    <th class="text-left px-4 py-2 font-medium">Match</th>
+                    {#if showSeason}
+                        <th class="text-left px-4 py-2 font-medium">Season</th>
+                    {/if}
                     <th
                         class="text-right px-4 py-2 font-medium"
                         aria-sort={ariaSort('nbTickets')}
@@ -1109,6 +1080,7 @@
                             </span>
                         </button>
                     </th>
+                    <th class="text-left px-4 py-2 font-medium">Status</th>
                     <th
                         class="text-right px-4 py-2 font-medium"
                         aria-sort={ariaSort('listedPrice')}
@@ -1154,38 +1126,17 @@
                             </span>
                         </button>
                     </th>
-                    <th class="text-left px-4 py-2 font-medium">Status</th>
                     <th class="px-4 py-2"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-line">
-                {#if pendingSales !== null && terminalSales !== null}
-                    {#if pendingSales.length > 0}
-                        <tr>
-                            <td colspan="7" class="px-4 py-2 text-xs font-medium text-ink-muted uppercase tracking-wide bg-surface-subtle">
-                                Pending — {sectionLabel(pendingSales.length, 'sale')}
-                            </td>
-                        </tr>
-                        {#each pendingSales as sale (sale.id)}
-                            {@render saleRow(sale)}
-                        {/each}
-                    {/if}
-                    {#if terminalSales.length > 0}
-                        <tr>
-                            <td colspan="7" class="px-4 py-2 text-xs font-medium text-ink-muted uppercase tracking-wide bg-surface-subtle">
-                                Completed — {sectionLabel(terminalSales.length, 'sale')}
-                            </td>
-                        </tr>
-                        {#each terminalSales as sale (sale.id)}
-                            {@render saleRow(sale)}
-                        {/each}
-                    {/if}
-                {:else}
-                    {#each sortedSales as sale (sale.id)}
-                        {@render saleRow(sale)}
-                    {/each}
-                {/if}
+                {#each rows as sale (sale.id)}
+                    {@render saleRow(sale)}
+                {/each}
             </tbody>
+            <tfoot>
+                <SalesTotals {summary} variant="row" {showSeason} />
+            </tfoot>
         </table>
     </div>
 {/if}

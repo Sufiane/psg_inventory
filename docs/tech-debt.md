@@ -15,3 +15,12 @@ passes today and blocks anything worse. Two functions are above the target of 15
 `UpdateSaleUsecase.execute` was brought under 15 in PSG-50. Deferred because splitting
 them is a refactor of hardened, well-tested code. Acting costs one extraction pass per function, then lowering
 the threshold in `eslint.config.mjs`.
+
+
+## Edit drawer shows pre-invest profit while rows show net (PSG-87)
+
+Sales table rows now show net (`profit - invest`, PSG-82). The edit drawer in
+`web/src/routes/(app)/sales/+page.svelte` still renders `editSale.profit` in the SOLD
+summary, the Mark sold button and the revert confirmation, so a row and its drawer can
+disagree. Deferred because the drawer was out of scope for the Sales page redesign. Acting
+costs swapping three spots to `saleNet(editSale)` and relabelling.
