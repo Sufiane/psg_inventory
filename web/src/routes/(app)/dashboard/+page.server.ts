@@ -1,8 +1,13 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { api } from '$lib/api';
-import { resolveSeason, seasonStartYearFromDate } from '$lib/season';
-import type { AskAnswer, FormattedMatch, TimePeriodAccounting } from '$lib/types';
+import { resolveSeasonYear, seasonStartYearFromDate } from '$lib/season';
+import type {
+    Amortization,
+    AskAnswer,
+    SaleListItem,
+    TimePeriodAccounting,
+} from '$lib/types';
 
 // Backend budget for /ask is the Gemini call (see GEMINI_TIMEOUT_MS in
 // llm.service.ts) plus the accounting/matches/Redis work around it. Set
@@ -13,22 +18,21 @@ import type { AskAnswer, FormattedMatch, TimePeriodAccounting } from '$lib/types
 const ASK_TIMEOUT_MS = 60_000;
 
 export const load: PageServerLoad = (event) => {
-    // Streamed: both fly to the client independently and the page shell
+    // Streamed: all four fly to the client independently and the page shell
     // renders immediately with skeletons in their slots.
-    const season = resolveSeason(event.url, false);
+    const season = resolveSeasonYear(event.url);
     const isCurrent = season === seasonStartYearFromDate(new Date());
     const accounting = api<TimePeriodAccounting>(
         event,
         isCurrent ? '/accounting/current-season' : `/accounting/season/${season}`,
     );
-    const matches = api<FormattedMatch[]>(
+    const amortization = api<Amortization>(event, `/accounting/amortization/${season}`);
+    const sales = api<SaleListItem[]>(
         event,
-        isCurrent
-            ? '/matches/current-season?withResult=true'
-            : `/matches/season/${season}?withResult=true`,
+        isCurrent ? '/sales/current-season' : `/sales/season/${season}`,
     );
 
-    return { accounting, matches };
+    return { season, accounting, amortization, sales };
 };
 
 export const actions: Actions = {
