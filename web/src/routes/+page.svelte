@@ -53,14 +53,14 @@
     />
 </svelte:head>
 
-<section class="hero">
+<section class="bg-surface-subtle text-ink">
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <header
             class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pt-6"
         >
             <a
                 href="/"
-                class="font-semibold tracking-tight text-hero-ink hover:opacity-80 transition-opacity"
+                class="font-semibold tracking-tight text-ink hover:opacity-80 transition-opacity"
             >
                 PSG Inventory
             </a>
@@ -70,13 +70,13 @@
             >
                 <a
                     href="/login"
-                    class="inline-flex items-center min-h-11 text-hero-ink-muted hover:text-hero-ink px-2 transition-colors"
+                    class="inline-flex items-center min-h-11 text-ink-muted hover:text-ink px-2 transition-colors"
                 >
                     Sign in
                 </a>
                 <a
                     href="/register"
-                    class="inline-flex items-center min-h-11 rounded border border-hero-ink/30 text-hero-ink px-3.5 hover:bg-hero-ink/10 transition-colors"
+                    class="inline-flex items-center min-h-11 rounded border border-ink/30 text-ink px-3.5 hover:bg-ink/10 transition-colors"
                 >
                     Create account
                 </a>
@@ -86,41 +86,41 @@
         <div class="grid lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-14 pt-12 pb-20 lg:pt-20 lg:pb-28 items-center">
             <div>
                 <p
-                    class="text-sm font-medium text-hero-ink-muted mb-4 inline-flex items-center gap-2"
+                    class="text-sm font-medium text-ink-muted mb-4 inline-flex items-center gap-2"
                 >
                     <span
                         aria-hidden="true"
-                        class="inline-block w-1.5 h-1.5 rounded-full bg-hero-ink-muted/80"
+                        class="inline-block w-1.5 h-1.5 rounded-full bg-ink-muted/80"
                     ></span>
                     Personal ledger for season-ticket resellers
                 </p>
                 <h1
-                    class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] text-hero-ink text-balance"
+                    class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] text-ink text-balance"
                 >
                     Know exactly how much
-                    <span class="text-hero-ink-muted">
+                    <span class="text-ink-muted">
                         you're making this season.
                     </span>
                 </h1>
                 <p
-                    class="mt-6 text-lg leading-relaxed text-hero-ink-muted max-w-xl text-pretty"
+                    class="mt-6 text-lg leading-relaxed text-ink-muted max-w-xl text-pretty"
                 >
                     Sales attach to matches. Matches group by season. The season pass is
                     a lump-sum cost, amortized across the schedule. One trustworthy
-                    answer to <span class="text-hero-ink">am I actually making money?</span>
+                    answer to <span class="text-ink">am I actually making money?</span>
                 </p>
 
                 {#if demoOutage}
                     <p
                         role="status"
-                        class="mt-6 rounded border border-hero-ink/30 bg-hero-bg-deep/50 text-hero-ink text-sm px-3 py-2 max-w-xl"
+                        class="mt-6 rounded border border-ink/30 bg-surface-subtle/50 text-ink text-sm px-3 py-2 max-w-xl"
                     >
                         {demoOutage}
                     </p>
                 {:else if form?.message}
                     <p
                         role="alert"
-                        class="mt-6 rounded border border-hero-ink/30 bg-hero-bg-deep/50 text-hero-ink text-sm px-3 py-2 max-w-xl"
+                        class="mt-6 rounded border border-ink/30 bg-surface-subtle/50 text-ink text-sm px-3 py-2 max-w-xl"
                     >
                         {form.message}
                     </p>
@@ -145,12 +145,12 @@
                             disabled={demoOutage !== null ||
                                 (submittingKey !== null && submittingKey !== 'demo1')}
                             aria-busy={submittingKey === 'demo1' || undefined}
-                            class="hero-primary inline-flex items-center justify-center gap-2 min-h-12 rounded bg-hero-ink text-hero-bg px-5 py-3 text-base font-medium hover:bg-hero-ink-muted disabled:opacity-60 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
+                            class="hero-primary inline-flex items-center justify-center gap-2 min-h-12 rounded bg-brand text-on-brand px-5 py-3 text-base font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
                         >
                             {#if submittingKey === 'demo1'}
                                 <span
                                     aria-hidden="true"
-                                    class="inline-block w-4 h-4 rounded-full border-2 border-hero-bg/30 border-t-hero-bg animate-spin"
+                                    class="inline-block w-4 h-4 rounded-full border-2 border-on-brand/30 border-t-on-brand animate-spin"
                                 ></span>
                             {/if}
                             Tour the live demo
@@ -158,12 +158,12 @@
                         </button>
                     </form>
 
-                    <span class="text-sm text-hero-ink-muted">
+                    <span class="text-sm text-ink-muted">
                         Real data. No signup.
                     </span>
                 </div>
 
-                <div class="mt-5 text-sm text-hero-ink-muted flex flex-wrap items-baseline gap-x-1.5">
+                <div class="mt-5 text-sm text-ink-muted flex flex-wrap items-baseline gap-x-1.5">
                     <span>Tracking multiple passes?</span>
                     <form
                         method="POST"
@@ -183,7 +183,7 @@
                             disabled={demoOutage !== null ||
                                 (submittingKey !== null && submittingKey !== 'demo2')}
                             aria-busy={submittingKey === 'demo2' || undefined}
-                            class="text-hero-ink underline-offset-4 hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+                            class="text-ink underline-offset-4 hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                             {#if submittingKey === 'demo2'}
                                 Signing in…
@@ -199,7 +199,7 @@
                 {#if data.showcase}
                     {@const showcase = data.showcase}
                     <div
-                        class="preview-card relative bg-surface text-ink rounded-xl border border-hero-ink/10 p-6 sm:p-7"
+                        class="preview-card relative bg-surface text-ink rounded-xl border border-ink/10 p-6 sm:p-7"
                     >
                         <div
                             class="flex items-center justify-between gap-3 pb-4 border-b border-line"
@@ -263,7 +263,7 @@
 
                         <span
                             aria-hidden="true"
-                            class="preview-badge absolute -top-3 left-6 inline-flex items-center gap-1.5 rounded-full bg-hero-bg-deep text-hero-ink text-xs font-medium px-2.5 py-1 border border-hero-ink/20"
+                            class="preview-badge absolute -top-3 left-6 inline-flex items-center gap-1.5 rounded-full bg-surface-subtle text-ink text-xs font-medium px-2.5 py-1 border border-ink/20"
                         >
                             <span
                                 class="inline-block w-1.5 h-1.5 rounded-full bg-positive-strong"
@@ -326,30 +326,6 @@
 </footer>
 
 <style>
-    .hero {
-        background: var(--color-hero-bg);
-        color: var(--color-hero-ink);
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Soft chroma bloom in the top-right so the drench isn't a flat panel.
-       Sits behind content via pointer-events:none. */
-    .hero::before {
-        content: '';
-        position: absolute;
-        inset: -20% -10% auto auto;
-        width: 60rem;
-        height: 60rem;
-        background: radial-gradient(
-            circle at center,
-            color-mix(in oklch, var(--color-hero-ink) 10%, transparent) 0%,
-            transparent 60%
-        );
-        pointer-events: none;
-        opacity: 0.55;
-    }
-
     .hero-primary-arrow {
         display: inline-block;
         transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
