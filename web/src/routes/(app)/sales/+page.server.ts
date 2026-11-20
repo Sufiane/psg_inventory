@@ -21,13 +21,11 @@ export const load: PageServerLoad = async (event) => {
     const season = resolveSeason(event.url, true);
     const currentSeason = seasonStartYearFromDate(new Date());
     let sales: SaleListItem[];
-    let salesGroup: SalesGroupListItem | null = null;
     let year: SeasonYear | null = null;
 
     if (season === currentSeason) {
         const grouped = await api<SalesGroupListItem>(event, '/sales/grouped');
         sales = [...grouped.pending, ...grouped.terminal];
-        salesGroup = grouped;
     } else if (season === 'all') {
         const perSeason = await Promise.all(
             seasonOptions(new Date(), 6).map((option) =>
@@ -86,7 +84,6 @@ export const load: PageServerLoad = async (event) => {
 
     return {
         sales,
-        salesGroup,
         year,
         season,
         editSale,
