@@ -203,7 +203,7 @@
         <button
             type="submit"
             disabled={submitting !== null}
-            class="rounded bg-primary text-surface px-4 py-2 font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+            class="rounded bg-brand text-on-brand px-4 py-2 font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
             onclick={(event) => confirmIfPast(event, 'save')}
         >
             {#if submitting === 'update'}

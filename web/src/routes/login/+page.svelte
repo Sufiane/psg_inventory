@@ -9,7 +9,7 @@
 
 <div class="px-4">
 <div
-    class="max-w-sm mx-auto mt-16 bg-surface rounded-lg shadow-sm border border-line p-6"
+    class="max-w-sm mx-auto mt-16 bg-surface rounded-lg border border-line p-6"
 >
     <h1 class="text-xl font-semibold tracking-tight text-ink mb-1">Sign in</h1>
     <p class="text-sm text-ink-muted mb-4">

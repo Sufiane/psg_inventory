@@ -199,7 +199,7 @@
                 {#if data.showcase}
                     {@const showcase = data.showcase}
                     <div
-                        class="preview-card relative bg-surface text-ink rounded-xl border border-hero-ink/10 shadow-2xl shadow-hero-bg-deep/40 p-6 sm:p-7"
+                        class="preview-card relative bg-surface text-ink rounded-xl border border-hero-ink/10 p-6 sm:p-7"
                     >
                         <div
                             class="flex items-center justify-between gap-3 pb-4 border-b border-line"

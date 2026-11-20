@@ -1,156 +1,67 @@
 @import 'tailwindcss';
 
-/* Restrained palette tuned to PRODUCT.md ("sharp / quiet / precise").
-   All neutrals carry a faint chroma toward the brand hue (270, ink-violet)
-   so the surfaces feel cohesive with the primary without reading as
-   "tinted". Semantic positive / negative are deep ledger tones, not
-   alert-grade. OKLCH throughout. */
 @theme {
-    --color-ink: oklch(0.22 0.05 270);
-    --color-ink-muted: oklch(0.48 0.04 270);
-    /* Held at L 0.55 so 12-13px helper text clears WCAG AA 4.5:1 against
-       --color-surface (measured ~4.80:1). Lighter slips below AA. */
-    --color-ink-faint: oklch(0.55 0.03 270);
+    --color-ink: #dce2f7;
+    --color-ink-muted: #a3acc2;
+    --color-ink-faint: #8b94aa;
 
-    --color-surface: oklch(0.995 0.003 270);
-    --color-surface-subtle: oklch(0.975 0.005 270);
-    --color-surface-strong: oklch(0.94 0.008 270);
+    --color-surface: #0c1321;
+    --color-surface-subtle: #070e1c;
+    --color-surface-strong: #19202e;
 
-    --color-line: oklch(0.91 0.008 270);
-    --color-line-strong: oklch(0.84 0.012 270);
+    --color-line: #232a39;
+    --color-line-strong: #6a7490;
 
-    --color-primary: oklch(0.42 0.14 270);
-    --color-primary-hover: oklch(0.34 0.15 270);
+    --color-primary: #ffb3b4;
+    --color-primary-hover: #ffdad9;
 
-    --color-positive: oklch(0.48 0.13 155);
-    --color-positive-strong: oklch(0.42 0.14 155);
+    --color-brand: #e1003c;
+    --color-brand-hover: #bf0031;
+    --color-on-brand: #ffffff;
 
-    --color-negative: oklch(0.5 0.18 25);
-    --color-negative-strong: oklch(0.44 0.2 25);
+    --color-positive: #10b981;
+    --color-positive-strong: #4edea3;
 
-    /* Status-of-money tones. Both reserved for amounts that AREN'T realized cash.
-       - warning: pending sales (in-flight, may land, may not). Amber/saffron.
-       - sunk: unrealized sales (cancelled, never coming). Muted plum, deliberately
-         hue-shifted away from --color-primary (270) so it doesn't read as brand. */
-    --color-warning: oklch(0.55 0.13 70);
-    --color-warning-strong: oklch(0.48 0.14 70);
+    --color-negative: #ffb4ab;
+    --color-negative-strong: #ffdad6;
 
-    --color-sunk: oklch(0.45 0.07 320);
-    --color-sunk-strong: oklch(0.38 0.08 320);
+    --color-warning: #f59e0b;
+    --color-warning-strong: #fbbf24;
 
-    /* gift: tickets given away rather than sold. Not a loss (sunk), not
-       in-flight (warning), not cash (positive) — its own hue at 210.
-       Measured ≥4.5:1 against --color-surface in both themes (light
-       5.56:1 / 7.26:1, dark 8.48:1 / 11.21:1). */
-    --color-gift: oklch(0.5 0.1 210);
-    --color-gift-strong: oklch(0.43 0.11 210);
+    --color-sunk: #9d7d91;
+    --color-sunk-strong: #b08fa4;
+    --color-sunk-fill: #6e5d6d;
 
-    /* Drenched brand surface for the marketing hero. Held in both modes
-       (brand identity wins over dark-mode auto-flip) so the violet stays
-       the brand's voice rather than a lavender lift when the OS is dark.
-       Contrast against --color-hero-ink (~17:1) and --color-hero-ink-muted
-       (~9.4:1) both clear AAA. */
-    --color-hero-bg: oklch(0.30 0.16 270);
-    --color-hero-bg-deep: oklch(0.22 0.14 270);
-    --color-hero-ink: oklch(0.995 0.003 270);
-    --color-hero-ink-muted: oklch(0.86 0.04 270);
+    --color-gift: #2aa7b8;
+    --color-gift-strong: #5cc4d2;
+
+    --color-hero-bg: #0c1321;
+    --color-hero-bg-deep: #070e1c;
+    --color-hero-ink: #dce2f7;
+    --color-hero-ink-muted: #a3acc2;
+
+    --font-sans: 'Space Grotesk Variable', ui-sans-serif, system-ui, -apple-system,
+        'Segoe UI', sans-serif;
+    --font-display: 'Syne Variable', 'Space Grotesk Variable', ui-sans-serif, system-ui,
+        sans-serif;
+    --font-mono: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+
+    --radius-lg: 0.375rem;
+    --radius-md: 0.25rem;
 }
 
-/* Dark-mode token overrides. Tailwind v4 generates utilities like
-   `text-ink` as `color: var(--color-ink)`, so flipping the CSS variables
-   at :root cascades through every utility without changing markup.
-
-   Two triggers:
-   - explicit user choice: `<html data-theme="dark">`
-   - system preference: `prefers-color-scheme: dark`, unless the user has
-     explicitly opted into light with `<html data-theme="light">`. */
-:root[data-theme='dark'] {
-    color-scheme: dark;
-    --color-ink: oklch(0.94 0.02 270);
-    --color-ink-muted: oklch(0.72 0.03 270);
-    --color-ink-faint: oklch(0.6 0.03 270);
-    --color-surface: oklch(0.18 0.01 270);
-    --color-surface-subtle: oklch(0.13 0.01 270);
-    --color-surface-strong: oklch(0.26 0.015 270);
-    --color-line: oklch(0.28 0.015 270);
-    --color-line-strong: oklch(0.4 0.02 270);
-    --color-primary: oklch(0.72 0.15 270);
-    --color-primary-hover: oklch(0.8 0.16 270);
-    --color-positive: oklch(0.72 0.15 155);
-    --color-positive-strong: oklch(0.8 0.17 155);
-    --color-negative: oklch(0.7 0.18 25);
-    --color-negative-strong: oklch(0.78 0.2 25);
-    --color-warning: oklch(0.74 0.16 70);
-    --color-warning-strong: oklch(0.8 0.17 70);
-    --color-sunk: oklch(0.7 0.14 320);
-    --color-sunk-strong: oklch(0.78 0.15 320);
-    --color-gift: oklch(0.74 0.11 210);
-    --color-gift-strong: oklch(0.82 0.12 210);
-}
-
-:root[data-theme='dark'] .skeleton {
-    background-image: linear-gradient(
-        90deg,
-        transparent 0%,
-        color-mix(in oklch, var(--color-surface-strong) 90%, white) 50%,
-        transparent 100%
-    );
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        --color-ink: oklch(0.94 0.02 270);
-        --color-ink-muted: oklch(0.72 0.03 270);
-        /* Bumped from L 0.55 to L 0.60 so helper text clears WCAG AA 4.5:1
-           against --color-surface in dark mode (measured ~4.76:1). */
-        --color-ink-faint: oklch(0.60 0.03 270);
-
-        --color-surface: oklch(0.18 0.01 270);
-        --color-surface-subtle: oklch(0.13 0.01 270);
-        --color-surface-strong: oklch(0.26 0.015 270);
-
-        --color-line: oklch(0.28 0.015 270);
-        --color-line-strong: oklch(0.4 0.02 270);
-
-        --color-primary: oklch(0.72 0.15 270);
-        --color-primary-hover: oklch(0.8 0.16 270);
-
-        --color-positive: oklch(0.72 0.15 155);
-        --color-positive-strong: oklch(0.8 0.17 155);
-
-        --color-negative: oklch(0.7 0.18 25);
-        --color-negative-strong: oklch(0.78 0.2 25);
-
-        --color-warning: oklch(0.74 0.16 70);
-        --color-warning-strong: oklch(0.8 0.17 70);
-
-        --color-sunk: oklch(0.7 0.14 320);
-        --color-sunk-strong: oklch(0.78 0.15 320);
-
-        --color-gift: oklch(0.74 0.11 210);
-        --color-gift-strong: oklch(0.82 0.12 210);
-    }
-
-    :root:not([data-theme='light']) .skeleton {
-        background-image: linear-gradient(
-            90deg,
-            transparent 0%,
-            color-mix(in oklch, var(--color-surface-strong) 90%, white) 50%,
-            transparent 100%
-        );
-    }
-}
-
-/* Type system — Linear-leaning quiet light.
-   System sans for UI, system mono for numerics; tabular figures locked
+/* Space Grotesk stands in for mono on figures; tabular figures are locked
    so columns of money line up at any size. */
 :root {
+    color-scheme: dark;
     font-feature-settings: 'kern' 1;
 }
 
 h1,
 h2,
 h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
     text-wrap: balance;
 }
 

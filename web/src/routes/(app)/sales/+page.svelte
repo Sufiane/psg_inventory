@@ -699,7 +699,7 @@
                     <button
                         type="submit"
                         disabled={submitting !== null}
-                        class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                        class="rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                         onclick={(event) => confirmIfPast(event, 'save')}
                     >
                         {#if submitting === 'update'}
@@ -868,7 +868,7 @@
                 <button
                     type="submit"
                     disabled={submitting !== null || data.matches.length === 0}
-                    class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                    class="rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                 >
                     {#if submitting === 'create'}
                         <Spinner size="1em" />
@@ -1037,7 +1037,7 @@
             {#if data.canCreate}
                 <a
                     href={urlWithNew(true)}
-                    class="rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
+                    class="rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover transition-colors"
                 >
                     + New sale
                 </a>

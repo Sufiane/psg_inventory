@@ -32,7 +32,7 @@
             aria-current={tab === 'current' ? 'page' : undefined}
             class="px-3 py-2 text-sm rounded-md transition-colors duration-150 {tab ===
             'current'
-                ? 'bg-primary text-surface'
+                ? 'bg-brand text-on-brand'
                 : 'text-ink-muted hover:bg-surface-strong hover:text-ink'}"
         >
             Current
@@ -42,7 +42,7 @@
             aria-current={tab === 'all-time' ? 'page' : undefined}
             class="px-3 py-2 text-sm rounded-md transition-colors duration-150 {tab ===
             'all-time'
-                ? 'bg-primary text-surface'
+                ? 'bg-brand text-on-brand'
                 : 'text-ink-muted hover:bg-surface-strong hover:text-ink'}"
         >
             All time
@@ -57,7 +57,7 @@
                 aria-current={tab === 'season' ? 'page' : undefined}
                 class="border-0 outline-0 px-2 py-2 text-sm rounded-md cursor-pointer transition-colors duration-150 {tab ===
                 'season'
-                    ? 'bg-primary text-surface'
+                    ? 'bg-brand text-on-brand'
                     : 'bg-transparent text-ink-muted hover:bg-surface-strong hover:text-ink'}"
                 onchange={(event) => event.currentTarget.form?.requestSubmit()}
             >

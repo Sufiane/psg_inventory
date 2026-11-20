@@ -47,3 +47,19 @@ export function seasonLabelFromDate(date: Date | string | null | undefined): str
         seasonStartYearFromDate(date instanceof Date ? date : new Date(date)),
     );
 }
+
+export function seasonOptions(
+    now: Date,
+    count: number,
+): { year: SeasonYear; label: string }[] {
+    const current = seasonStartYearFromDate(now);
+    const options: { year: SeasonYear; label: string }[] = [];
+
+    for (let i = 0; i < count; i++) {
+        const year = (current - i) as SeasonYear;
+
+        options.push({ year, label: seasonLabel(year) });
+    }
+
+    return options;
+}

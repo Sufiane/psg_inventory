@@ -82,7 +82,7 @@
                     value={option.value}
                     aria-pressed={active}
                     class="px-2.5 py-1 text-sm rounded transition-colors duration-150 {active
-                        ? 'bg-primary text-surface'
+                        ? 'bg-brand text-on-brand'
                         : 'text-ink-muted hover:bg-surface-strong hover:text-ink'}"
                 >
                     {option.label}

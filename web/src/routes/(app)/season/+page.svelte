@@ -163,7 +163,7 @@
                                 <button
                                     type="submit"
                                     disabled={submitting !== null}
-                                    class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                                    class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                                 >
                                     {#if submitting === `update:${pass.id}`}
                                         <Spinner size="1em" />
@@ -288,7 +288,7 @@
                 <button
                     type="submit"
                     disabled={submitting !== null}
-                    class="rounded bg-primary text-surface px-4 py-2 text-sm font-medium hover:bg-primary-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                    class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                 >
                     {#if submitting === 'create'}
                         <Spinner size="1em" />
