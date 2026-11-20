@@ -1,4 +1,4 @@
-import type { Accounting, SaleListItem, SaleStatus } from './types';
+import type { Accounting, SaleListItem, SaleStatus, TimePeriodAccounting } from './types';
 
 export type SalesSummary = {
     tickets: number;
@@ -60,4 +60,14 @@ export function cancelledFrom(
         count: (unrealized?.totalSales ?? 0) - (gifted?.totalSales ?? 0),
         amount: (unrealized?.totalProfit ?? 0) - (gifted?.totalProfit ?? 0),
     };
+}
+
+export function realizedNet(
+    accounting: Pick<TimePeriodAccounting, 'realized' | 'totalSeasonInvestment'>,
+): number {
+    return (
+        (accounting.realized?.totalProfit ?? 0) -
+        (accounting.realized?.totalInvest ?? 0) -
+        accounting.totalSeasonInvestment
+    );
 }

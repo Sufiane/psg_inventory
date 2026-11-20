@@ -3,10 +3,11 @@ import {
     cancelledFrom,
     dominantStatus,
     groupSalesByMatch,
+    realizedNet,
     saleNet,
     summarizeSales,
 } from './sale-math';
-import type { Accounting, SaleListItem, SaleStatus } from './types';
+import type { Accounting, SaleListItem, SaleStatus, TimePeriodAccounting } from './types';
 
 function sale(overrides: Partial<Record<string, unknown>> = {}): SaleListItem {
     return {
@@ -165,6 +166,26 @@ describe('cancelledFrom', () => {
     describe('when both are null', () => {
         it('returns zeros', () => {
             expect(cancelledFrom(null, null)).toEqual({ count: 0, amount: 0 });
+        });
+    });
+});
+
+describe('realizedNet', () => {
+    function period(realized: Accounting | null): TimePeriodAccounting {
+        return { realized, totalSeasonInvestment: 100 } as unknown as TimePeriodAccounting;
+    }
+
+    describe('when realized sales exist', () => {
+        it('subtracts invest and season investment from proceeds', () => {
+            const realized = { totalProfit: 500, totalInvest: 150 } as unknown as Accounting;
+
+            expect(realizedNet(period(realized))).toBe(250);
+        });
+    });
+
+    describe('when realized is null', () => {
+        it('returns the negative season investment', () => {
+            expect(realizedNet(period(null))).toBe(-100);
         });
     });
 });
