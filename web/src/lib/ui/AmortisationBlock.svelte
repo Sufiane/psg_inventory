@@ -6,7 +6,7 @@
     import { money, shortDate } from '$lib/format';
     import { carrySeason } from '$lib/season';
 
-    let { data, matchCount }: { data: Amortization; matchCount: number } = $props();
+    let { data, homeMatchCount }: { data: Amortization; homeMatchCount: number } = $props();
 
     const hasPass = $derived(data.hasPass && data.passPrice > 0);
     const cleared = $derived(hasPass && data.breakEven !== null);
@@ -36,19 +36,19 @@
             >
         </p>
     {:else}
-        {#if matchCount === 0}
-            <p class="mt-3 text-sm text-ink">No fixtures in this season.</p>
+        {#if homeMatchCount === 0}
+            <p class="mt-3 text-sm text-ink">No home fixtures in this season.</p>
         {:else}
             <p class="mt-3 flex flex-wrap items-baseline gap-1.5 text-sm text-ink">
                 <span class="font-mono" data-numeric>{money(data.passPrice)}</span>
                 <span class="sr-only">divided by</span>
                 <span class="text-ink-faint" aria-hidden="true">÷</span>
-                <span class="font-mono" data-numeric>{matchCount}</span>
-                <span>fixtures</span>
+                <span class="font-mono" data-numeric>{homeMatchCount}</span>
+                <span>home fixtures</span>
                 <span class="sr-only">equals</span>
                 <span class="text-ink-faint" aria-hidden="true">=</span>
                 <span class="font-mono font-semibold" data-numeric
-                    >{money(passCostPerMatch(data.passPrice, matchCount))}</span
+                    >{money(passCostPerMatch(data.passPrice, homeMatchCount))}</span
                 >
             </p>
         {/if}

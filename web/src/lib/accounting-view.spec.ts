@@ -1,13 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchId } from '@psg/shared/ids';
-import { passCostPerMatch, stripSegments, tableGroups } from './accounting-view';
+import {
+    homeMatchCount,
+    passCostPerMatch,
+    stripSegments,
+    tableGroups,
+} from './accounting-view';
 import type { FormattedMatch, SaleListItem, SaleStatus } from './types';
 
-function match(id: string, opponent: string, date: string): FormattedMatch {
+function match(
+    id: string,
+    opponent: string,
+    date: string,
+    atHome = true,
+): FormattedMatch {
     return {
         id: id as MatchId,
         date,
-        atHome: true,
+        atHome,
         competition: 'CHAMPIONSHIP',
         opponent: opponent as FormattedMatch['opponent'],
     };
@@ -139,6 +149,32 @@ describe('tableGroups', () => {
             expect(groups.map((group) => group.matchId)).toEqual(['m1', 'orphan']);
             expect(groups[1]?.opponent).toBe('Rival FC');
             expect(groups[1]?.date).toBe('2026-09-01T15:00:00.000Z');
+        });
+    });
+});
+
+describe('homeMatchCount', () => {
+    describe('when the list mixes home and away matches', () => {
+        it('counts only the home matches', () => {
+            const matches = [
+                match('m1', 'A', '2026-09-01'),
+                match('m2', 'B', '2026-09-08', false),
+                match('m3', 'C', '2026-09-15'),
+            ];
+
+            expect(homeMatchCount(matches)).toBe(2);
+        });
+    });
+
+    describe('when every match is away', () => {
+        it('returns 0', () => {
+            expect(homeMatchCount([match('m1', 'A', '2026-09-01', false)])).toBe(0);
+        });
+    });
+
+    describe('when the list is empty', () => {
+        it('returns 0', () => {
+            expect(homeMatchCount([])).toBe(0);
         });
     });
 });
