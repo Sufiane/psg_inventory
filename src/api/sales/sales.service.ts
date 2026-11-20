@@ -92,7 +92,7 @@ export class SalesService implements ISalesService {
 
     private formatSale(sale: Sale): FormattedSale {
         return {
-            ...omit(sale, ['Match', 'userId', 'matchId']),
+            ...omit(sale, ['Match', 'userId']),
             opponent: {
                 id: sale.Match.Opponent.id,
                 name: sale.Match.Opponent.name,
