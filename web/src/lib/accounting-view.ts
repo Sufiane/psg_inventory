@@ -10,6 +10,10 @@ export function passCostPerMatch(passPrice: number, matchCount: number): number 
     return passPrice / matchCount;
 }
 
+export function homeMatchCount(matches: FormattedMatch[]): number {
+    return matches.filter((match) => match.atHome).length;
+}
+
 export type StripSegment = {
     matchId: MatchId;
     opponent: string;

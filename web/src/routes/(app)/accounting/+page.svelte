@@ -12,7 +12,7 @@
     import SeasonMatchTable from '$lib/ui/SeasonMatchTable.svelte';
     import { money, signedMoney } from '$lib/format';
     import { groupSalesByMatch, summarizeSales } from '$lib/sale-math';
-    import { stripSegments, tableGroups } from '$lib/accounting-view';
+    import { homeMatchCount, stripSegments, tableGroups } from '$lib/accounting-view';
     import { carrySeason } from '$lib/season';
 
     let { data }: { data: PageData } = $props();
@@ -154,7 +154,7 @@
         {@const salesByMatch = groupSalesByMatch(view.sales)}
         <div class="mb-6 space-y-6">
             {#if view.amortization}
-                <AmortisationBlock data={view.amortization} matchCount={view.matches.length} />
+                <AmortisationBlock data={view.amortization} homeMatchCount={homeMatchCount(view.matches)} />
             {/if}
 
             {#if view.matches.length > 0}
