@@ -27,7 +27,7 @@
     }: Props = $props();
 
     const base =
-        'inline-flex items-center justify-center gap-2 min-h-11 rounded bg-primary text-surface px-3.5 py-2.5 text-sm font-medium hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+        'inline-flex items-center justify-center gap-2 min-h-11 rounded bg-brand text-on-brand px-3.5 py-2.5 text-sm font-medium hover:bg-brand-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
     const className = $derived(
         [base, fullWidth ? 'w-full' : '', extraClass].filter(Boolean).join(' '),

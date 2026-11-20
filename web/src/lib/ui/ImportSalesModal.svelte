@@ -142,7 +142,7 @@
 <dialog
     bind:this={dialogEl}
     onclose={handleClose}
-    class="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-2xl overflow-auto rounded border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-black/50"
+    class="fixed inset-0 m-auto h-fit max-h-[90vh] w-full max-w-2xl overflow-auto rounded border border-line bg-surface p-0 text-ink backdrop:bg-black/50"
 >
     <div class="flex flex-col gap-4 p-6">
         <header class="flex items-center justify-between">

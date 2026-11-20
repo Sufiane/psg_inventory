@@ -52,7 +52,7 @@
     <div class="pt-3">
         <a
             href="/sales/new?matchId={data.match.id}"
-            class="inline-block rounded bg-primary text-surface px-3 py-1.5 text-sm font-medium hover:bg-primary-hover transition-colors"
+            class="inline-block rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover transition-colors"
         >
             Add sale for this match
         </a>

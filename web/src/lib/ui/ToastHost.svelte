@@ -12,7 +12,7 @@
     {#each toastStore.toasts as toast (toast.id)}
         <div
             role={toast.variant === 'negative' ? 'alert' : 'status'}
-            class="rounded-lg border {variantClass[toast.variant]} text-sm px-3 py-2 shadow-lg flex items-start gap-2"
+            class="rounded-lg border {variantClass[toast.variant]} text-sm px-3 py-2 flex items-start gap-2"
         >
             <span class="flex-1">{toast.message}</span>
             <button

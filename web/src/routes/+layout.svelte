@@ -1,4 +1,6 @@
 <script lang="ts">
+    import '@fontsource-variable/syne';
+    import '@fontsource-variable/space-grotesk';
     import '../app.css';
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
