@@ -13,61 +13,11 @@
 
     let { data }: { data: PageData } = $props();
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
     let tab = $derived(data.view);
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Accounting</h1>
-
-    <div
-        class="inline-flex items-center gap-1 bg-surface border border-line-strong rounded-lg p-1"
-        role="navigation"
-        aria-label="Accounting period"
-    >
-        <a
-            href="/accounting?view=current"
-            aria-current={tab === 'current' ? 'page' : undefined}
-            class="px-3 py-2 text-sm rounded-md transition-colors duration-150 {tab ===
-            'current'
-                ? 'bg-brand text-on-brand'
-                : 'text-ink-muted hover:bg-surface-strong hover:text-ink'}"
-        >
-            Current
-        </a>
-        <a
-            href="/accounting?view=all-time"
-            aria-current={tab === 'all-time' ? 'page' : undefined}
-            class="px-3 py-2 text-sm rounded-md transition-colors duration-150 {tab ===
-            'all-time'
-                ? 'bg-brand text-on-brand'
-                : 'text-ink-muted hover:bg-surface-strong hover:text-ink'}"
-        >
-            All time
-        </a>
-
-        <form method="GET" class="flex items-center">
-            <input type="hidden" name="view" value="season" />
-            <label for="accounting-season" class="sr-only">View a specific season</label>
-            <select
-                id="accounting-season"
-                name="year"
-                aria-current={tab === 'season' ? 'page' : undefined}
-                class="border-0 outline-0 px-2 py-2 text-sm rounded-md cursor-pointer transition-colors duration-150 {tab ===
-                'season'
-                    ? 'bg-brand text-on-brand'
-                    : 'bg-transparent text-ink-muted hover:bg-surface-strong hover:text-ink'}"
-                onchange={(event) => event.currentTarget.form?.requestSubmit()}
-            >
-                <option value="" disabled hidden>Season</option>
-                {#each years as year (year)}
-                    <option value={year} selected={data.year === year}>{year}</option>
-                {/each}
-            </select>
-        </form>
-    </div>
 </div>
 
 {#await data.accounting}
@@ -150,7 +100,7 @@
             <p class="mt-4 text-xs text-ink-muted">
                 No season pass recorded.
                 <a
-                    href="/season?year={data.year ?? new Date().getFullYear()}"
+                    href="/season?year={data.year ?? seasonStartYearFromDate(new Date())}"
                     class="text-primary font-medium hover:text-primary-hover hover:underline"
                     >Set it on the Season tab.</a
                 >

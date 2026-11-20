@@ -13,10 +13,9 @@
         signedMoney,
     } from '$lib/format';
     import { passesForMatch, passesForSale } from '$lib/sale-passes';
-    import { seasonLabel, seasonLabelFromDate, seasonStartYearFromDate } from '$lib/season';
+    import { seasonLabelFromDate } from '$lib/season';
     import { statusPill, profitTone } from '$lib/sale-helpers';
     import type { SaleListItem } from '$lib/types';
-    import type { SeasonYear } from '@psg/shared/time';
     import Spinner from '$lib/ui/Spinner.svelte';
     import ImportSalesModal from '$lib/ui/ImportSalesModal.svelte';
     import { invalidateAll } from '$app/navigation';
@@ -46,25 +45,6 @@
     }
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
-
-    // Season years, not calendar years: between January and July the calendar
-    // year names a season that has not started, and picking it now yields an
-    // empty sales list and an empty match list.
-    const currentSeason = seasonStartYearFromDate(new Date());
-
-    // Union in `data.year` when a bookmarked/typed `?year=` falls outside the
-    // usual six-season window — otherwise no <option> matches it, the browser
-    // silently falls back to "Current", and the dropdown lies about which
-    // season is actually loaded.
-    let years = $derived.by(() => {
-        const base = Array.from({ length: 6 }, (_, i) => currentSeason - i);
-
-        if (data.year !== null && !base.includes(data.year)) {
-            return [...base, data.year].sort((first, second) => second - first);
-        }
-
-        return base;
-    });
 
     type SortKey = 'nbTickets' | 'listedPrice' | 'invest' | 'profit';
     type SortDir = 'asc' | 'desc';
@@ -1009,23 +989,6 @@
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Sales</h1>
 
     <div class="flex items-center gap-3">
-        <form method="GET" class="flex items-center gap-2">
-            <label class="text-sm text-ink-muted" for="year">Season</label>
-            <select
-                id="year"
-                name="year"
-                class="rounded border border-line-strong bg-surface text-ink-muted px-2 py-1 text-sm hover:text-ink hover:border-ink transition-colors"
-                onchange={(event) => event.currentTarget.form?.requestSubmit()}
-            >
-                <option value="">Current</option>
-                {#each years as year (year)}
-                    <option value={year} selected={data.year === year}
-                        >{seasonLabel(year as SeasonYear)}</option
-                    >
-                {/each}
-            </select>
-        </form>
-
         {#if !isNew}
             <button
                 type="button"

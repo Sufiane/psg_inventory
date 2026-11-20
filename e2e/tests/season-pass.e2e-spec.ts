@@ -10,7 +10,7 @@ test.describe('season pass', () => {
         // Open the create disclosure.
         await page.getByText('+ Add another pass').click();
 
-        const createForm = page.locator('details form');
+        const createForm = page.locator('details:has(summary:has-text("Add another pass")) form');
         await createForm.getByLabel('Label').fill(label);
         await createForm.getByLabel('Price (€)').fill('500');
         await createForm.getByLabel('Category').fill('A');

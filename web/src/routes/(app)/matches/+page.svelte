@@ -5,9 +5,6 @@
 
     let { data }: { data: PageData } = $props();
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
     const venueOptions = [
         { value: 'both', label: 'Both' },
         { value: 'home', label: 'Home' },
@@ -54,20 +51,9 @@
     <h1 class="text-2xl font-semibold tracking-tight text-ink">Matches</h1>
 
     <form method="GET" class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2">
-            <label class="text-sm text-ink-muted" for="year">Season</label>
-            <select
-                id="year"
-                name="year"
-                class="rounded border border-line-strong bg-surface text-ink-muted px-2 py-1 text-sm hover:text-ink hover:border-ink transition-colors"
-                onchange={(event) => event.currentTarget.form?.requestSubmit()}
-            >
-                <option value="">Current</option>
-                {#each years as year (year)}
-                    <option value={year} selected={data.year === year}>{year}</option>
-                {/each}
-            </select>
-        </div>
+        {#if data.year !== null}
+            <input type="hidden" name="year" value={data.year} />
+        {/if}
 
         <div
             class="inline-flex items-center gap-0.5 bg-surface border border-line-strong rounded-md p-0.5"

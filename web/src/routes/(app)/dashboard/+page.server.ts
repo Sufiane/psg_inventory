@@ -1,6 +1,7 @@
 import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { api } from '$lib/api';
+import { resolveSeason, seasonStartYearFromDate } from '$lib/season';
 import type { AskAnswer, FormattedMatch, TimePeriodAccounting } from '$lib/types';
 
 // Backend budget for /ask is the Gemini call (see GEMINI_TIMEOUT_MS in
@@ -14,10 +15,17 @@ const ASK_TIMEOUT_MS = 60_000;
 export const load: PageServerLoad = (event) => {
     // Streamed: both fly to the client independently and the page shell
     // renders immediately with skeletons in their slots.
-    const accounting = api<TimePeriodAccounting>(event, '/accounting/current-season');
+    const season = resolveSeason(event.url, false);
+    const isCurrent = season === seasonStartYearFromDate(new Date());
+    const accounting = api<TimePeriodAccounting>(
+        event,
+        isCurrent ? '/accounting/current-season' : `/accounting/season/${season}`,
+    );
     const matches = api<FormattedMatch[]>(
         event,
-        '/matches/current-season?withResult=true',
+        isCurrent
+            ? '/matches/current-season?withResult=true'
+            : `/matches/season/${season}?withResult=true`,
     );
 
     return { accounting, matches };
