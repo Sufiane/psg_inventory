@@ -2,6 +2,7 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { competitionLabel } from '$lib/format';
+    import Button from '$lib/ui/Button.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
     import { toastStore } from '$lib/stores/toast.svelte';
 
@@ -132,16 +133,7 @@
             class="mb-4"
             use:enhance={track('loadCurrent')}
         >
-            <button
-                type="submit"
-                disabled={submitting !== null}
-                class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-            >
-                {#if submitting === 'loadCurrent'}
-                    <Spinner size="1em" />
-                {/if}
-                Load current season
-            </button>
+            <Button type="submit" disabled={submitting !== null} loading={submitting === 'loadCurrent'}>Load current season</Button>
         </form>
 
         <form
@@ -242,16 +234,7 @@
                 </label>
             </fieldset>
 
-            <button
-                type="submit"
-                disabled={submitting !== null}
-                class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-            >
-                {#if submitting === 'create'}
-                    <Spinner size="1em" />
-                {/if}
-                Create match
-            </button>
+            <Button type="submit" disabled={submitting !== null} loading={submitting === 'create'}>Create match</Button>
         </form>
     </section>
 
@@ -313,16 +296,7 @@
                 />
             </label>
 
-            <button
-                type="submit"
-                disabled={submitting !== null}
-                class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-            >
-                {#if submitting === 'flushUserCache'}
-                    <Spinner size="1em" />
-                {/if}
-                Flush cache
-            </button>
+            <Button type="submit" disabled={submitting !== null} loading={submitting === 'flushUserCache'}>Flush cache</Button>
         </form>
     </section>
 </div>

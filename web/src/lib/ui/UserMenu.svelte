@@ -51,7 +51,7 @@
     </summary>
 
     <div
-        class="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-line-strong bg-surface p-3 text-sm shadow-lg"
+        class="absolute right-0 z-20 mt-2 w-60 rounded-lg border border-line-strong bg-surface p-3 text-sm"
     >
         <p class="truncate text-ink-muted" title={email}>{email}</p>
 

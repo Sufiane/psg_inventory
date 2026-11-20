@@ -2,6 +2,7 @@
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
     import { money } from '$lib/format';
+    import Button from '$lib/ui/Button.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -144,16 +145,7 @@
                             </div>
 
                             <div class="flex items-center gap-3">
-                                <button
-                                    type="submit"
-                                    disabled={submitting !== null}
-                                    class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                                >
-                                    {#if submitting === `update:${pass.id}`}
-                                        <Spinner size="1em" />
-                                    {/if}
-                                    Save
-                                </button>
+                                <Button type="submit" disabled={submitting !== null} loading={submitting === `update:${pass.id}`}>Save</Button>
 
                                 <button
                                     type="submit"
@@ -269,16 +261,7 @@
                     </label>
                 </div>
 
-                <button
-                    type="submit"
-                    disabled={submitting !== null}
-                    class="rounded bg-brand text-on-brand px-4 py-2 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                >
-                    {#if submitting === 'create'}
-                        <Spinner size="1em" />
-                    {/if}
-                    Add pass
-                </button>
+                <Button type="submit" disabled={submitting !== null} loading={submitting === 'create'}>Add pass</Button>
             </form>
         </details>
     </section>
