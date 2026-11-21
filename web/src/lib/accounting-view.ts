@@ -91,3 +91,20 @@ export function tableGroups(
 
     return groups;
 }
+
+export function upcomingIndex(segments: StripSegment[], today: Date): number {
+    if (segments.length === 0) {
+        return -1;
+    }
+
+    const startOfToday = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+    ).getTime();
+    const index = segments.findIndex(
+        (segment) => new Date(segment.date).getTime() >= startOfToday,
+    );
+
+    return index === -1 ? segments.length - 1 : index;
+}
