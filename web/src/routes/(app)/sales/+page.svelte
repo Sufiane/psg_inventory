@@ -353,7 +353,7 @@
 
         const opponent = editSale.Match.Opponent.name;
         const ok = confirm(
-            `Revert the ${opponent} sale to pending? This removes ${signedMoney(editSale.profit)} from realized profit.`,
+            `Revert the ${opponent} sale to pending? This removes ${signedMoney(saleNet(editSale))} from realized net profit.`,
         );
 
         if (!ok) {
@@ -412,9 +412,9 @@
                             <span class="font-medium text-positive-strong">Sold</span>
                             <span class="text-ink-muted">·</span>
                             <span class="font-mono text-positive">
-                                {signedMoney(editSale.profit)}
+                                {signedMoney(saleNet(editSale))}
                             </span>
-                            <span class="text-ink-muted">in realized profit</span>
+                            <span class="text-ink-muted">net realized profit</span>
                         </p>
 
                         <form
@@ -459,9 +459,9 @@
                             Mark sold
                             <span class="text-surface/80">·</span>
                             <span class="font-mono">
-                                {signedMoney(editSale.profit)}
+                                {signedMoney(saleNet(editSale))}
                             </span>
-                            <span class="text-surface/80 font-normal">to realized</span>
+                            <span class="text-surface/80 font-normal">to realized net</span>
                         </button>
                         <p class="text-xs text-ink-faint">
                             {editSale.status === 'CANCELLED'
