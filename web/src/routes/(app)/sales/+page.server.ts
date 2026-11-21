@@ -4,7 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
-import { resolveSeason, seasonOptions, seasonStartYearFromDate } from '$lib/season';
+import { resolveSeason, seasonStartYearFromDate } from '$lib/season';
 import { readPayload } from './read-payload';
 import type {
     FormattedMatch,
@@ -27,13 +27,7 @@ export const load: PageServerLoad = async (event) => {
         const grouped = await api<SalesGroupListItem>(event, '/sales/grouped');
         sales = [...grouped.pending, ...grouped.terminal];
     } else if (season === 'all') {
-        const perSeason = await Promise.all(
-            seasonOptions(new Date(), 6).map((option) =>
-                api<SaleListItem[]>(event, `/sales/season/${option.year}`),
-            ),
-        );
-
-        sales = perSeason.flat();
+        sales = await api<SaleListItem[]>(event, '/sales');
     } else {
         sales = await api<SaleListItem[]>(event, `/sales/season/${season}`);
         year = season;
