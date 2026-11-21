@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { competitionLabel, dateTime, signedMoney } from '$lib/format';
-    import { displayScore, matchSummary } from '$lib/matches-view';
+    import { displayScore, matchOutcome, matchSummary, OUTCOME_CLASS } from '$lib/matches-view';
     import type { FormattedMatch, SaleListItem, SaleStatus } from '$lib/types';
     import StatusChip from './StatusChip.svelte';
 
@@ -26,6 +26,7 @@
 
     const summary = $derived(matchSummary(sales));
     const score = $derived(displayScore(match));
+    const outcome = $derived(matchOutcome(match));
 
     function select(event: MouseEvent): void {
         if (
@@ -75,15 +76,13 @@
             {competitionLabel(match.competition)}
         </span>
 
-        {#if score}
+        {#if score && outcome}
             <span
-                class="shrink-0 font-mono text-xs {match.result?.isWin
-                    ? 'text-positive-strong'
-                    : 'text-negative'}"
+                class="shrink-0 font-mono text-xs {OUTCOME_CLASS[outcome]}"
                 data-numeric
             >
                 {score}
-                <span class="sr-only">{match.result?.isWin ? 'win' : 'loss or draw'}</span>
+                <span class="sr-only">{outcome}</span>
             </span>
         {/if}
 

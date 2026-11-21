@@ -12,7 +12,7 @@
     import Skeleton from '$lib/ui/Skeleton.svelte';
     import { money, signedMoney } from '$lib/format';
     import { breakEvenCaption, netTone, recentSales } from '$lib/dashboard';
-    import { cancelledFrom } from '$lib/sale-math';
+    import { cancelledFrom, realizedFigures } from '$lib/sale-math';
     import { carrySeason, seasonLabel } from '$lib/season';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -55,11 +55,8 @@
         {/each}
     </div>
 {:then accounting}
-    {@const realizedProceeds = accounting.realized?.totalProfit ?? 0}
-    {@const realizedInvest = accounting.realized?.totalInvest ?? 0}
-    {@const seasonInvest = accounting.totalSeasonInvestment}
+    {@const figures = realizedFigures(accounting)}
     {@const hasPass = accounting.seasonInvestments.length > 0}
-    {@const netProfit = realizedProceeds - realizedInvest - seasonInvest}
     {@const cancelled = cancelledFrom(accounting.unrealized, accounting.gifted)}
     {@const giftedCount = accounting.gifted?.totalSales ?? 0}
     {@const pendingCount = accounting.pending?.totalSales ?? 0}
@@ -74,11 +71,11 @@
         </h2>
         <p
             class="mt-1 mb-5 font-mono text-5xl font-semibold tracking-tight {netTone(
-                netProfit,
+                figures.net,
             )}"
             data-numeric
         >
-            {signedMoney(netProfit)}
+            {signedMoney(figures.net)}
         </p>
 
         <div class="max-w-md">
@@ -86,22 +83,22 @@
                 lines={[
                     {
                         label: 'Realized proceeds (SOLD)',
-                        value: realizedProceeds,
+                        value: figures.proceeds,
                         sign: 'plus',
                     },
-                    { label: 'Ticket invest', value: realizedInvest, sign: 'minus' },
+                    { label: 'Ticket invest', value: figures.invest, sign: 'minus' },
                     ...(hasPass
                         ? [
                               {
                                   label: 'Season pass',
-                                  value: seasonInvest,
+                                  value: figures.seasonInvest,
                                   sign: 'minus' as const,
                               },
                           ]
                         : []),
                 ]}
                 resultLabel="Net realized profit"
-                result={netProfit}
+                result={figures.net}
             />
         </div>
 
