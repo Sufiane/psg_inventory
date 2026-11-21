@@ -5,6 +5,8 @@ import {
     passCostPerMatch,
     stripSegments,
     tableGroups,
+    upcomingIndex,
+    type StripSegment,
 } from './accounting-view';
 import type { FormattedMatch, SaleListItem, SaleStatus } from './types';
 
@@ -175,6 +177,61 @@ describe('homeMatchCount', () => {
     describe('when the list is empty', () => {
         it('returns 0', () => {
             expect(homeMatchCount([])).toBe(0);
+        });
+    });
+});
+
+describe('upcomingIndex', () => {
+    function segment(id: string, date: string): StripSegment {
+        return {
+            matchId: id as MatchId,
+            opponent: id,
+            date,
+            status: null,
+            isBreakEven: false,
+        };
+    }
+
+    const today = new Date(2026, 8, 10, 14, 0);
+
+    describe('when some fixtures are today or later', () => {
+        it('returns the index of the first of them', () => {
+            const segments = [
+                segment('m1', new Date(2026, 8, 1, 20, 0).toISOString()),
+                segment('m2', new Date(2026, 8, 15, 20, 0).toISOString()),
+                segment('m3', new Date(2026, 8, 22, 20, 0).toISOString()),
+            ];
+
+            expect(upcomingIndex(segments, today)).toBe(1);
+        });
+    });
+
+    describe('when a fixture is today but earlier in the day', () => {
+        it('returns that fixture', () => {
+            const segments = [
+                segment('m1', new Date(2026, 8, 1, 20, 0).toISOString()),
+                segment('m2', new Date(2026, 8, 10, 9, 0).toISOString()),
+                segment('m3', new Date(2026, 8, 22, 20, 0).toISOString()),
+            ];
+
+            expect(upcomingIndex(segments, today)).toBe(1);
+        });
+    });
+
+    describe('when all fixtures are past', () => {
+        it('returns the last index', () => {
+            const segments = [
+                segment('m1', new Date(2026, 8, 1, 20, 0).toISOString()),
+                segment('m2', new Date(2026, 8, 5, 20, 0).toISOString()),
+            ];
+
+            expect(upcomingIndex(segments, today)).toBe(1);
+        });
+    });
+
+    describe('when there are no segments', () => {
+        it('returns -1', () => {
+            expect(upcomingIndex([], today)).toBe(-1);
         });
     });
 });

@@ -17,6 +17,11 @@ test.describe('season accounting', () => {
             strip.getByRole('listitem', { name: new RegExp(E2E_OPPONENT_NAME) }),
         ).toHaveCount(1);
 
+        const scroller = page.getByRole('region', { name: 'Matchday strip scroller' });
+
+        await expect(scroller).toBeVisible();
+        await expect(scroller.getByText(E2E_OPPONENT_NAME).first()).toBeVisible();
+
         await expect(page.getByText('Net before season pass')).toBeVisible();
     });
 });
