@@ -1,6 +1,6 @@
 <script lang="ts">
     import { competitionLabel, dateTime, money } from '$lib/format';
-    import { displayScore } from '$lib/matches-view';
+    import { displayScore, matchOutcome, OUTCOME_CLASS } from '$lib/matches-view';
     import { saleNet } from '$lib/sale-math';
     import type { FormattedMatch, SaleListItem } from '$lib/types';
     import Button from './Button.svelte';
@@ -21,6 +21,7 @@
     let { match, sales, headingLevel = 'h2' }: Props = $props();
 
     const score = $derived(displayScore(match));
+    const outcome = $derived(matchOutcome(match));
 </script>
 
 <section aria-labelledby="inspector-title-{match.id}" class="rounded-lg border border-line bg-surface">
@@ -41,18 +42,14 @@
             <dd class="text-ink">{competitionLabel(match.competition)}</dd>
             <dt class="text-ink-muted">Venue</dt>
             <dd class="text-ink">{match.atHome ? 'Home' : 'Away'}</dd>
-            {#if score}
+            {#if score && outcome}
                 <dt class="text-ink-muted">Score</dt>
                 <dd
-                    class="font-mono {match.result?.isWin
-                        ? 'text-positive-strong'
-                        : 'text-negative'}"
+                    class="font-mono {OUTCOME_CLASS[outcome]}"
                     data-numeric
                 >
                     {score}
-                    <span class="font-sans text-ink-muted"
-                        >({match.result?.isWin ? 'win' : 'loss or draw'})</span
-                    >
+                    <span class="font-sans text-ink-muted">({outcome})</span>
                 </dd>
             {/if}
         </dl>

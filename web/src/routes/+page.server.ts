@@ -4,6 +4,7 @@ import { JWT_COOKIE } from '$lib/api';
 import { backendUrl } from '$lib/env';
 import { decodeJwt } from '$lib/jwt';
 import { Logger } from '$lib/logger';
+import { realizedFigures } from '$lib/sale-math';
 import type { LoginResponse, TimePeriodAccounting } from '$lib/types';
 
 const logger = new Logger('HomeDemoAction');
@@ -112,10 +113,7 @@ async function fetchShowcase(
         }
 
         const accounting = (await accountingResponse.json()) as TimePeriodAccounting;
-        const realizedProceeds = accounting.realized?.totalProfit ?? 0;
-        const realizedInvest = accounting.realized?.totalInvest ?? 0;
-        const seasonInvest = accounting.totalSeasonInvestment;
-        const netProfit = realizedProceeds - realizedInvest - seasonInvest;
+        const figures = realizedFigures(accounting);
         // realized.totalSales is misnamed in the backend: it's actually
         // SUM(listedPrice) on sold rows, not a row count. The honest "tickets
         // sold" signal lives in totalNbTickets (sum of nbTickets per sale).
@@ -124,10 +122,10 @@ async function fetchShowcase(
 
         return cacheShowcase(
             {
-                netProfit,
-                realizedProceeds,
-                realizedInvest,
-                seasonInvest,
+                netProfit: figures.net,
+                realizedProceeds: figures.proceeds,
+                realizedInvest: figures.invest,
+                seasonInvest: figures.seasonInvest,
                 soldCount,
                 seasonStartYear,
                 fetchedAt: now,
