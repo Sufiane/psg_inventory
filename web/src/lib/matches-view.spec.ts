@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { displayScore, matchSummary, type MatchSummary } from './matches-view';
+import { displayScore, matchOutcome, matchSummary, type MatchSummary } from './matches-view';
 import type { FormattedMatch, SaleListItem, SaleStatus } from './types';
 
 function sale(status: SaleStatus, overrides: Partial<SaleListItem> = {}): SaleListItem {
@@ -79,14 +79,14 @@ describe('matchSummary', () => {
     });
 });
 
-describe('displayScore', () => {
-    function match(score: string | undefined): Pick<FormattedMatch, 'result'> {
-        return { result: score === undefined ? undefined : { score } } as Pick<
-            FormattedMatch,
-            'result'
-        >;
-    }
+function match(score: string | undefined, isWin = false): Pick<FormattedMatch, 'result'> {
+    return { result: score === undefined ? undefined : { score, isWin } } as Pick<
+        FormattedMatch,
+        'result'
+    >;
+}
 
+describe('displayScore', () => {
     describe('when a score is present', () => {
         it('returns the score', () => {
             expect(displayScore(match('2-1'))).toBe('2-1');
@@ -102,6 +102,50 @@ describe('displayScore', () => {
     describe('when there is no result', () => {
         it('returns null', () => {
             expect(displayScore(match(undefined))).toBeNull();
+        });
+    });
+});
+
+describe('matchOutcome', () => {
+    describe('when the home side wins', () => {
+        it('returns win', () => {
+            expect(matchOutcome(match('2 - 1', true))).toBe('win');
+        });
+    });
+
+    describe('when the team loses', () => {
+        it('returns loss', () => {
+            expect(matchOutcome(match('0 - 3', false))).toBe('loss');
+        });
+    });
+
+    describe('when goals are equal', () => {
+        it('returns draw', () => {
+            expect(matchOutcome(match('1 - 1'))).toBe('draw');
+        });
+
+        it('returns draw for a compact score', () => {
+            expect(matchOutcome(match('0-0'))).toBe('draw');
+        });
+    });
+
+    describe('when the score does not parse', () => {
+        it('falls back to a win when isWin is true', () => {
+            expect(matchOutcome(match('2 to 1', true))).toBe('win');
+        });
+
+        it('falls back to a loss when isWin is false', () => {
+            expect(matchOutcome(match('2 to 1', false))).toBe('loss');
+        });
+    });
+
+    describe('when there is no usable score', () => {
+        it('returns null without a result', () => {
+            expect(matchOutcome(match(undefined))).toBeNull();
+        });
+
+        it('returns null for a null score', () => {
+            expect(matchOutcome(match('null-null'))).toBeNull();
         });
     });
 });
