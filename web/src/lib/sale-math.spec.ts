@@ -3,6 +3,7 @@ import {
     cancelledFrom,
     dominantStatus,
     groupSalesByMatch,
+    realizedFigures,
     realizedNet,
     saleNet,
     summarizeSales,
@@ -186,6 +187,36 @@ describe('realizedNet', () => {
     describe('when realized is null', () => {
         it('returns the negative season investment', () => {
             expect(realizedNet(period(null))).toBe(-100);
+        });
+    });
+});
+
+describe('realizedFigures', () => {
+    function period(realized: Accounting | null): TimePeriodAccounting {
+        return { realized, totalSeasonInvestment: 100 } as unknown as TimePeriodAccounting;
+    }
+
+    describe('when realized sales exist', () => {
+        it('returns proceeds, invest, season invest and net', () => {
+            const realized = { totalProfit: 500, totalInvest: 150 } as unknown as Accounting;
+
+            expect(realizedFigures(period(realized))).toEqual({
+                proceeds: 500,
+                invest: 150,
+                seasonInvest: 100,
+                net: 250,
+            });
+        });
+    });
+
+    describe('when realized is null', () => {
+        it('returns zero proceeds and invest with negative net', () => {
+            expect(realizedFigures(period(null))).toEqual({
+                proceeds: 0,
+                invest: 0,
+                seasonInvest: 100,
+                net: -100,
+            });
         });
     });
 });

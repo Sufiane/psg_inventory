@@ -62,12 +62,25 @@ export function cancelledFrom(
     };
 }
 
+export type RealizedFigures = {
+    proceeds: number;
+    invest: number;
+    seasonInvest: number;
+    net: number;
+};
+
+export function realizedFigures(
+    accounting: Pick<TimePeriodAccounting, 'realized' | 'totalSeasonInvestment'>,
+): RealizedFigures {
+    const proceeds = accounting.realized?.totalProfit ?? 0;
+    const invest = accounting.realized?.totalInvest ?? 0;
+    const seasonInvest = accounting.totalSeasonInvestment;
+
+    return { proceeds, invest, seasonInvest, net: proceeds - invest - seasonInvest };
+}
+
 export function realizedNet(
     accounting: Pick<TimePeriodAccounting, 'realized' | 'totalSeasonInvestment'>,
 ): number {
-    return (
-        (accounting.realized?.totalProfit ?? 0) -
-        (accounting.realized?.totalInvest ?? 0) -
-        accounting.totalSeasonInvestment
-    );
+    return realizedFigures(accounting).net;
 }

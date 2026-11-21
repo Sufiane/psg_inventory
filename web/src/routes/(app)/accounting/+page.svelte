@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import type { TimePeriodAccounting } from '$lib/types';
     import { page } from '$app/state';
     import AccountingCard from '$lib/ui/AccountingCard.svelte';
     import LeadTimeStrip from '$lib/ui/LeadTimeStrip.svelte';
@@ -12,7 +11,7 @@
     import MatchdayStrip from '$lib/ui/MatchdayStrip.svelte';
     import SeasonMatchTable from '$lib/ui/SeasonMatchTable.svelte';
     import { money, signedMoney } from '$lib/format';
-    import { groupSalesByMatch, summarizeSales } from '$lib/sale-math';
+    import { groupSalesByMatch, realizedFigures, summarizeSales } from '$lib/sale-math';
     import {
         filterSegments,
         hiddenWithSales,
@@ -34,24 +33,6 @@
         { value: 'home', label: 'Home' },
         { value: 'away', label: 'Away' },
     ];
-
-    function figuresOf(accounting: TimePeriodAccounting): {
-        realizedProceeds: number;
-        realizedInvest: number;
-        seasonInvest: number;
-        netProfit: number;
-    } {
-        const realizedProceeds = accounting.realized?.totalProfit ?? 0;
-        const realizedInvest = accounting.realized?.totalInvest ?? 0;
-        const seasonInvest = accounting.totalSeasonInvestment;
-
-        return {
-            realizedProceeds,
-            realizedInvest,
-            seasonInvest,
-            netProfit: realizedProceeds - realizedInvest - seasonInvest,
-        };
-    }
 
     function netTone(value: number): string {
         if (value < 0) {
@@ -87,7 +68,7 @@
 {#await data.accounting}
     <NetProfitSkeleton />
 {:then accounting}
-    {@const figures = figuresOf(accounting)}
+    {@const figures = realizedFigures(accounting)}
     <section aria-labelledby="figures-heading" class="mb-6">
         <h2 id="figures-heading" class="text-sm font-medium text-ink-muted">Season figures</h2>
 
@@ -96,11 +77,11 @@
                 <h3 class="text-sm font-medium text-ink-muted">Net realized profit</h3>
                 <p
                     class="mt-1 font-mono text-3xl font-display font-semibold tracking-tight {netTone(
-                        figures.netProfit,
+                        figures.net,
                     )}"
                     data-numeric
                 >
-                    {signedMoney(figures.netProfit)}
+                    {signedMoney(figures.net)}
                 </p>
             </div>
 
@@ -108,11 +89,11 @@
                 <h3 class="text-sm font-medium text-ink-muted">Realized proceeds (SOLD)</h3>
                 <p
                     class="mt-1 font-mono text-2xl font-semibold tracking-tight {proceedsTone(
-                        figures.realizedProceeds,
+                        figures.proceeds,
                     )}"
                     data-numeric
                 >
-                    {signedMoney(figures.realizedProceeds)}
+                    {signedMoney(figures.proceeds)}
                 </p>
             </div>
 
@@ -222,7 +203,7 @@
         <Skeleton height="8rem" width="100%" rounded="rounded-lg" />
     </div>
 {:then accounting}
-    {@const figures = figuresOf(accounting)}
+    {@const figures = realizedFigures(accounting)}
     <section aria-labelledby="waterfall-heading" class="mb-6 max-w-lg">
         <h2 id="waterfall-heading" class="text-sm font-medium text-ink-muted">
             How net profit is calculated
@@ -233,14 +214,14 @@
                 lines={[
                     {
                         label: 'Realized proceeds (SOLD)',
-                        value: figures.realizedProceeds,
+                        value: figures.proceeds,
                         sign: 'plus',
                     },
-                    { label: 'Ticket invest', value: figures.realizedInvest, sign: 'minus' },
+                    { label: 'Ticket invest', value: figures.invest, sign: 'minus' },
                     { label: 'Season pass', value: figures.seasonInvest, sign: 'minus' },
                 ]}
                 resultLabel="Net realized profit"
-                result={figures.netProfit}
+                result={figures.net}
             />
         </div>
     </section>
