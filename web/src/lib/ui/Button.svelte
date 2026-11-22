@@ -4,6 +4,7 @@
 
     type Props = {
         children: Snippet;
+        variant?: 'primary' | 'secondary';
         href?: string;
         type?: 'button' | 'submit' | 'reset';
         disabled?: boolean;
@@ -16,6 +17,7 @@
 
     let {
         children,
+        variant = 'primary',
         href,
         type = 'button',
         disabled = false,
@@ -26,11 +28,21 @@
         onclick,
     }: Props = $props();
 
-    const base =
-        'inline-flex items-center justify-center gap-2 min-h-11 rounded bg-brand text-on-brand px-3.5 py-2.5 text-sm font-medium hover:bg-brand-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+    const variants = {
+        primary: 'bg-brand text-on-brand hover:bg-brand-hover',
+        secondary: 'border border-line-strong bg-transparent text-ink hover:bg-surface-strong',
+    };
 
     const className = $derived(
-        [base, fullWidth ? 'w-full' : '', extraClass].filter(Boolean).join(' '),
+        [
+            'inline-flex items-center justify-center gap-2 min-h-11 rounded',
+            variants[variant],
+            'px-3.5 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+            fullWidth ? 'w-full' : '',
+            extraClass,
+        ]
+            .filter(Boolean)
+            .join(' '),
     );
 </script>
 
