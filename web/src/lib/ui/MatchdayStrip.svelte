@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { StripSegment } from '$lib/accounting-view';
     import type { SaleStatus } from '$lib/types';
-    import { upcomingIndex } from '$lib/accounting-view';
+    import { stripOpponent, upcomingIndex } from '$lib/accounting-view';
     import { shortDate } from '$lib/format';
 
     let { segments }: { segments: StripSegment[] } = $props();
@@ -70,7 +70,7 @@
         >
             <ol aria-label="Matchday strip" class="flex w-max gap-2">
                 {#each segments as segment (segment.matchId)}
-                    {@const label = `${segment.opponent}, ${shortDate(segment.date)}, ${segment.status ?? 'no sale'}${segment.isBreakEven ? ', break-even' : ''}`}
+                    {@const label = `${segment.opponent}, ${shortDate(segment.date)}, ${segment.status ?? 'no sale'}${segment.atHome ? '' : ', away'}${segment.isBreakEven ? ', break-even' : ''}`}
                     <li class="w-24 shrink-0 snap-start" aria-label={label} title={label}>
                         <span
                             class="flex h-7 items-center justify-center rounded-sm {fillFor(
@@ -84,7 +84,7 @@
                             {shortDate(segment.date)}
                         </span>
                         <span class="block text-xs text-ink line-clamp-2 break-words">
-                            {segment.opponent}
+                            {stripOpponent(segment)}
                         </span>
                     </li>
                 {/each}
@@ -121,5 +121,6 @@
             <span class="h-3 w-6 rounded-sm bg-line-strong"></span>No sale
         </li>
         <li class="flex items-center gap-1"><span aria-hidden="true">★</span> break-even</li>
+        <li class="flex items-center gap-1"><span aria-hidden="true">@</span> away</li>
     </ul>
 {/if}

@@ -8,16 +8,32 @@
     import Skeleton from '$lib/ui/Skeleton.svelte';
     import MathBlock from '$lib/ui/MathBlock.svelte';
     import AmortisationBlock from '$lib/ui/AmortisationBlock.svelte';
+    import FilterTabs from '$lib/ui/FilterTabs.svelte';
     import MatchdayStrip from '$lib/ui/MatchdayStrip.svelte';
     import SeasonMatchTable from '$lib/ui/SeasonMatchTable.svelte';
     import { money, signedMoney } from '$lib/format';
     import { groupSalesByMatch, summarizeSales } from '$lib/sale-math';
-    import { homeMatchCount, stripSegments, tableGroups } from '$lib/accounting-view';
+    import {
+        filterSegments,
+        hiddenWithSales,
+        homeMatchCount,
+        parseVenue,
+        stripSegments,
+        tableGroups,
+        venueHref,
+        type Venue,
+    } from '$lib/accounting-view';
     import { carrySeason } from '$lib/season';
 
     let { data }: { data: PageData } = $props();
 
     const isAll = $derived(data.season === 'all');
+    const venue = $derived(parseVenue(page.url.searchParams.get('venue')));
+    const venueTabs: { value: Venue; label: string }[] = [
+        { value: 'both', label: 'All' },
+        { value: 'home', label: 'Home' },
+        { value: 'away', label: 'Away' },
+    ];
 
     function figuresOf(accounting: TimePeriodAccounting): {
         realizedProceeds: number;
@@ -158,13 +174,37 @@
             {/if}
 
             {#if view.matches.length > 0}
-                <MatchdayStrip
-                    segments={stripSegments(
-                        view.matches,
-                        salesByMatch,
-                        view.amortization?.breakEven?.matchId ?? null,
-                    )}
-                />
+                {@const segments = stripSegments(
+                    view.matches,
+                    salesByMatch,
+                    view.amortization?.breakEven?.matchId ?? null,
+                )}
+                {@const visible = filterSegments(segments, venue)}
+                {@const hidden = hiddenWithSales(segments, venue)}
+                <div class="space-y-2">
+                    <div data-sveltekit-noscroll data-sveltekit-keepfocus>
+                        <FilterTabs
+                            label="Venue"
+                            tabs={venueTabs.map((tab) => ({
+                                href: venueHref(page.url, tab.value),
+                                label: tab.label,
+                                active: venue === tab.value,
+                            }))}
+                        />
+                    </div>
+                    {#if hidden > 0}
+                        <p class="text-xs text-ink-faint">
+                            {hidden}
+                            {venue === 'home' ? 'away' : 'home'}
+                            {hidden === 1 ? 'match' : 'matches'} with sales hidden.
+                        </p>
+                    {/if}
+                    {#if visible.length === 0}
+                        <p class="text-sm text-ink-faint">No {venue} matches this season.</p>
+                    {:else}
+                        <MatchdayStrip segments={visible} />
+                    {/if}
+                </div>
             {/if}
         </div>
     {:catch err}

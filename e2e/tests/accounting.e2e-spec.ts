@@ -24,4 +24,39 @@ test.describe('season accounting', () => {
 
         await expect(page.getByText('Net before season pass')).toBeVisible();
     });
+
+    test.describe('venue filter', () => {
+        test.describe('when venue is home', () => {
+            test('lists the seeded home match', async ({ page }) => {
+                await page.goto('/accounting?venue=home');
+
+                const strip = page.getByRole('list', { name: 'Matchday strip' });
+
+                await expect(
+                    strip.getByRole('listitem', { name: new RegExp(E2E_OPPONENT_NAME) }),
+                ).toHaveCount(1);
+            });
+        });
+
+        test.describe('when venue is away', () => {
+            test('shows the empty message and no seeded match', async ({ page }) => {
+                await page.goto('/accounting?venue=away');
+
+                await expect(page.getByText('No away matches this season.')).toBeVisible();
+                await expect(page.getByRole('list', { name: 'Matchday strip' })).toHaveCount(0);
+            });
+        });
+
+        test.describe('when clicking the Home tab', () => {
+            test('sets venue=home in the URL', async ({ page }) => {
+                await page.goto('/accounting');
+                await page
+                    .getByRole('navigation', { name: 'Venue' })
+                    .getByRole('link', { name: 'Home' })
+                    .click();
+
+                await expect(page).toHaveURL(/venue=home/);
+            });
+        });
+    });
 });
