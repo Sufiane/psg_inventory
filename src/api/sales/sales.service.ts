@@ -20,7 +20,9 @@ import {
     FormattedSale,
     FormattedSalesGroup,
     ISalesService,
+    SalesCommission,
 } from './interfaces/sales.service.interface';
+import { PSG_COMMISSION } from '../../shared/constants';
 import { IUngiftSaleUsecase } from './usecases/ungift-sale/ungift-sale.usecase';
 import { IDeleteSaleUsecase } from './usecases/delete-sale/delete-sale.usecase';
 import { IUpdateSaleUsecase } from './usecases/update-sale/update-sale.usecase';
@@ -34,6 +36,10 @@ export class SalesService implements ISalesService {
         private readonly deleteSaleUsecase: IDeleteSaleUsecase,
         private readonly updateSaleUsecase: IUpdateSaleUsecase,
     ) {}
+
+    getCommission(): SalesCommission {
+        return { commissionPercent: PSG_COMMISSION };
+    }
 
     async getSale(userId: UserId, saleId: SaleId): Promise<Sale> {
         const sale = await this.salesDbService.getOneSale(userId, saleId);

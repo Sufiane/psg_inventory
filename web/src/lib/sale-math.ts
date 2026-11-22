@@ -14,6 +14,53 @@ export function saleNet(sale: Pick<SaleListItem, 'profit' | 'invest'>): number {
     return sale.profit - sale.invest;
 }
 
+export type SaleProfitBreakdown = {
+    listedPrice: number;
+    commission: number;
+    proceeds: number;
+    invest: number;
+    net: number;
+};
+
+// Same expression and operation order as the backend's computeProfit, so
+// `proceeds` is bit-identical to the stored `Sales.profit` and `net` to saleNet.
+export function computeSaleBreakdown(
+    sale: { listedPrice: number; invest: number },
+    commissionPercent: number,
+): SaleProfitBreakdown {
+    const proceeds = (sale.listedPrice * (100 - commissionPercent)) / 100;
+
+    return {
+        listedPrice: sale.listedPrice,
+        commission: sale.listedPrice - proceeds,
+        proceeds,
+        invest: sale.invest,
+        net: proceeds - sale.invest,
+    };
+}
+
+export function computeDraftBreakdown(
+    listedPrice: number | null,
+    invest: number | null,
+    commissionPercent: number,
+): SaleProfitBreakdown | null {
+    if (listedPrice === null || listedPrice < 1 || (invest !== null && invest < 0)) {
+        return null;
+    }
+
+    return computeSaleBreakdown({ listedPrice, invest: invest ?? 0 }, commissionPercent);
+}
+
+export function parseAmount(raw: string): number | null {
+    if (raw.trim() === '') {
+        return null;
+    }
+
+    const value = Number(raw);
+
+    return Number.isFinite(value) ? value : null;
+}
+
 export function summarizeSales(sales: SaleListItem[]): SalesSummary {
     const summary: SalesSummary = {
         tickets: 0,

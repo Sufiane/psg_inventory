@@ -4,9 +4,11 @@ import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import { homeMatchCount } from '$lib/accounting-view';
 import { resolveSeason, seasonStartYearFromDate } from '$lib/season';
 import { readPayload } from './read-payload';
 import type {
+    CommissionResponse,
     FormattedMatch,
     RecipientListItem,
     SaleDetail,
@@ -35,16 +37,15 @@ export const load: PageServerLoad = async (event) => {
 
     let editSale: SaleDetail | null = null;
     let recipients: RecipientListItem[] = [];
+    let editHomeFixtures: number | null = null;
 
-    // Both panel-specific to the edit drawer: `/recipients` only feeds the
-    // gift-recipient combobox rendered inside it, so there's no reason to pay
-    // for that call — or let a failure of it take down the whole page — on
-    // every list view. Fetched together so a slow/failing recipients call
-    // can't block loading the sale itself, and vice versa.
+    let commissionPercent: number | null = null;
+
     if (editId && !isNew) {
-        const [saleResult, recipientsResult] = await Promise.allSettled([
+        const [saleResult, recipientsResult, commissionResult] = await Promise.allSettled([
             api<SaleDetail>(event, `/sales/${editId}`),
             api<RecipientListItem[]>(event, '/recipients'),
+            api<CommissionResponse>(event, '/sales/commission'),
         ]);
 
         if (saleResult.status === 'fulfilled') {
@@ -53,6 +54,22 @@ export const load: PageServerLoad = async (event) => {
 
         if (recipientsResult.status === 'fulfilled') {
             recipients = recipientsResult.value;
+        }
+
+        if (commissionResult.status === 'fulfilled') {
+            commissionPercent = commissionResult.value.commissionPercent;
+        }
+
+        if (editSale) {
+            const saleSeason = seasonStartYearFromDate(new Date(editSale.Match.date));
+
+            try {
+                editHomeFixtures = homeMatchCount(
+                    await api<FormattedMatch[]>(event, `/matches/season/${saleSeason}`),
+                );
+            } catch {
+                editHomeFixtures = null;
+            }
         }
     }
 
@@ -77,6 +94,8 @@ export const load: PageServerLoad = async (event) => {
     }
 
     return {
+        commissionPercent,
+        editHomeFixtures,
         sales,
         year,
         season,

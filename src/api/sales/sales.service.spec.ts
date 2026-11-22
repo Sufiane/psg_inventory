@@ -10,6 +10,7 @@ import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
 import { ErrorCode } from '../../common/exceptions/error-codes.enum';
+import { PSG_COMMISSION } from '../../shared/constants';
 import { SaleAllocationsValidator } from './shared/sale-allocations.validator';
 import { AddSaleDto } from './dto/add-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
@@ -187,6 +188,16 @@ describe('SalesService', () => {
                 const result = await service.getSalesGrouped(userId);
 
                 expect(result.pending[0]?.matchId).toBe(matchId);
+            });
+        });
+    });
+
+    describe('getCommission', () => {
+        describe('when called', () => {
+            it('returns the PSG commission percent', () => {
+                expect(service.getCommission()).toEqual({
+                    commissionPercent: PSG_COMMISSION,
+                });
             });
         });
     });

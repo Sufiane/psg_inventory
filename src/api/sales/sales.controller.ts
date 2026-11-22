@@ -6,6 +6,7 @@ import {
     FormattedSale,
     FormattedSalesGroup,
     ISalesService,
+    SalesCommission,
 } from './interfaces/sales.service.interface';
 import type { Sale } from '../../db/sales/type/sale.type';
 import { AddSaleDto } from './dto/add-sale.dto';
@@ -48,6 +49,11 @@ export class SalesController {
         @Param() { matchId }: GetMatchSalesDto,
     ): Promise<FormattedSale[]> {
         return await this.salesService.getMatchSales(user.id, matchId);
+    }
+
+    @Get('/commission')
+    getCommission(): SalesCommission {
+        return this.salesService.getCommission();
     }
 
     @Get('/:saleId')

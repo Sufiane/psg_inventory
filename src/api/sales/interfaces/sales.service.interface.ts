@@ -1,5 +1,6 @@
 import type { MatchId, OpponentId, SaleId, UserId } from '@psg/shared/ids';
 import type { ListedPrice, Profit } from '@psg/shared/money';
+import type { Percentage } from '@psg/shared/percentage';
 import type { SeasonYear } from '@psg/shared/time';
 import { Sale } from '../../../db/sales/type/sale.type';
 import { AddSaleDto } from '../dto/add-sale.dto';
@@ -17,7 +18,12 @@ export type FormattedSalesGroup = {
     terminal: FormattedSale[];
 };
 
+export type SalesCommission = {
+    commissionPercent: Percentage;
+};
+
 export abstract class ISalesService {
+    abstract getCommission(): SalesCommission;
     abstract getSale(userId: UserId, saleId: SaleId): Promise<Sale>;
     abstract getSales(userId: UserId): Promise<FormattedSale[]>;
     abstract getCurrentSeasonSales(userId: UserId): Promise<FormattedSale[]>;
