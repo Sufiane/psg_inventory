@@ -107,5 +107,23 @@ describe('readPayload', () => {
                 expect(result.payload).toBeUndefined();
             });
         });
+
+        describe('when listedPrice is a fraction', () => {
+            it('rejects the update', () => {
+                const result = readPayload(buildForm({ listedPrice: '33.5' }), 'sale-1');
+
+                expect(result.error).toBe('Listed price must be a whole number of euros.');
+                expect(result.payload).toBeUndefined();
+            });
+        });
+
+        describe('when invest is a fraction', () => {
+            it('rejects the update', () => {
+                const result = readPayload(buildForm({ invest: '2.5' }), 'sale-1');
+
+                expect(result.error).toBe('Invest must be a whole number of euros.');
+                expect(result.payload).toBeUndefined();
+            });
+        });
     });
 });

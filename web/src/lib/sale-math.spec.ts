@@ -288,9 +288,15 @@ describe('parseAmount', () => {
         });
     });
 
-    describe('when the input is a decimal', () => {
+    describe('when the input is a fraction', () => {
+        it('returns null', () => {
+            expect(parseAmount('33.5')).toBeNull();
+        });
+    });
+
+    describe('when the input is a whole number', () => {
         it('returns the number', () => {
-            expect(parseAmount('12.5')).toBe(12.5);
+            expect(parseAmount('33')).toBe(33);
         });
     });
 });
@@ -322,6 +328,24 @@ describe('computeDraftBreakdown', () => {
         });
     });
 
+    describe('when the listed price is a fraction above 1', () => {
+        it('returns null', () => {
+            expect(computeDraftBreakdown(33.5, 0, 12)).toBeNull();
+        });
+    });
+
+    describe('when invest is a fraction', () => {
+        it('returns null', () => {
+            expect(computeDraftBreakdown(33, 2.5, 12)).toBeNull();
+        });
+    });
+
+    describe('when both are whole numbers', () => {
+        it('returns a breakdown', () => {
+            expect(computeDraftBreakdown(33, 0, 12)).not.toBeNull();
+        });
+    });
+
     describe('when invest is empty', () => {
         it('treats invest as zero', () => {
             expect(computeDraftBreakdown(100, null, 12)?.net).toBe(88);
@@ -330,8 +354,8 @@ describe('computeDraftBreakdown', () => {
 
     describe('when the price is valid', () => {
         it('matches computeSaleBreakdown', () => {
-            expect(computeDraftBreakdown(310, 184.21, 12)).toEqual(
-                computeSaleBreakdown({ listedPrice: 310, invest: 184.21 }, 12),
+            expect(computeDraftBreakdown(310, 184, 12)).toEqual(
+                computeSaleBreakdown({ listedPrice: 310, invest: 184 }, 12),
             );
         });
     });

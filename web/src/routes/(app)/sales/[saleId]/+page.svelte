@@ -138,7 +138,8 @@
             type="number"
             name="listedPrice"
             min="1"
-            step="0.01"
+            step="1"
+            inputmode="numeric"
             value={sale.listedPrice}
             class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
         />
@@ -150,7 +151,8 @@
             type="number"
             name="invest"
             min="0"
-            step="0.01"
+            step="1"
+            inputmode="numeric"
             value={sale.invest}
             class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
         />
