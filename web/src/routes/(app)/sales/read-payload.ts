@@ -1,10 +1,9 @@
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
 
 /**
- * Two forms on this route submit to `?/update`: the gift form and the
- * edit-numbers form. Each declares itself through the hidden `intent` field,
- * because `status: 'GIFTED'` can arrive from either one for different
- * reasons and so cannot decide on its own whether a recipient is required.
+ * `?/update` is submitted by a single edit drawer form. Its hidden `intent`
+ * field is `gift` when the draft status is GIFTED and `edit-numbers`
+ * otherwise; only `gift` makes the recipient rules apply.
  */
 export function readPayload(form: FormData): {
     payload?: Record<string, unknown>;

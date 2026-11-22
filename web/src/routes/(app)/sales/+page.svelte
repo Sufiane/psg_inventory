@@ -14,9 +14,9 @@
         signedMoney,
     } from '$lib/format';
     import { passesForMatch, passesForSale } from '$lib/sale-passes';
-    import { saleNet, summarizeSales } from '$lib/sale-math';
+    import { parseAmount, saleNet, summarizeSales } from '$lib/sale-math';
     import { seasonLabel, seasonLabelFromDate } from '$lib/season';
-    import { statusPill, profitTone } from '$lib/sale-helpers';
+    import { profitTone } from '$lib/sale-helpers';
     import {
         filterByStatus,
         parseStatusParam,
@@ -26,7 +26,8 @@
         type SaleSortDir,
         type SaleSortKey,
     } from '$lib/sales-view';
-    import type { SaleListItem } from '$lib/types';
+    import type { SaleListItem, SaleStatus, SeasonPass } from '$lib/types';
+    import SaleProfitBlock from '$lib/ui/SaleProfitBlock.svelte';
     import SalesToolbar from '$lib/ui/SalesToolbar.svelte';
     import SalesTotals from '$lib/ui/SalesTotals.svelte';
     import StatusChip from '$lib/ui/StatusChip.svelte';
@@ -133,6 +134,87 @@
         editSale === null ? [] : passesForSale(data.passes, editSale),
     );
 
+    const STATUS_OPTIONS: { value: SaleStatus; label: string; tone: string }[] = [
+        {
+            value: 'SOLD',
+            label: 'Sold',
+            tone: 'peer-checked:bg-positive/15 peer-checked:text-positive-strong peer-checked:border-positive/50',
+        },
+        {
+            value: 'PENDING',
+            label: 'Pending',
+            tone: 'peer-checked:bg-warning/15 peer-checked:text-warning-strong peer-checked:border-warning/50',
+        },
+        {
+            value: 'GIFTED',
+            label: 'Gifted',
+            tone: 'peer-checked:bg-gift/15 peer-checked:text-gift-strong peer-checked:border-gift/50',
+        },
+        {
+            value: 'CANCELLED',
+            label: 'Cancelled',
+            tone: 'peer-checked:bg-sunk/15 peer-checked:text-sunk-strong peer-checked:border-sunk/50',
+        },
+    ];
+
+    let draftStatus = $derived<SaleStatus>(editSale?.status ?? 'PENDING');
+    let draftListedPrice = $derived(editSale ? String(editSale.listedPrice) : '');
+    let draftInvest = $derived(editSale ? String(editSale.invest) : '');
+    let statusChanged = $derived(editSale !== null && draftStatus !== editSale.status);
+
+    let passCostHint = $derived.by(() => {
+        const fixtures = data.editHomeFixtures;
+
+        if (!editSale || fixtures === null || fixtures === 0 || editVisiblePasses.length === 0) {
+            return null;
+        }
+
+        const allocated = editVisiblePasses.filter((pass) =>
+            editSale?.Allocations?.some(
+                (alloc) => alloc.seasonPassId === pass.id && alloc.nbTickets > 0,
+            ),
+        );
+        const counted = allocated.length > 0 ? allocated : editVisiblePasses;
+        const total = counted.reduce((sum, pass) => sum + pass.price, 0);
+
+        return `Pass cost basis: ${money(total)} ÷ ${fixtures} home matches`;
+    });
+
+    function isStatusAllowed(target: SaleStatus): boolean {
+        if (!editSale) {
+            return false;
+        }
+
+        if (target === editSale.status) {
+            return true;
+        }
+
+        switch (target) {
+            case 'SOLD':
+                return editSale.status !== 'GIFTED';
+            case 'PENDING':
+                return editSale.status === 'SOLD';
+            case 'GIFTED':
+                return editSale.status === 'PENDING' && !isPastMatch;
+            default:
+                return false;
+        }
+    }
+
+    function stepAllocation(event: Event, delta: 1 | -1): void {
+        const input = (event.currentTarget as HTMLElement).parentElement?.querySelector('input');
+
+        if (!input) {
+            return;
+        }
+
+        if (delta === 1) {
+            input.stepUp();
+        } else {
+            input.stepDown();
+        }
+    }
+
     function urlWithEdit(targetId: string | null): string {
         const params = new URLSearchParams(page.url.searchParams);
 
@@ -147,9 +229,8 @@
         return qs ? `/sales?${qs}` : '/sales';
     }
 
-    let submitting = $state<'update' | 'delete' | 'flip' | 'create' | null>(null);
+    let submitting = $state<'update' | 'delete' | 'create' | null>(null);
 
-    let firstFieldEl = $state<HTMLInputElement | HTMLAnchorElement | null>(null);
     let newPanelFirstEl = $state<HTMLSelectElement | HTMLButtonElement | null>(null);
 
     // `canCreate` is computed server-side against the sanitized season year
@@ -177,10 +258,12 @@
     $effect(() => {
         if (editId && editSale && editSale.id === editId) {
             void tick().then(() => {
-                firstFieldEl?.focus();
+                const firstField = document.querySelector<HTMLElement>('[data-edit-first]');
 
-                if (firstFieldEl instanceof HTMLInputElement) {
-                    firstFieldEl.select();
+                firstField?.focus();
+
+                if (firstField instanceof HTMLInputElement) {
+                    firstField.select();
                 }
             });
         }
@@ -282,21 +365,6 @@
         };
     }
 
-    function trackFlip({ cancel }: { cancel: () => void }) {
-        if (submitting !== null) {
-            cancel();
-
-            return;
-        }
-
-        submitting = 'flip';
-
-        return async ({ update }: { update: () => Promise<void> }) => {
-            await update();
-            submitting = null;
-        };
-    }
-
     function confirmIfPast(event: Event, action: 'save' | 'delete'): void {
         if (!editSale || !isPastMatch || !editMatchDate) {
             return;
@@ -311,6 +379,26 @@
         if (!ok) {
             event.preventDefault();
         }
+    }
+
+    function confirmSave(event: Event): void {
+        if (!editSale) {
+            return;
+        }
+
+        if (statusChanged && draftStatus === 'SOLD') {
+            confirmMarkSold(event);
+
+            return;
+        }
+
+        if (statusChanged && draftStatus === 'PENDING' && editSale.status === 'SOLD') {
+            confirmRevert(event);
+
+            return;
+        }
+
+        confirmIfPast(event, 'save');
     }
 
     function confirmDelete(event: Event): void {
@@ -362,232 +450,151 @@
     }
 </script>
 
+{#snippet allocStepper(pass: SeasonPass, current: number, isFirst: boolean)}
+    <div class="inline-flex items-center rounded border border-line-strong bg-surface">
+        <button
+            type="button"
+            aria-label="Remove a ticket from {pass.label}"
+            onclick={(event) => stepAllocation(event, -1)}
+            class="size-10 text-ink-muted hover:text-ink transition-colors"
+        >
+            −
+        </button>
+        <input
+            type="number"
+            name={`alloc_${pass.id}`}
+            aria-label="Tickets on {pass.label}"
+            data-edit-first={isFirst ? '' : undefined}
+            min="0"
+            step="1"
+            value={current}
+            class="w-12 bg-transparent text-center text-ink font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <button
+            type="button"
+            aria-label="Add a ticket to {pass.label}"
+            onclick={(event) => stepAllocation(event, 1)}
+            class="size-10 text-ink-muted hover:text-ink transition-colors"
+        >
+            +
+        </button>
+    </div>
+{/snippet}
+
 {#snippet editPanel(saleId: string)}
     {#if editSale && editSale.id === saleId}
         <div
-            class="bg-surface-subtle border-t border-line p-4 space-y-3"
+            class="bg-surface-subtle border-t border-line p-4 sm:p-6"
             role="region"
             aria-label="Edit sale vs {editSale.Match.Opponent.name}"
         >
-            <div
-                class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs"
+            <form
+                method="POST"
+                action="?/update"
+                class="mx-auto max-w-2xl space-y-6"
+                use:enhance={trackSubmit}
             >
-                <span class="text-ink-muted">
-                    Currently
-                    <span
-                        class="ml-1 inline-block px-2 py-0.5 rounded font-medium {statusPill(
-                            editSale.status,
-                        )}"
-                    >
-                        {editSale.status}
-                    </span>
-                </span>
-                {#if editMatchDate}
-                    <span class="text-ink-faint font-mono">
-                        {dateTime(editMatchDate)}
-                    </span>
+                <input type="hidden" name="saleId" value={editSale.id} />
+                <input
+                    type="hidden"
+                    name="intent"
+                    value={draftStatus === 'GIFTED' ? 'gift' : 'edit-numbers'}
+                />
+                {#if statusChanged || draftStatus === 'GIFTED'}
+                    <input type="hidden" name="status" value={draftStatus} />
                 {/if}
-            </div>
+                <input type="hidden" name="previousStatus" value={editSale.status} />
 
-            {#if isPastMatch && editMatchDate}
-                <div
-                    role="alert"
-                    class="rounded-lg border border-warning bg-warning/10 px-3 py-2 text-xs text-warning-strong"
-                >
-                    Match has already been played. Saving here rewrites the original
-                    sale record.
-                </div>
-            {/if}
-
-            <!-- Status commit block. Marking a sale SOLD is the moment money
-                 becomes realized profit; it deserves its own affordance with the
-                 profit delta shown inline, not a checkbox buried in the input grid. -->
-            <div
-                class="rounded-lg border border-line bg-surface p-3 space-y-2"
-                aria-label="Sale status"
-            >
-                {#if editSale.status === 'SOLD'}
-                    <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <p class="text-sm text-ink">
-                            <span class="font-medium text-positive-strong">Sold</span>
-                            <span class="text-ink-muted">·</span>
-                            <span class="font-mono text-positive">
-                                {signedMoney(saleNet(editSale))}
-                            </span>
-                            <span class="text-ink-muted">net realized profit</span>
+                <header class="flex items-start justify-between gap-4">
+                    <div class="space-y-1">
+                        <p
+                            class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
+                        >
+                            Edit sale
+                            <span aria-hidden="true">·</span>
+                            <StatusChip status={editSale.status} />
                         </p>
-
-                        <form
-                            method="POST"
-                            action="?/update"
-                            use:enhance={trackFlip}
-                        >
-                            <input type="hidden" name="saleId" value={editSale.id} />
-                            <input type="hidden" name="status" value="PENDING" />
-                            <button
-                                type="submit"
-                                disabled={submitting !== null}
-                                onclick={confirmRevert}
-                                class="text-sm text-ink-muted hover:text-ink hover:underline disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                            >
-                                {#if submitting === 'flip'}
-                                    <Spinner size="1em" />
-                                {/if}
-                                Revert to pending
-                            </button>
-                        </form>
+                        <h2 class="text-xl font-semibold text-ink">
+                            PSG vs {editSale.Match.Opponent.name}{#if editMatchDate},
+                                {shortDate(editMatchDate)}{/if}
+                        </h2>
+                        {#if editMatchDate}
+                            <p class="text-sm text-ink-muted font-mono">
+                                {dateTime(editMatchDate)}
+                            </p>
+                        {/if}
                     </div>
-                {:else if editSale.status !== 'GIFTED'}
-                    <form
-                        method="POST"
-                        action="?/update"
-                        class="space-y-2"
-                        use:enhance={trackFlip}
+                    <a
+                        href={urlWithEdit(null)}
+                        aria-label="Close edit panel"
+                        class="size-10 inline-flex items-center justify-center rounded text-ink-muted hover:text-ink hover:bg-surface-strong transition-colors"
                     >
-                        <input type="hidden" name="saleId" value={editSale.id} />
-                        <input type="hidden" name="status" value="SOLD" />
+                        <span aria-hidden="true" class="text-xl leading-none">×</span>
+                    </a>
+                </header>
 
-                        <button
-                            type="submit"
-                            disabled={submitting !== null}
-                            onclick={confirmMarkSold}
-                            class="w-full rounded bg-positive text-surface px-4 py-2.5 font-medium hover:bg-positive-strong disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
-                        >
-                            {#if submitting === 'flip'}
-                                <Spinner size="1em" />
-                            {/if}
-                            Mark sold
-                            <span class="text-surface/80">·</span>
-                            <span class="font-mono">
-                                {signedMoney(saleNet(editSale))}
-                            </span>
-                            <span class="text-surface/80 font-normal">to realized net</span>
-                        </button>
+                {#if isPastMatch && editMatchDate}
+                    <div
+                        role="alert"
+                        class="rounded-lg border border-warning bg-warning/10 px-3 py-2 text-xs text-warning-strong"
+                    >
+                        Match has already been played. Saving here rewrites the original
+                        sale record.
+                    </div>
+                {/if}
+
+                <fieldset class="space-y-2" aria-label="Sale status">
+                    <legend class="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                        Status
+                    </legend>
+                    <div
+                        class="grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-lg border border-line bg-surface p-1"
+                    >
+                        {#each STATUS_OPTIONS as option (option.value)}
+                            <label class="relative block">
+                                <input
+                                    type="radio"
+                                    name="statusChoice"
+                                    value={option.value}
+                                    bind:group={draftStatus}
+                                    disabled={!isStatusAllowed(option.value)}
+                                    class="peer sr-only"
+                                />
+                                <span
+                                    class="flex min-h-10 items-center justify-center rounded border border-transparent px-3 text-sm text-ink-muted transition-colors cursor-pointer hover:text-ink peer-checked:font-medium {option.tone} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:cursor-not-allowed peer-disabled:opacity-40 peer-disabled:hover:text-ink-muted"
+                                >
+                                    {option.label}
+                                </span>
+                            </label>
+                        {/each}
+                    </div>
+                    {#if editSale.status === 'GIFTED'}
+                        <p class="text-xs text-ink-faint">
+                            A gifted sale is final. The recipient can still be changed.
+                        </p>
+                    {:else if statusChanged && draftStatus === 'SOLD'}
                         <p class="text-xs text-ink-faint">
                             {editSale.status === 'CANCELLED'
                                 ? 'Restores this sale and credits realized profit.'
                                 : 'Adds this sale to realized profit on the dashboard.'}
                         </p>
-                    </form>
-                {:else}
-                    <p class="text-sm text-ink">
-                        <span class="font-medium text-gift-strong">Gifted</span>
-                        <span class="text-ink-muted">·</span>
-                        <span class="text-ink-muted">
-                            a gifted sale is final — changing the status back needs a
-                            manual fix. The recipient can still be changed below.
-                        </span>
-                    </p>
-                {/if}
+                    {:else if statusChanged && draftStatus === 'PENDING'}
+                        <p class="text-xs text-ink-faint">
+                            Removes {signedMoney(saleNet(editSale))} from realized net profit.
+                        </p>
+                    {:else if statusChanged && draftStatus === 'GIFTED'}
+                        <p class="text-xs text-ink-faint">
+                            Records this ticket as given away. Stays out of realized profit.
+                        </p>
+                    {/if}
+                </fieldset>
 
-                <!-- D5: GIFTED is reachable only from PENDING and is terminal,
-                     and *entering* it is kickoff-guarded like SOLD. So the
-                     entry case (a PENDING sale) is offered before kickoff only.
-                     An already-GIFTED sale keeps the form at any time: that
-                     request updates the recipient, moves no status, and is
-                     exempt from the guard on purpose — recording *who*
-                     received a ticket is not a decision that has to precede
-                     the match (D5). A SOLD or CANCELLED sale is never offered
-                     the form: the server would refuse it, and an affordance
-                     that always fails is worse than none. -->
-                {#if editSale.status === 'GIFTED' || (editSale.status === 'PENDING' && !isPastMatch)}
-                    <form
-                        method="POST"
-                        action="?/update"
-                        class="space-y-2 border-t border-line pt-2"
-                        use:enhance={trackFlip}
-                    >
-                        <input type="hidden" name="saleId" value={editSale.id} />
-                        <!-- This form's intent is unambiguous: it always either starts a
-                             gift or updates an existing gift's recipient. `intent="gift"`
-                             is what gates the "recipient required" check server-side —
-                             not `status === 'GIFTED'` alone, since the edit-numbers form
-                             below can carry that same status for an unrelated reason. -->
-                        <input type="hidden" name="intent" value="gift" />
-                        <input type="hidden" name="status" value="GIFTED" />
-                        <input type="hidden" name="previousStatus" value={editSale.status} />
-
-                        {#if editSale.Gift}
-                            <p class="text-sm text-ink">
-                                <span class="font-medium text-gift-strong">Gifted</span>
-                                <span class="text-ink-muted">·</span>
-                                <span class="text-ink-muted">Given to</span>
-                                <span class="text-ink">{editSale.Gift.Recipient.name}</span>
-                            </p>
-                        {/if}
-
-                        <label class="block">
-                            <span class="text-xs text-ink-muted">
-                                {editSale.status === 'GIFTED' ? 'Recipient' : 'Given to'}
-                            </span>
-                            <input
-                                type="text"
-                                name="recipientName"
-                                list="recipient-options"
-                                required={editSale.status !== 'GIFTED'}
-                                autocomplete="off"
-                                maxlength="120"
-                                placeholder={editSale.Gift?.Recipient.name ?? 'Name'}
-                                class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-2"
-                            />
-                        </label>
-
-                        <button
-                            type="submit"
-                            disabled={submitting !== null}
-                            class="w-full rounded border border-gift text-gift-strong px-4 py-2 font-medium hover:bg-gift/10 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 transition-colors"
-                        >
-                            {#if submitting === 'flip'}
-                                <Spinner size="1em" />
-                            {/if}
-                            {editSale.status === 'GIFTED' ? 'Update recipient' : 'Mark gifted'}
-                        </button>
-
-                        {#if editSale.status === 'GIFTED'}
-                            <p class="text-xs text-ink-faint">
-                                Leave blank to keep the current recipient.
-                            </p>
-                        {:else}
-                            <p class="text-xs text-ink-faint">
-                                Records this ticket as given away. Stays out of realized
-                                profit.
-                            </p>
-                            <p class="text-xs text-ink-faint">
-                                Who received it? Type a new name to add them.
-                            </p>
-                        {/if}
-                    </form>
-                {/if}
-            </div>
-
-            <!-- Edit numbers form. This form's intent is editing price/invest/
-                 allocations — it is never trying to change status or the
-                 recipient, so it says nothing about either: no `status` field
-                 at all (UpdateSaleDto.status is optional, and the api leaves
-                 status untouched when it's absent), no `recipientName`. That
-                 also means this form works unmodified for a CANCELLED sale,
-                 which isn't a valid `status` target — there used to be a
-                 special case for that; omitting the field entirely made it
-                 unnecessary. -->
-            <form
-                method="POST"
-                action="?/update"
-                class="grid sm:grid-cols-2 gap-3"
-                use:enhance={trackSubmit}
-            >
-                <input type="hidden" name="saleId" value={editSale.id} />
-                <input type="hidden" name="intent" value="edit-numbers" />
-
-                <fieldset
-                    class="sm:col-span-2 rounded border border-line p-3 space-y-2"
-                >
-                    <legend class="text-xs text-ink-muted px-1">
-                        Tickets per pass
-                    </legend>
+                <fieldset class="space-y-2">
+                    <legend class="text-sm text-ink-muted">Tickets per pass</legend>
                     {#if editVisiblePasses.length === 0}
-                        <p class="text-xs text-negative-strong">
+                        <p class="text-xs text-negative">
                             No season pass for this sale's season — <a
-                                bind:this={firstFieldEl}
+                                data-edit-first
                                 href="/season"
                                 class="text-primary hover:text-primary-hover hover:underline"
                                 >create one</a
@@ -599,90 +606,140 @@
                                 editSale.Allocations?.find(
                                     (alloc) => alloc.seasonPassId === pass.id,
                                 )?.nbTickets ?? 0}
-                            <label class="flex items-center justify-between gap-3">
+                            <div class="flex items-center justify-between gap-3">
                                 <span class="text-sm text-ink-muted truncate">
                                     {pass.seasonStartYear} · {pass.label}
                                     <span class="text-ink-faint"
                                         >({pass.category} · {pass.row}/{pass.seat})</span
                                     >
                                 </span>
-                                {#if idx === 0}
-                                    <input
-                                        bind:this={firstFieldEl}
-                                        type="number"
-                                        name={`alloc_${pass.id}`}
-                                        min="0"
-                                        step="1"
-                                        value={current}
-                                        class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
-                                    />
-                                {:else}
-                                    <input
-                                        type="number"
-                                        name={`alloc_${pass.id}`}
-                                        min="0"
-                                        step="1"
-                                        value={current}
-                                        class="w-20 rounded border border-line-strong bg-surface text-ink px-2 py-1 text-right"
-                                    />
-                                {/if}
-                            </label>
+                                {@render allocStepper(pass, current, idx === 0)}
+                            </div>
                         {/each}
                     {/if}
                 </fieldset>
 
-                <label class="block">
-                    <span class="text-xs text-ink-muted">Listed price (€)</span>
-                    <input
-                        type="number"
-                        name="listedPrice"
-                        min="1"
-                        step="0.01"
-                        value={editSale.listedPrice}
-                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
-                    />
-                </label>
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label for="edit-listed-price" class="block text-sm text-ink-muted">
+                            Listed price
+                        </label>
+                        <div class="relative">
+                            <input
+                                id="edit-listed-price"
+                                type="number"
+                                name="listedPrice"
+                                min="1"
+                                step="0.01"
+                                value={draftListedPrice}
+                                oninput={(event) =>
+                                    (draftListedPrice = event.currentTarget.value)}
+                                class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
+                            />
+                            <span
+                                aria-hidden="true"
+                                class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-faint"
+                                >€</span
+                            >
+                        </div>
+                    </div>
 
-                <label class="block sm:col-span-2">
-                    <span class="text-xs text-ink-muted">Cost paid for tickets (€)</span>
-                    <input
-                        type="number"
-                        name="invest"
-                        min="0"
-                        step="0.01"
-                        value={editSale.invest}
-                        class="mt-1 w-full rounded border border-line-strong bg-surface text-ink px-3 py-1.5 text-sm"
+                    <div class="space-y-1">
+                        <label for="edit-invest" class="block text-sm text-ink-muted">
+                            Ticket invest
+                        </label>
+                        <div class="relative">
+                            <input
+                                id="edit-invest"
+                                type="number"
+                                name="invest"
+                                min="0"
+                                step="0.01"
+                                value={draftInvest}
+                                oninput={(event) => (draftInvest = event.currentTarget.value)}
+                                aria-describedby={passCostHint ? 'edit-invest-hint' : undefined}
+                                class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
+                            />
+                            <span
+                                aria-hidden="true"
+                                class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-faint"
+                                >€</span
+                            >
+                        </div>
+                        {#if passCostHint}
+                            <p id="edit-invest-hint" class="text-xs text-ink-faint">
+                                {passCostHint}
+                            </p>
+                        {/if}
+                    </div>
+
+                    {#if draftStatus === 'SOLD'}
+                        <div class="space-y-1">
+                            <span class="block text-sm text-ink-muted">Sold date</span>
+                            <p
+                                class="flex min-h-11 items-center rounded border border-line bg-surface px-3 text-ink font-mono"
+                            >
+                                {#if editSale.status === 'SOLD' && editSale.soldAt}
+                                    {dateTime(editSale.soldAt)}
+                                {:else}
+                                    Set when you save
+                                {/if}
+                            </p>
+                        </div>
+                    {/if}
+                </div>
+
+                {#if draftStatus === 'GIFTED'}
+                    <div class="space-y-1">
+                        <label for="edit-recipient" class="block text-sm text-ink-muted">
+                            Recipient
+                            {#if editSale.status !== 'GIFTED'}
+                                <span class="text-ink-faint">(required)</span>
+                            {/if}
+                        </label>
+                        <input
+                            id="edit-recipient"
+                            type="text"
+                            name="recipientName"
+                            list="recipient-options"
+                            required={editSale.status !== 'GIFTED'}
+                            autocomplete="off"
+                            maxlength="120"
+                            placeholder={editSale.Gift?.Recipient.name ?? 'e.g. Lucas'}
+                            class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink px-3"
+                        />
+                        <p class="text-xs text-ink-faint">
+                            {#if editSale.status === 'GIFTED'}
+                                Given to {editSale.Gift?.Recipient.name}. Leave blank to keep
+                                the current recipient.
+                            {:else}
+                                Type a new name to add them.
+                            {/if}
+                        </p>
+                    </div>
+                {/if}
+
+                {#if data.commissionPercent !== null && (draftStatus === 'SOLD' || draftStatus === 'PENDING')}
+                    <SaleProfitBlock
+                        listedPrice={parseAmount(draftListedPrice)}
+                        invest={parseAmount(draftInvest)}
+                        commissionPercent={data.commissionPercent}
                     />
-                </label>
+                {/if}
 
                 {#if form?.message}
-                    <p
-                        role="alert"
-                        class="sm:col-span-2 text-sm text-negative-strong"
-                    >
+                    <p role="alert" class="text-sm text-negative">
                         {form.message}
                     </p>
                 {/if}
 
-                <div class="sm:col-span-2 flex flex-wrap items-center gap-2 pt-2">
-                    <button
-                        type="submit"
-                        disabled={submitting !== null}
-                        class="rounded bg-brand text-on-brand px-3 py-1.5 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                        onclick={(event) => confirmIfPast(event, 'save')}
-                    >
-                        {#if submitting === 'update'}
-                            <Spinner size="1em" />
-                        {/if}
-                        Save changes
-                    </button>
-
+                <div class="flex flex-wrap items-center gap-3 border-t border-line pt-4">
                     <button
                         type="submit"
                         formaction="?/delete"
                         formnovalidate
                         disabled={submitting !== null}
-                        class="rounded border border-negative text-negative-strong px-3 py-1.5 text-sm font-medium hover:bg-negative/5 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                        class="min-h-11 px-1 text-sm text-negative hover:text-negative-strong hover:underline disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
                         onclick={confirmDelete}
                     >
                         {#if submitting === 'delete'}
@@ -693,13 +750,25 @@
 
                     <a
                         href={urlWithEdit(null)}
-                        class="ml-auto text-sm text-ink-muted hover:text-ink hover:underline px-2 py-1.5"
+                        class="ml-auto min-h-11 inline-flex items-center rounded border border-line-strong px-4 text-sm text-ink-muted hover:text-ink hover:bg-surface-strong transition-colors"
                     >
                         Cancel <kbd
-                            class="ml-1 font-mono text-[10px] text-ink-faint"
+                            class="ml-2 font-mono text-[10px] text-ink-faint"
                             aria-hidden="true">Esc</kbd
                         >
                     </a>
+
+                    <button
+                        type="submit"
+                        disabled={submitting !== null}
+                        class="min-h-11 rounded bg-brand text-on-brand px-4 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
+                        onclick={confirmSave}
+                    >
+                        {#if submitting === 'update'}
+                            <Spinner size="1em" />
+                        {/if}
+                        Save changes
+                    </button>
                 </div>
             </form>
         </div>

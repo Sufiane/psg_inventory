@@ -324,3 +324,7 @@ export type AskAnswer = {
     figures: AskFigures;
     generatedAt: string;
 };
+
+export type CommissionResponse = {
+    commissionPercent: number;
+};

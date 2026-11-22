@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
     cancelledFrom,
+    computeDraftBreakdown,
+    computeSaleBreakdown,
     dominantStatus,
     groupSalesByMatch,
+    parseAmount,
     realizedFigures,
     realizedNet,
     saleNet,
@@ -217,6 +220,119 @@ describe('realizedFigures', () => {
                 seasonInvest: 100,
                 net: -100,
             });
+        });
+    });
+});
+
+describe('computeSaleBreakdown', () => {
+    describe('when the price is clean', () => {
+        const breakdown = computeSaleBreakdown({ listedPrice: 310, invest: 184.21 }, 12);
+
+        it('computes proceeds after commission', () => {
+            expect(breakdown.proceeds).toBeCloseTo(272.8, 10);
+        });
+
+        it('computes the commission amount', () => {
+            expect(breakdown.commission).toBeCloseTo(37.2, 10);
+        });
+
+        it('computes net after invest', () => {
+            expect(breakdown.net).toBeCloseTo(88.59, 10);
+        });
+    });
+
+    describe('when invest is zero', () => {
+        it('keeps net equal to proceeds', () => {
+            const breakdown = computeSaleBreakdown({ listedPrice: 100, invest: 0 }, 12);
+
+            expect(breakdown.net).toBe(breakdown.proceeds);
+        });
+    });
+
+    describe('when invest exceeds proceeds', () => {
+        it('returns a negative net', () => {
+            expect(computeSaleBreakdown({ listedPrice: 100, invest: 120 }, 12).net).toBe(-32);
+        });
+    });
+
+    describe('when the price is zero', () => {
+        it('returns a net of minus invest', () => {
+            expect(computeSaleBreakdown({ listedPrice: 0, invest: 40 }, 12).net).toBe(-40);
+        });
+    });
+
+    describe('when compared with the stored profit', () => {
+        const prices = [33, 100, 310, 499, 1007];
+
+        it.each(prices)('matches saleNet exactly for price %d', (price) => {
+            const invest = 17;
+            const stored = { profit: (price * 88) / 100, invest } as SaleListItem;
+
+            expect(computeSaleBreakdown({ listedPrice: price, invest }, 12).net).toBe(
+                saleNet(stored),
+            );
+        });
+    });
+});
+
+describe('parseAmount', () => {
+    describe('when the input is empty', () => {
+        it('returns null', () => {
+            expect(parseAmount('  ')).toBeNull();
+        });
+    });
+
+    describe('when the input is not a number', () => {
+        it('returns null', () => {
+            expect(parseAmount('abc')).toBeNull();
+        });
+    });
+
+    describe('when the input is a decimal', () => {
+        it('returns the number', () => {
+            expect(parseAmount('12.5')).toBe(12.5);
+        });
+    });
+});
+
+describe('computeDraftBreakdown', () => {
+    describe('when the listed price is empty or invalid', () => {
+        it('returns null', () => {
+            expect(computeDraftBreakdown(null, 0, 12)).toBeNull();
+        });
+    });
+
+    describe('when the listed price is below 1', () => {
+        it('returns null for zero', () => {
+            expect(computeDraftBreakdown(0, 0, 12)).toBeNull();
+        });
+
+        it('returns null for a fraction', () => {
+            expect(computeDraftBreakdown(0.5, 0, 12)).toBeNull();
+        });
+
+        it('returns null for a negative price', () => {
+            expect(computeDraftBreakdown(-10, 0, 12)).toBeNull();
+        });
+    });
+
+    describe('when invest is negative', () => {
+        it('returns null', () => {
+            expect(computeDraftBreakdown(100, -5, 12)).toBeNull();
+        });
+    });
+
+    describe('when invest is empty', () => {
+        it('treats invest as zero', () => {
+            expect(computeDraftBreakdown(100, null, 12)?.net).toBe(88);
+        });
+    });
+
+    describe('when the price is valid', () => {
+        it('matches computeSaleBreakdown', () => {
+            expect(computeDraftBreakdown(310, 184.21, 12)).toEqual(
+                computeSaleBreakdown({ listedPrice: 310, invest: 184.21 }, 12),
+            );
         });
     });
 });

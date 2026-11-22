@@ -63,7 +63,9 @@ test.describe('sale lifecycle', () => {
         });
 
         await expect(drawer).toBeVisible();
-        await drawer.getByRole('button', { name: /^Mark sold/ }).click();
+        await expect(drawer.getByRole('region', { name: 'Profit calculation' })).toBeVisible();
+        await drawer.getByRole('radio', { name: 'Sold' }).check({ force: true });
+        await drawer.getByRole('button', { name: 'Save changes' }).click();
         await page.waitForURL('**/sales');
 
         const soldRow = saleRow(page, SOLD_PRICE);
@@ -75,6 +77,10 @@ test.describe('sale lifecycle', () => {
         const soldDrawer = page.getByRole('region', {
             name: new RegExp(`Edit sale vs ${E2E_OPPONENT_NAME}`),
         });
+        const blockNet = (await soldDrawer.getByTestId('profit-net').textContent())?.trim();
+
+        expect(blockNet).toMatch(/\d/);
+        await expect(soldRow).toContainText(blockNet ?? '');
 
         page.once('dialog', (dialog) => dialog.accept());
         await soldDrawer.getByRole('button', { name: 'Delete sale' }).click();
@@ -98,8 +104,9 @@ test.describe('sale lifecycle', () => {
         });
 
         await expect(drawer).toBeVisible();
-        await drawer.getByLabel('Given to').fill(RECIPIENT_NAME);
-        await drawer.getByRole('button', { name: 'Mark gifted' }).click();
+        await drawer.getByRole('radio', { name: 'Gifted' }).check({ force: true });
+        await drawer.getByLabel('Recipient').fill(RECIPIENT_NAME);
+        await drawer.getByRole('button', { name: 'Save changes' }).click();
         await page.waitForURL('**/sales');
 
         const giftedRow = saleRow(page, GIFT_PRICE);
