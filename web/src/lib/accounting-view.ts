@@ -20,6 +20,7 @@ export type StripSegment = {
     date: string;
     status: SaleStatus | null;
     isBreakEven: boolean;
+    atHome: boolean;
 };
 
 export function stripSegments(
@@ -37,6 +38,7 @@ export function stripSegments(
             date: match.date,
             status: dominantStatus(statuses),
             isBreakEven: breakEvenMatchId !== null && match.id === breakEvenMatchId,
+            atHome: match.atHome,
         };
     });
 }
@@ -107,4 +109,50 @@ export function upcomingIndex(segments: StripSegment[], today: Date): number {
     );
 
     return index === -1 ? segments.length - 1 : index;
+}
+
+export type Venue = 'both' | 'home' | 'away';
+
+export function parseVenue(value: string | null): Venue {
+    if (value === 'home' || value === 'away') {
+        return value;
+    }
+
+    return 'both';
+}
+
+function matchesVenue(segment: StripSegment, venue: Venue): boolean {
+    if (venue === 'both') {
+        return true;
+    }
+
+    return venue === 'home' ? segment.atHome : !segment.atHome;
+}
+
+export function filterSegments(segments: StripSegment[], venue: Venue): StripSegment[] {
+    return segments.filter((segment) => matchesVenue(segment, venue));
+}
+
+export function hiddenWithSales(segments: StripSegment[], venue: Venue): number {
+    return segments.filter(
+        (segment) => !matchesVenue(segment, venue) && segment.status !== null,
+    ).length;
+}
+
+export function venueHref(url: URL, venue: Venue): string {
+    const params = new URLSearchParams(url.searchParams);
+
+    if (venue === 'both') {
+        params.delete('venue');
+    } else {
+        params.set('venue', venue);
+    }
+
+    const search = params.toString();
+
+    return search === '' ? url.pathname : `${url.pathname}?${search}`;
+}
+
+export function stripOpponent(segment: StripSegment): string {
+    return segment.atHome ? segment.opponent : `@ ${segment.opponent}`;
 }

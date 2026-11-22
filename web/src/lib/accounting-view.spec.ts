@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchId } from '@psg/shared/ids';
 import {
+    filterSegments,
+    hiddenWithSales,
     homeMatchCount,
+    parseVenue,
     passCostPerMatch,
+    stripOpponent,
     stripSegments,
     tableGroups,
     upcomingIndex,
+    venueHref,
     type StripSegment,
 } from './accounting-view';
 import type { FormattedMatch, SaleListItem, SaleStatus } from './types';
@@ -101,6 +106,30 @@ describe('stripSegments', () => {
         });
     });
 
+    describe('when the match is away', () => {
+        it('gives the segment atHome false', () => {
+            const segments = stripSegments(
+                [match('m1', 'Rival FC', '2026-09-01', false)],
+                {},
+                null,
+            );
+
+            expect(segments[0]?.atHome).toBe(false);
+        });
+    });
+
+    describe('when the match is at home', () => {
+        it('gives the segment atHome true', () => {
+            const segments = stripSegments(
+                [match('m1', 'Rival FC', '2026-09-01', true)],
+                {},
+                null,
+            );
+
+            expect(segments[0]?.atHome).toBe(true);
+        });
+    });
+
     describe('when two matches are given', () => {
         it('returns one segment per match in input order', () => {
             const segments = stripSegments(
@@ -189,6 +218,7 @@ describe('upcomingIndex', () => {
             date,
             status: null,
             isBreakEven: false,
+            atHome: true,
         };
     }
 
@@ -232,6 +262,148 @@ describe('upcomingIndex', () => {
     describe('when there are no segments', () => {
         it('returns -1', () => {
             expect(upcomingIndex([], today)).toBe(-1);
+        });
+    });
+});
+
+function venueSegment(
+    id: string,
+    atHome: boolean,
+    status: SaleStatus | null = null,
+): StripSegment {
+    return {
+        matchId: id as MatchId,
+        opponent: id,
+        date: '2026-09-01',
+        status,
+        isBreakEven: false,
+        atHome,
+    };
+}
+
+describe('parseVenue', () => {
+    describe('when the value is a known venue', () => {
+        it.each(['home', 'away', 'both'] as const)('passes %s through', (value) => {
+            expect(parseVenue(value)).toBe(value);
+        });
+    });
+
+    describe('when the value is null', () => {
+        it('returns both', () => {
+            expect(parseVenue(null)).toBe('both');
+        });
+    });
+
+    describe('when the value is unknown', () => {
+        it('returns both', () => {
+            expect(parseVenue('garbage')).toBe('both');
+        });
+    });
+});
+
+describe('filterSegments', () => {
+    const segments = [
+        venueSegment('m1', true),
+        venueSegment('m2', false),
+        venueSegment('m3', true),
+    ];
+
+    describe('when the venue is both', () => {
+        it('returns every segment in order', () => {
+            expect(filterSegments(segments, 'both')).toEqual(segments);
+        });
+    });
+
+    describe('when the venue is home', () => {
+        it('keeps only home segments', () => {
+            expect(filterSegments(segments, 'home').map((segment) => segment.matchId)).toEqual([
+                'm1',
+                'm3',
+            ]);
+        });
+    });
+
+    describe('when the venue is away', () => {
+        it('keeps only away segments', () => {
+            expect(filterSegments(segments, 'away').map((segment) => segment.matchId)).toEqual([
+                'm2',
+            ]);
+        });
+    });
+
+    describe('when the list is empty', () => {
+        it('returns an empty list', () => {
+            expect(filterSegments([], 'home')).toEqual([]);
+        });
+    });
+});
+
+describe('hiddenWithSales', () => {
+    const segments = [
+        venueSegment('m1', true, 'SOLD'),
+        venueSegment('m2', false, 'PENDING'),
+        venueSegment('m3', false),
+        venueSegment('m4', false, 'SOLD'),
+    ];
+
+    describe('when the venue is both', () => {
+        it('returns 0', () => {
+            expect(hiddenWithSales(segments, 'both')).toBe(0);
+        });
+    });
+
+    describe('when the venue is home', () => {
+        it('counts away segments that have a sale', () => {
+            expect(hiddenWithSales(segments, 'home')).toBe(2);
+        });
+    });
+
+    describe('when the venue is away', () => {
+        it('counts home segments that have a sale', () => {
+            expect(hiddenWithSales(segments, 'away')).toBe(1);
+        });
+    });
+});
+
+describe('venueHref', () => {
+    describe('when setting home', () => {
+        it('adds venue and keeps year', () => {
+            const href = venueHref(new URL('http://x.test/accounting?year=2025'), 'home');
+
+            expect(href).toBe('/accounting?year=2025&venue=home');
+        });
+    });
+
+    describe('when setting both', () => {
+        it('removes venue and keeps other params', () => {
+            const href = venueHref(
+                new URL('http://x.test/accounting?venue=away&view=table'),
+                'both',
+            );
+
+            expect(href).toBe('/accounting?view=table');
+        });
+    });
+
+    describe('when no params remain', () => {
+        it('returns the bare path', () => {
+            expect(venueHref(new URL('http://x.test/accounting?venue=away'), 'both')).toBe(
+                '/accounting',
+            );
+        });
+    });
+});
+
+describe('stripOpponent', () => {
+    describe('when the match is away', () => {
+        it('prefixes the opponent with @', () => {
+            expect(stripOpponent({ ...venueSegment('Rival FC', false) })).toBe('@ Rival FC');
+        });
+    });
+
+    describe('when the match is at home', () => {
+        it('returns the opponent unchanged', () => {
+            expect(stripOpponent({ ...venueSegment('Rival FC', true) })).toBe('Rival FC');
         });
     });
 });
