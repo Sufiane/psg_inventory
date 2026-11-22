@@ -4,7 +4,9 @@ import { E2E_OPPONENT_NAME } from '../fixtures';
 // Distinct per scenario so a row can be found unambiguously even though both
 // sales share the same seeded opponent/match — see spec D4. Playwright's
 // `fullyParallel` config can run these two tests concurrently, so neither
-// scenario may assume it is "the only" sale for this opponent.
+// scenario may assume it is "the only" sale for this opponent. The gift sale
+// is found by price while PENDING and by recipient once GIFTED (gifted rows
+// render no price).
 const SOLD_PRICE = '501';
 const GIFT_PRICE = '502';
 const RECIPIENT_NAME = 'E2E Recipient';
@@ -32,6 +34,12 @@ async function createSale(page: Page, listedPrice: string): Promise<void> {
 function saleRow(page: Page, listedPrice: string): Locator {
     return page.getByRole('row', {
         name: new RegExp(`${E2E_OPPONENT_NAME}.*${listedPrice}`),
+    });
+}
+
+function giftedRow(page: Page, recipient: string): Locator {
+    return page.getByRole('row', {
+        name: new RegExp(`${E2E_OPPONENT_NAME}.*Gifted to ${recipient}`),
     });
 }
 
@@ -109,11 +117,11 @@ test.describe('sale lifecycle', () => {
         await drawer.getByRole('button', { name: 'Save changes' }).click();
         await page.waitForURL('**/sales');
 
-        const giftedRow = saleRow(page, GIFT_PRICE);
+        const giftedSaleRow = giftedRow(page, RECIPIENT_NAME);
 
-        await expect(giftedRow).toContainText('GIFTED');
+        await expect(giftedSaleRow).toContainText('GIFTED');
 
-        await giftedRow.getByRole('link', { name: 'Edit' }).click();
+        await giftedSaleRow.getByRole('link', { name: 'Edit' }).click();
 
         const giftedDrawer = page.getByRole('region', {
             name: new RegExp(`Edit sale vs ${E2E_OPPONENT_NAME}`),
@@ -125,6 +133,6 @@ test.describe('sale lifecycle', () => {
         await giftedDrawer.getByRole('button', { name: 'Delete sale' }).click();
         await page.waitForURL('**/sales');
 
-        await expect(saleRow(page, GIFT_PRICE)).toHaveCount(0);
+        await expect(giftedRow(page, RECIPIENT_NAME)).toHaveCount(0);
     });
 });
