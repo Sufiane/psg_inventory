@@ -481,7 +481,7 @@
     </div>
 {/snippet}
 
-{#snippet editPanel(saleId: string)}
+{#snippet editPanel(saleId: string, layout: 'card' | 'row')}
     {#if editSale && editSale.id === saleId}
         <div
             class="bg-surface-subtle border-t border-line p-4 sm:p-6"
@@ -621,12 +621,12 @@
 
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label for="edit-listed-price" class="block text-sm text-ink-muted">
+                        <label for="edit-listed-price-{layout}" class="block text-sm text-ink-muted">
                             Listed price
                         </label>
                         <div class="relative">
                             <input
-                                id="edit-listed-price"
+                                id="edit-listed-price-{layout}"
                                 type="number"
                                 name="listedPrice"
                                 min="1"
@@ -645,19 +645,19 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label for="edit-invest" class="block text-sm text-ink-muted">
+                        <label for="edit-invest-{layout}" class="block text-sm text-ink-muted">
                             Ticket invest
                         </label>
                         <div class="relative">
                             <input
-                                id="edit-invest"
+                                id="edit-invest-{layout}"
                                 type="number"
                                 name="invest"
                                 min="0"
                                 step="0.01"
                                 value={draftInvest}
                                 oninput={(event) => (draftInvest = event.currentTarget.value)}
-                                aria-describedby={passCostHint ? 'edit-invest-hint' : undefined}
+                                aria-describedby={passCostHint ? `edit-invest-hint-${layout}` : undefined}
                                 class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
                             />
                             <span
@@ -667,7 +667,7 @@
                             >
                         </div>
                         {#if passCostHint}
-                            <p id="edit-invest-hint" class="text-xs text-ink-faint">
+                            <p id="edit-invest-hint-{layout}" class="text-xs text-ink-faint">
                                 {passCostHint}
                             </p>
                         {/if}
@@ -691,14 +691,14 @@
 
                 {#if draftStatus === 'GIFTED'}
                     <div class="space-y-1">
-                        <label for="edit-recipient" class="block text-sm text-ink-muted">
+                        <label for="edit-recipient-{layout}" class="block text-sm text-ink-muted">
                             Recipient
                             {#if editSale.status !== 'GIFTED'}
                                 <span class="text-ink-faint">(required)</span>
                             {/if}
                         </label>
                         <input
-                            id="edit-recipient"
+                            id="edit-recipient-{layout}"
                             type="text"
                             name="recipientName"
                             list="recipient-options"
@@ -983,7 +983,7 @@
 
         {#if isOpen}
             <div id="edit-{sale.id}">
-                {@render editPanel(sale.id)}
+                {@render editPanel(sale.id, 'card')}
             </div>
         {/if}
     </li>
@@ -1049,7 +1049,7 @@
     {#if isOpen}
         <tr id="edit-{sale.id}">
             <td colspan={columnCount} class="p-0">
-                {@render editPanel(sale.id)}
+                {@render editPanel(sale.id, 'row')}
             </td>
         </tr>
     {/if}
