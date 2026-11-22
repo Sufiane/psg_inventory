@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import {
     ArrayMinSize,
     IsArray,
-    IsNumber,
+    IsInt,
     IsOptional,
     IsString,
     Min,
@@ -24,11 +24,11 @@ export class AddSaleDto {
     allocations!: SaleAllocationDto[];
 
     @IsOptional()
-    @IsNumber()
+    @IsInt()
     @Min(0)
     invest: Invest = 0 as Invest;
 
-    @IsNumber()
+    @IsInt()
     @Min(1)
     listedPrice!: ListedPrice;
 }

@@ -44,7 +44,12 @@ export function computeDraftBreakdown(
     invest: number | null,
     commissionPercent: number,
 ): SaleProfitBreakdown | null {
-    if (listedPrice === null || listedPrice < 1 || (invest !== null && invest < 0)) {
+    if (
+        listedPrice === null ||
+        !Number.isInteger(listedPrice) ||
+        listedPrice < 1 ||
+        (invest !== null && (!Number.isInteger(invest) || invest < 0))
+    ) {
         return null;
     }
 
@@ -58,7 +63,7 @@ export function parseAmount(raw: string): number | null {
 
     const value = Number(raw);
 
-    return Number.isFinite(value) ? value : null;
+    return Number.isInteger(value) ? value : null;
 }
 
 export function summarizeSales(sales: SaleListItem[]): SalesSummary {

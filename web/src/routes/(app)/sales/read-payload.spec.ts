@@ -122,4 +122,24 @@ describe('readPayload', () => {
             });
         });
     });
+
+    describe('edit-numbers fractions', () => {
+        describe('when listedPrice is a fraction', () => {
+            it('rejects the update', () => {
+                const result = readPayload(editNumbersForm({ listedPrice: '33.5' }));
+
+                expect(result.error).toBe('Listed price must be a whole number of euros.');
+                expect(result.payload).toBeUndefined();
+            });
+        });
+
+        describe('when invest is a fraction', () => {
+            it('rejects the update', () => {
+                const result = readPayload(editNumbersForm({ invest: '2.5' }));
+
+                expect(result.error).toBe('Invest must be a whole number of euros.');
+                expect(result.payload).toBeUndefined();
+            });
+        });
+    });
 });

@@ -1,4 +1,5 @@
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import { validateWholeEuro } from '$lib/whole-euro';
 
 /**
  * `?/update` is submitted by a single edit drawer form. Its hidden `intent`
@@ -53,8 +54,10 @@ export function readPayload(form: FormData): {
     if (typeof listedPriceRaw === 'string' && listedPriceRaw.length > 0) {
         const value = Number(listedPriceRaw);
 
-        if (!Number.isFinite(value) || value < 1) {
-            return { error: 'Listed price must be at least 1.' };
+        const error = validateWholeEuro('listedPrice', value);
+
+        if (error !== null) {
+            return { error };
         }
 
         payload.listedPrice = value;
@@ -65,8 +68,10 @@ export function readPayload(form: FormData): {
     if (typeof investRaw === 'string' && investRaw.length > 0) {
         const value = Number(investRaw);
 
-        if (!Number.isFinite(value) || value < 0) {
-            return { error: 'Invest must be 0 or more.' };
+        const error = validateWholeEuro('invest', value);
+
+        if (error !== null) {
+            return { error };
         }
 
         payload.invest = value;

@@ -4,6 +4,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { api } from '$lib/api';
 import { splitByKickoff } from '$lib/matches';
 import { parseAllocationsFromForm } from '$lib/sale-allocations';
+import { validateWholeEuro } from '$lib/whole-euro';
 import { homeMatchCount } from '$lib/accounting-view';
 import { resolveSeason, seasonStartYearFromDate } from '$lib/season';
 import { readPayload } from './read-payload';
@@ -176,12 +177,16 @@ export const actions: Actions = {
             });
         }
 
-        if (!Number.isFinite(listedPrice) || listedPrice < 1) {
-            return fail(400, { message: 'Listed price must be at least 1.' });
+        const listedPriceError = validateWholeEuro('listedPrice', listedPrice);
+
+        if (listedPriceError !== null) {
+            return fail(400, { message: listedPriceError });
         }
 
-        if (invest !== undefined && (!Number.isFinite(invest) || invest < 0)) {
-            return fail(400, { message: 'Invest must be 0 or more.' });
+        const investError = invest === undefined ? null : validateWholeEuro('invest', invest);
+
+        if (investError !== null) {
+            return fail(400, { message: investError });
         }
 
         try {
