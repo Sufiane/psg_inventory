@@ -78,7 +78,7 @@
     "@swc/core": "1.16.2",
     "@types/bcrypt": "6.0.0",
     "@types/multer": "2.2.0",
-    "@types/node": "22.9.0",
+    "@types/node": "26.6.6",
     "@types/papaparse": "5.5.2",
     "@types/passport-jwt": "4.0.1",
     "@types/passport-local": "1.0.38",
