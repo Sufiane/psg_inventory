@@ -1,7 +1,7 @@
 <script lang="ts">
+    import type { SubmitFunction } from '@sveltejs/kit';
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
-    import type { SubmitFunction } from '@sveltejs/kit';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { tick } from 'svelte';
@@ -14,8 +14,8 @@
         shortDate,
         signedMoney,
     } from '$lib/format';
-    import { passesForMatch, passesForSale } from '$lib/sale-passes';
-    import { parseAmount, saleNet, summarizeSales } from '$lib/sale-math';
+    import { passesForMatch } from '$lib/sale-passes';
+    import { saleNet, summarizeSales } from '$lib/sale-math';
     import { seasonLabel, seasonLabelFromDate } from '$lib/season';
     import { profitTone } from '$lib/sale-helpers';
     import {
@@ -27,8 +27,8 @@
         type SaleSortDir,
         type SaleSortKey,
     } from '$lib/sales-view';
-    import type { SaleListItem, SaleStatus, SeasonPass } from '$lib/types';
-    import SaleProfitBlock from '$lib/ui/SaleProfitBlock.svelte';
+    import type { SaleListItem } from '$lib/types';
+    import SaleEditPanel from '$lib/ui/SaleEditPanel.svelte';
     import SalesToolbar from '$lib/ui/SalesToolbar.svelte';
     import SalesTotals from '$lib/ui/SalesTotals.svelte';
     import StatusChip from '$lib/ui/StatusChip.svelte';
@@ -126,95 +126,6 @@
     );
     let tabs = $derived(statusTabs(page.url));
     let editSale = $derived(data.editSale);
-    let editMatchDate = $derived(editSale ? new Date(editSale.Match.date) : null);
-    let isPastMatch = $derived(
-        editMatchDate ? editMatchDate.getTime() < Date.now() : false,
-    );
-
-    let editVisiblePasses = $derived(
-        editSale === null ? [] : passesForSale(data.passes, editSale),
-    );
-
-    const STATUS_OPTIONS: { value: SaleStatus; label: string; tone: string }[] = [
-        {
-            value: 'SOLD',
-            label: 'Sold',
-            tone: 'peer-checked:bg-positive/15 peer-checked:text-positive-strong peer-checked:border-positive/50',
-        },
-        {
-            value: 'PENDING',
-            label: 'Pending',
-            tone: 'peer-checked:bg-warning/15 peer-checked:text-warning-strong peer-checked:border-warning/50',
-        },
-        {
-            value: 'GIFTED',
-            label: 'Gifted',
-            tone: 'peer-checked:bg-gift/15 peer-checked:text-gift-strong peer-checked:border-gift/50',
-        },
-        {
-            value: 'CANCELLED',
-            label: 'Cancelled',
-            tone: 'peer-checked:bg-sunk/15 peer-checked:text-sunk-strong peer-checked:border-sunk/50',
-        },
-    ];
-
-    let draftStatus = $derived<SaleStatus>(editSale?.status ?? 'PENDING');
-    let draftListedPrice = $derived(editSale ? String(editSale.listedPrice) : '');
-    let draftInvest = $derived(editSale ? String(editSale.invest) : '');
-    let statusChanged = $derived(editSale !== null && draftStatus !== editSale.status);
-
-    let passCostHint = $derived.by(() => {
-        const fixtures = data.editHomeFixtures;
-
-        if (!editSale || fixtures === null || fixtures === 0 || editVisiblePasses.length === 0) {
-            return null;
-        }
-
-        const allocated = editVisiblePasses.filter((pass) =>
-            editSale?.Allocations?.some(
-                (alloc) => alloc.seasonPassId === pass.id && alloc.nbTickets > 0,
-            ),
-        );
-        const counted = allocated.length > 0 ? allocated : editVisiblePasses;
-        const total = counted.reduce((sum, pass) => sum + pass.price, 0);
-
-        return `Pass cost basis: ${money(total)} ÷ ${fixtures} home matches`;
-    });
-
-    function isStatusAllowed(target: SaleStatus): boolean {
-        if (!editSale) {
-            return false;
-        }
-
-        if (target === editSale.status) {
-            return true;
-        }
-
-        switch (target) {
-            case 'SOLD':
-                return editSale.status !== 'GIFTED';
-            case 'PENDING':
-                return editSale.status === 'SOLD';
-            case 'GIFTED':
-                return editSale.status === 'PENDING' && !isPastMatch;
-            default:
-                return false;
-        }
-    }
-
-    function stepAllocation(event: Event, delta: 1 | -1): void {
-        const input = (event.currentTarget as HTMLElement).parentElement?.querySelector('input');
-
-        if (!input) {
-            return;
-        }
-
-        if (delta === 1) {
-            input.stepUp();
-        } else {
-            input.stepDown();
-        }
-    }
 
     function urlWithEdit(targetId: string | null): string {
         const params = new URLSearchParams(page.url.searchParams);
@@ -347,7 +258,7 @@
         };
     }
 
-    function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }): ReturnType<SubmitFunction> {
+    const trackSubmit: SubmitFunction = ({ action, cancel }) => {
         const which: 'update' | 'delete' = action.search.includes('delete')
             ? 'delete'
             : 'update';
@@ -360,424 +271,26 @@
 
         submitting = which;
 
-        return async ({ update }: { update: () => Promise<void> }): Promise<void> => {
+        return async ({ update }) => {
             await update();
             submitting = null;
         };
-    }
-
-    function confirmIfPast(event: Event, action: 'save' | 'delete'): void {
-        if (!editSale || !isPastMatch || !editMatchDate) {
-            return;
-        }
-
-        const opponent = editSale.Match.Opponent.name;
-        const verb = action === 'save' ? 'Save changes to' : 'Delete';
-        const ok = confirm(
-            `${verb} the ${opponent} sale? The match was on ${dateTime(editMatchDate)}; this rewrites historical numbers.`,
-        );
-
-        if (!ok) {
-            event.preventDefault();
-        }
-    }
-
-    function confirmSave(event: Event): void {
-        if (!editSale) {
-            return;
-        }
-
-        if (statusChanged && draftStatus === 'SOLD') {
-            confirmMarkSold(event);
-
-            return;
-        }
-
-        if (statusChanged && draftStatus === 'PENDING' && editSale.status === 'SOLD') {
-            confirmRevert(event);
-
-            return;
-        }
-
-        confirmIfPast(event, 'save');
-    }
-
-    function confirmDelete(event: Event): void {
-        if (!editSale) {
-            return;
-        }
-
-        if (isPastMatch) {
-            confirmIfPast(event, 'delete');
-
-            return;
-        }
-
-        const opponent = editSale.Match.Opponent.name;
-
-        if (!confirm(`Delete the ${opponent} sale?`)) {
-            event.preventDefault();
-        }
-    }
-
-    function confirmMarkSold(event: Event): void {
-        if (!editSale || !isPastMatch || !editMatchDate) {
-            return;
-        }
-
-        const opponent = editSale.Match.Opponent.name;
-        const ok = confirm(
-            `Mark the ${opponent} sale as sold? Match was on ${dateTime(editMatchDate)}; this writes a historical sale.`,
-        );
-
-        if (!ok) {
-            event.preventDefault();
-        }
-    }
-
-    function confirmRevert(event: Event): void {
-        if (!editSale) {
-            return;
-        }
-
-        const opponent = editSale.Match.Opponent.name;
-        const ok = confirm(
-            `Revert the ${opponent} sale to pending? This removes ${signedMoney(saleNet(editSale))} from realized net profit.`,
-        );
-
-        if (!ok) {
-            event.preventDefault();
-        }
-    }
+    };
 </script>
-
-{#snippet allocStepper(pass: SeasonPass, current: number, isFirst: boolean)}
-    <div class="inline-flex items-center rounded border border-line-strong bg-surface">
-        <button
-            type="button"
-            aria-label="Remove a ticket from {pass.label}"
-            onclick={(event): void => stepAllocation(event, -1)}
-            class="size-10 text-ink-muted hover:text-ink transition-colors"
-        >
-            −
-        </button>
-        <input
-            type="number"
-            name={`alloc_${pass.id}`}
-            aria-label="Tickets on {pass.label}"
-            data-edit-first={isFirst ? '' : undefined}
-            min="0"
-            step="1"
-            value={current}
-            class="w-12 bg-transparent text-center text-ink font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        />
-        <button
-            type="button"
-            aria-label="Add a ticket to {pass.label}"
-            onclick={(event): void => stepAllocation(event, 1)}
-            class="size-10 text-ink-muted hover:text-ink transition-colors"
-        >
-            +
-        </button>
-    </div>
-{/snippet}
 
 {#snippet editPanel(saleId: string, layout: 'card' | 'row')}
     {#if editSale && editSale.id === saleId}
-        <div
-            class="bg-surface-subtle border-t border-line p-4 sm:p-6"
-            role="region"
-            aria-label="Edit sale vs {editSale.Match.Opponent.name}"
-        >
-            <form
-                method="POST"
-                action="?/update"
-                class="mx-auto max-w-2xl space-y-6"
-                use:enhance={trackSubmit}
-            >
-                <input type="hidden" name="saleId" value={editSale.id} />
-                <input
-                    type="hidden"
-                    name="intent"
-                    value={draftStatus === 'GIFTED' ? 'gift' : 'edit-numbers'}
-                />
-                {#if statusChanged || draftStatus === 'GIFTED'}
-                    <input type="hidden" name="status" value={draftStatus} />
-                {/if}
-                <input type="hidden" name="previousStatus" value={editSale.status} />
-
-                <header class="flex items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <p
-                            class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted"
-                        >
-                            Edit sale
-                            <span aria-hidden="true">·</span>
-                            <StatusChip status={editSale.status} />
-                        </p>
-                        <h2 class="text-xl font-semibold text-ink">
-                            PSG vs {editSale.Match.Opponent.name}{#if editMatchDate},
-                                {shortDate(editMatchDate)}{/if}
-                        </h2>
-                        {#if editMatchDate}
-                            <p class="text-sm text-ink-muted font-mono">
-                                {dateTime(editMatchDate)}
-                            </p>
-                        {/if}
-                    </div>
-                    <a
-                        href={urlWithEdit(null)}
-                        aria-label="Close edit panel"
-                        class="size-10 inline-flex items-center justify-center rounded text-ink-muted hover:text-ink hover:bg-surface-strong transition-colors"
-                    >
-                        <span aria-hidden="true" class="text-xl leading-none">×</span>
-                    </a>
-                </header>
-
-                {#if isPastMatch && editMatchDate}
-                    <div
-                        role="alert"
-                        class="rounded-lg border border-warning bg-warning/10 px-3 py-2 text-xs text-warning-strong"
-                    >
-                        Match has already been played. Saving here rewrites the original
-                        sale record.
-                    </div>
-                {/if}
-
-                <fieldset class="space-y-2" aria-label="Sale status">
-                    <legend class="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        Status
-                    </legend>
-                    <div
-                        class="grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-lg border border-line bg-surface p-1"
-                    >
-                        {#each STATUS_OPTIONS as option (option.value)}
-                            <label class="relative block">
-                                <input
-                                    type="radio"
-                                    name="statusChoice"
-                                    value={option.value}
-                                    bind:group={draftStatus}
-                                    disabled={!isStatusAllowed(option.value)}
-                                    class="peer sr-only"
-                                />
-                                <span
-                                    class="flex min-h-10 items-center justify-center rounded border border-transparent px-3 text-sm text-ink-muted transition-colors cursor-pointer hover:text-ink peer-checked:font-medium {option.tone} peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink peer-disabled:cursor-not-allowed peer-disabled:opacity-40 peer-disabled:hover:text-ink-muted"
-                                >
-                                    {option.label}
-                                </span>
-                            </label>
-                        {/each}
-                    </div>
-                    {#if editSale.status === 'GIFTED'}
-                        <p class="text-xs text-ink-faint">
-                            A gifted sale is final. The recipient can still be changed.
-                        </p>
-                    {:else if statusChanged && draftStatus === 'SOLD'}
-                        <p class="text-xs text-ink-faint">
-                            {editSale.status === 'CANCELLED'
-                                ? 'Restores this sale and credits realized profit.'
-                                : 'Adds this sale to realized profit on the dashboard.'}
-                        </p>
-                    {:else if statusChanged && draftStatus === 'PENDING'}
-                        <p class="text-xs text-ink-faint">
-                            Removes {signedMoney(saleNet(editSale))} from realized net profit.
-                        </p>
-                    {:else if statusChanged && draftStatus === 'GIFTED'}
-                        <p class="text-xs text-ink-faint">
-                            Records this ticket as given away. Stays out of realized profit.
-                        </p>
-                    {/if}
-                </fieldset>
-
-                <fieldset class="space-y-2">
-                    <legend class="text-sm text-ink-muted">Tickets per pass</legend>
-                    {#if editVisiblePasses.length === 0}
-                        <p class="text-xs text-negative">
-                            No season pass for this sale's season — <a
-                                data-edit-first
-                                href="/season"
-                                class="text-primary hover:text-primary-hover hover:underline"
-                                >create one</a
-                            > to change its allocations.
-                        </p>
-                    {:else}
-                        {#each editVisiblePasses as pass, idx (pass.id)}
-                            {@const current =
-                                editSale.Allocations?.find(
-                                    (alloc) => alloc.seasonPassId === pass.id,
-                                )?.nbTickets ?? 0}
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm text-ink-muted truncate">
-                                    {pass.seasonStartYear} · {pass.label}
-                                    <span class="text-ink-faint"
-                                        >({pass.category} · {pass.row}/{pass.seat})</span
-                                    >
-                                </span>
-                                {@render allocStepper(pass, current, idx === 0)}
-                            </div>
-                        {/each}
-                    {/if}
-                </fieldset>
-
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <div class="space-y-1">
-                        <label for="edit-listed-price-{layout}" class="block text-sm text-ink-muted">
-                            Listed price
-                        </label>
-                        <div class="relative">
-                            <input
-                                id="edit-listed-price-{layout}"
-                                type="number"
-                                name="listedPrice"
-                                min="1"
-                                step="1"
-                                inputmode="numeric"
-                                value={draftListedPrice}
-                                oninput={(event): void => {
-                                    draftListedPrice = event.currentTarget.value;
-                                }}
-                                class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
-                            />
-                            <span
-                                aria-hidden="true"
-                                class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-faint"
-                                >€</span
-                            >
-                        </div>
-                    </div>
-
-                    <div class="space-y-1">
-                        <label for="edit-invest-{layout}" class="block text-sm text-ink-muted">
-                            Ticket invest
-                        </label>
-                        <div class="relative">
-                            <input
-                                id="edit-invest-{layout}"
-                                type="number"
-                                name="invest"
-                                min="0"
-                                step="1"
-                                inputmode="numeric"
-                                value={draftInvest}
-                                oninput={(event): void => {
-                                    draftInvest = event.currentTarget.value;
-                                }}
-                                aria-describedby={passCostHint ? `edit-invest-hint-${layout}` : undefined}
-                                class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
-                            />
-                            <span
-                                aria-hidden="true"
-                                class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-ink-faint"
-                                >€</span
-                            >
-                        </div>
-                        {#if passCostHint}
-                            <p id="edit-invest-hint-{layout}" class="text-xs text-ink-faint">
-                                {passCostHint}
-                            </p>
-                        {/if}
-                    </div>
-
-                    {#if draftStatus === 'SOLD'}
-                        <div class="space-y-1">
-                            <span class="block text-sm text-ink-muted">Sold date</span>
-                            <p
-                                class="flex min-h-11 items-center rounded border border-line bg-surface px-3 text-ink font-mono"
-                            >
-                                {#if editSale.status === 'SOLD' && editSale.soldAt}
-                                    {dateTime(editSale.soldAt)}
-                                {:else}
-                                    Set when you save
-                                {/if}
-                            </p>
-                        </div>
-                    {/if}
-                </div>
-
-                {#if draftStatus === 'GIFTED'}
-                    <div class="space-y-1">
-                        <label for="edit-recipient-{layout}" class="block text-sm text-ink-muted">
-                            Recipient
-                            {#if editSale.status !== 'GIFTED'}
-                                <span class="text-ink-faint">(required)</span>
-                            {/if}
-                        </label>
-                        <input
-                            id="edit-recipient-{layout}"
-                            type="text"
-                            name="recipientName"
-                            list="recipient-options"
-                            required={editSale.status !== 'GIFTED'}
-                            autocomplete="off"
-                            maxlength="120"
-                            placeholder={editSale.Gift?.Recipient.name ?? 'e.g. Lucas'}
-                            class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink px-3"
-                        />
-                        <p class="text-xs text-ink-faint">
-                            {#if editSale.status === 'GIFTED'}
-                                Given to {editSale.Gift?.Recipient.name}. Leave blank to keep
-                                the current recipient.
-                            {:else}
-                                Type a new name to add them.
-                            {/if}
-                        </p>
-                    </div>
-                {/if}
-
-                {#if data.commissionPercent !== null && (draftStatus === 'SOLD' || draftStatus === 'PENDING')}
-                    <SaleProfitBlock
-                        listedPrice={parseAmount(draftListedPrice)}
-                        invest={parseAmount(draftInvest)}
-                        commissionPercent={data.commissionPercent}
-                    />
-                {/if}
-
-                {#if form?.message}
-                    <p role="alert" class="text-sm text-negative">
-                        {form.message}
-                    </p>
-                {/if}
-
-                <div class="flex flex-wrap items-center gap-3 border-t border-line pt-4">
-                    <button
-                        type="submit"
-                        formaction="?/delete"
-                        formnovalidate
-                        disabled={submitting !== null}
-                        class="min-h-11 px-1 text-sm text-negative hover:text-negative-strong hover:underline disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                        onclick={confirmDelete}
-                    >
-                        {#if submitting === 'delete'}
-                            <Spinner size="1em" />
-                        {/if}
-                        Delete sale
-                    </button>
-
-                    <a
-                        href={urlWithEdit(null)}
-                        class="ml-auto min-h-11 inline-flex items-center rounded border border-line-strong px-4 text-sm text-ink-muted hover:text-ink hover:bg-surface-strong transition-colors"
-                    >
-                        Cancel <kbd
-                            class="ml-2 font-mono text-[10px] text-ink-faint"
-                            aria-hidden="true">Esc</kbd
-                        >
-                    </a>
-
-                    <button
-                        type="submit"
-                        disabled={submitting !== null}
-                        class="min-h-11 rounded bg-brand text-on-brand px-4 text-sm font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                        onclick={confirmSave}
-                    >
-                        {#if submitting === 'update'}
-                            <Spinner size="1em" />
-                        {/if}
-                        Save changes
-                    </button>
-                </div>
-            </form>
-        </div>
+        <SaleEditPanel
+            sale={editSale}
+            {layout}
+            passes={data.passes}
+            homeFixtures={data.editHomeFixtures}
+            commissionPercent={data.commissionPercent}
+            errorMessage={form?.message}
+            closeHref={urlWithEdit(null)}
+            {submitting}
+            enhanceSubmit={trackSubmit}
+        />
     {/if}
 {/snippet}
 
