@@ -1,7 +1,7 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import Button from './Button.svelte';
-    import { commitImport, revertImport } from '$lib/api/sales-import';
+    import { commitImport, revertImport, validateImport } from '$lib/api/sales-import';
     import type {
         CommitResult,
         DraftRow,
@@ -9,6 +9,7 @@
         PreviewResponse,
     } from '$lib/types/sales-import';
     import {
+        applyValidation,
         needsRecipient,
         rowStateClass,
         rowStateLabel,
@@ -40,10 +41,20 @@
     let loading = $state(false);
     let errorMessage = $state<string | null>(null);
     let commitResult = $state<CommitResult | null>(null);
+    let validating = $state(false);
+    let validationFailed = $state(false);
+    let editVersion = 0;
+    let validationTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const VALIDATION_DEBOUNCE_MS = 300;
+
+    $effect(() => (): void => clearTimeout(validationTimer));
 
     const summary = $derived(summarizeDraft(rows));
 
-    const canImport = $derived(rows.length > 0 && summary.errors === 0 && !loading);
+    const canImport = $derived(
+        rows.length > 0 && summary.errors === 0 && !loading && !validating && !validationFailed,
+    );
 
     const passLookup = $derived.by(() => {
         const map = new Map<string, SeasonPass>();
@@ -65,15 +76,52 @@
             .filter((pass): pass is SeasonPass => pass != null);
     }
 
-    // Deliberate duplicate of resolveGiftRecipientStatus in
-    // src/api/sales-import/sales-import.resolver.ts — the only import rule the
-    // client can check without match/pass data. Keep the two in step.
-    function resolveRowStatus(row: DraftRow): DraftRow['rowStatus'] {
+    // Mirrors resolveGiftRecipientStatus (src/api/sales-import/sales-import.resolver.ts)
+    // for instant feedback; every other state comes from the server re-check.
+    function resolveRowStatus(row: DraftRow, previous: DraftRow['rowStatus']): DraftRow['rowStatus'] {
         if (needsRecipient(row)) {
             return 'error:gift-recipient-missing';
         }
 
-        return 'ok';
+        return previous;
+    }
+
+    function scheduleValidation(): void {
+        editVersion += 1;
+
+        const version = editVersion;
+
+        if (validationFailed) {
+            errorMessage = null;
+        }
+
+        validating = true;
+        validationFailed = false;
+        clearTimeout(validationTimer);
+        validationTimer = setTimeout((): void => {
+            void runValidation(version);
+        }, VALIDATION_DEBOUNCE_MS);
+    }
+
+    async function runValidation(version: number): Promise<void> {
+        try {
+            const result = await validateImport(selectedPassIds, rows);
+
+            if (version !== editVersion) {
+                return;
+            }
+
+            rows = applyValidation(rows, result.rows);
+            validating = false;
+        } catch (error) {
+            if (version !== editVersion) {
+                return;
+            }
+
+            validationFailed = true;
+            validating = false;
+            errorMessage = error instanceof Error ? error.message : 'Could not re-check rows.';
+        }
     }
 
     function updateRow(index: number, patch: Partial<DraftRow>): void {
@@ -84,8 +132,9 @@
 
             const next = { ...row, ...patch };
 
-            return { ...next, rowStatus: resolveRowStatus(next) };
+            return { ...next, rowStatus: resolveRowStatus(next, row.rowStatus) };
         });
+        scheduleValidation();
     }
 
     function updateAllocation(rowIndex: number, passId: SeasonPassId, count: number): void {
@@ -102,8 +151,9 @@
 
             const patched = { ...row, allocations: next };
 
-            return { ...patched, rowStatus: resolveRowStatus(patched) };
+            return { ...patched, rowStatus: resolveRowStatus(patched, row.rowStatus) };
         });
+        scheduleValidation();
     }
 
     function allocationFor(row: DraftRow, passId: SeasonPassId): number {
@@ -112,6 +162,10 @@
 
     function deleteRow(index: number): void {
         rows = rows.filter((_, i) => i !== index);
+
+        if (validating) {
+            scheduleValidation();
+        }
     }
 
     function addRow(missing: MissingMatch): void {
@@ -143,6 +197,7 @@
             },
         ];
         missingMatches = missingMatches.filter((match) => match.matchId !== missing.matchId);
+        scheduleValidation();
     }
 
     async function importRows(): Promise<void> {
@@ -215,6 +270,8 @@
             <p>
                 {#if summary.total === 0}
                     <span class="text-ink-muted">No rows to import</span>
+                {:else if validating}
+                    <span class="text-ink-muted" role="status">Checking...</span>
                 {:else}
                     {summary.ready}
                     {summary.ready === 1 ? 'row' : 'rows'} ready,

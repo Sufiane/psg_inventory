@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { TicketCount } from '@psg/shared/counts';
+import type { MatchId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
 import {
+    applyValidation,
     formatFileSize,
     needsRecipient,
     rowStateClass,
@@ -211,6 +213,65 @@ describe('formatFileSize', () => {
     describe('when 1 MB or more', () => {
         it('formats megabytes', () => {
             expect(formatFileSize(2_621_440)).toBe('2.5 MB');
+        });
+    });
+});
+
+describe('applyValidation', () => {
+    describe('when lengths match', () => {
+        it('takes rowStatus and matchId from the validated rows', () => {
+            const rows = [makeRow({ rowStatus: 'ok' })];
+            const validated = [
+                makeRow({
+                    rowStatus: 'error:match-missing',
+                    matchId: 'match-1' as MatchId,
+                }),
+            ];
+
+            const [result] = applyValidation(rows, validated);
+
+            expect(result?.rowStatus).toBe('error:match-missing');
+            expect(result?.matchId).toBe('match-1');
+        });
+
+        it('keeps the edited fields from the current rows', () => {
+            const rows = [
+                makeRow({ date: '2026-09-01', opponent: 'Nice', recipient: 'Sam' }),
+            ];
+            const validated = [makeRow({ date: '2026-08-15', opponent: 'Lyon' })];
+
+            const [result] = applyValidation(rows, validated);
+
+            expect(result?.date).toBe('2026-09-01');
+            expect(result?.opponent).toBe('Nice');
+            expect(result?.recipient).toBe('Sam');
+        });
+
+        it('turns a previously errored row ok when validated ok', () => {
+            const rows = [makeRow({ rowStatus: 'error:match-missing' })];
+            const validated = [makeRow({ rowStatus: 'ok' })];
+
+            const [result] = applyValidation(rows, validated);
+
+            expect(result?.rowStatus).toBe('ok');
+        });
+
+        it('clears matchId when the validated row has none', () => {
+            const rows = [makeRow({ matchId: 'match-1' as MatchId })];
+            const validated = [makeRow({ rowStatus: 'error:match-missing' })];
+
+            const [result] = applyValidation(rows, validated);
+
+            expect(result?.matchId).toBeUndefined();
+        });
+    });
+
+    describe('when lengths differ', () => {
+        it('returns the rows unchanged', () => {
+            const rows = [makeRow(), makeRow({ rowIndex: 1 })];
+            const validated = [makeRow({ rowStatus: 'error:invalid-cell' })];
+
+            expect(applyValidation(rows, validated)).toBe(rows);
         });
     });
 });

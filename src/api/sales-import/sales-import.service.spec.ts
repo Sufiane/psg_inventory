@@ -20,6 +20,7 @@ import { ICommitSalesImportUsecase } from './usecases/commit-sales-import/commit
 import { ImportCacheInvalidator } from './shared/import-cache.invalidator';
 import { ImportPassesValidator } from './shared/import-passes.validator';
 import { CommitRequestDto } from './dto/commit-request.dto';
+import { DraftRowDto } from './dto/draft-row.dto';
 
 describe('SalesImportService', () => {
     let service: SalesImportService;
@@ -167,6 +168,99 @@ describe('SalesImportService', () => {
 
             expect(commitUsecase.execute).toHaveBeenCalledWith(userId, dto);
             expect(result).toEqual({ batchId: 'batch-1', salesCreated: 2 });
+        });
+    });
+
+    describe('validate', () => {
+        function draftRow(overrides: Partial<DraftRowDto>): DraftRowDto {
+            return {
+                rowIndex: 0,
+                date: '2025-09-14',
+                opponent: 'Marseille',
+                listedPrice: 120,
+                nbTickets: 1,
+                invest: 0,
+                status: 'SOLD',
+                allocations: [{ seasonPassId: passAId, nbTickets: 1 }],
+                rowStatus: 'error:match-missing',
+                ...overrides,
+            } as DraftRowDto;
+        }
+
+        beforeEach(() => {
+            passesDb.findById.mockResolvedValue(passFixture({}));
+            matchesDb.getHomeMatchesForSeason.mockResolvedValue([matchFixture()]);
+        });
+
+        describe('when all rows are valid', () => {
+            it('returns ok rows with the match id and zero errors', async () => {
+                const result = await service.validate(userId, {
+                    selectedPassIds: [passAId],
+                    rows: [draftRow({})],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('ok');
+                expect(result.rows[0]!.matchId).toBe(matchId);
+                expect(result.summary).toEqual({ total: 1, errors: 0, warnings: 0 });
+            });
+        });
+
+        describe('when a row date has no home match', () => {
+            it('flags only that row as error:match-missing', async () => {
+                const result = await service.validate(userId, {
+                    selectedPassIds: [passAId],
+                    rows: [draftRow({}), draftRow({ rowIndex: 1, date: '2025-10-05' })],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('ok');
+                expect(result.rows[1]!.rowStatus).toBe('error:match-missing');
+                expect(result.summary).toEqual({ total: 2, errors: 1, warnings: 0 });
+            });
+        });
+
+        describe('when a row opponent differs from the match opponent', () => {
+            it('counts the warning', async () => {
+                const result = await service.validate(userId, {
+                    selectedPassIds: [passAId],
+                    rows: [draftRow({ opponent: 'Lyon' })],
+                });
+
+                expect(result.rows[0]!.rowStatus).toMatch(/^warn:/);
+                expect(result.summary.warnings).toBe(1);
+            });
+        });
+
+        describe('when several rows are sent', () => {
+            it('returns them in input order', async () => {
+                const result = await service.validate(userId, {
+                    selectedPassIds: [passAId],
+                    rows: [
+                        draftRow({ rowIndex: 2 }),
+                        draftRow({ rowIndex: 0, date: '2025-10-05' }),
+                        draftRow({ rowIndex: 1 }),
+                    ],
+                });
+
+                expect(result.rows.map((row) => row.rowIndex)).toEqual([2, 0, 1]);
+            });
+        });
+
+        describe('when a pass belongs to another user', () => {
+            beforeEach(() => {
+                passesDb.findById.mockResolvedValue(
+                    passFixture({ userId: 'other-user' as UserId }),
+                );
+            });
+
+            it('throws SEASON_PASS_FORBIDDEN without loading matches', async () => {
+                await expect(
+                    service.validate(userId, {
+                        selectedPassIds: [passAId],
+                        rows: [draftRow({})],
+                    }),
+                ).rejects.toMatchObject({ code: ErrorCode.SEASON_PASS_FORBIDDEN });
+                expect(matchesDb.getHomeMatchesForSeason).not.toHaveBeenCalled();
+            });
         });
     });
 

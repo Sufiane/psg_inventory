@@ -71,6 +71,18 @@ export function needsRecipient(row: DraftRow): boolean {
     return row.status === 'GIFTED' && (row.recipient ?? '').trim().length === 0;
 }
 
+export function applyValidation(rows: DraftRow[], validated: DraftRow[]): DraftRow[] {
+    if (rows.length !== validated.length) {
+        return rows;
+    }
+
+    return rows.map((row, index) => {
+        const server = validated[index] as DraftRow;
+
+        return { ...row, rowStatus: server.rowStatus, matchId: server.matchId };
+    });
+}
+
 export function selectedSeasonYears(
     passes: SeasonPass[],
     selectedPassIds: string[],

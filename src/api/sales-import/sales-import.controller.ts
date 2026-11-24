@@ -16,6 +16,7 @@ import { CommitRequestDto } from './dto/commit-request.dto';
 import { DeleteBatchDto } from './dto/delete-batch.dto';
 import { PreviewRequestDto } from './dto/preview-request.dto';
 import { PreviewResponse } from './dto/preview-response.dto';
+import { ValidateImportResponse } from './dto/validate-import-response.dto';
 import { SalesImportService, CommitResult } from './sales-import.service';
 
 const MAX_UPLOAD_BYTES = 512 * 1024;
@@ -48,6 +49,14 @@ export class SalesImportController {
         @Body() body: CommitRequestDto,
     ): Promise<CommitResult> {
         return await this.salesImportService.commit(user.id, body);
+    }
+
+    @Post('validate')
+    async validate(
+        @User() user: AuthenticatedUser,
+        @Body() body: CommitRequestDto,
+    ): Promise<ValidateImportResponse> {
+        return await this.salesImportService.validate(user.id, body);
     }
 
     @Delete(':batchId')

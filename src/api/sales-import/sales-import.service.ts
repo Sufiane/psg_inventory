@@ -9,7 +9,8 @@ import { ISalesImportDbService } from '../../db/sales-import/sales-import.db.int
 import { CommitRequestDto } from './dto/commit-request.dto';
 import { PreviewResponse } from './dto/preview-response.dto';
 import { parseImportCsv } from './sales-import.csv';
-import { resolveDraftRows } from './sales-import.resolver';
+import { ValidateImportResponse } from './dto/validate-import-response.dto';
+import { resolveDraftRows, validateCommitRows } from './sales-import.resolver';
 import {
     CommitResult,
     ICommitSalesImportUsecase,
@@ -57,6 +58,23 @@ export class SalesImportService {
             missingMatches: resolved.missingMatches,
             seasonStartYear,
         };
+    }
+
+    async validate(
+        userId: UserId,
+        dto: CommitRequestDto,
+    ): Promise<ValidateImportResponse> {
+        const seasonStartYear = await this.passesValidator.validate(
+            userId,
+            dto.selectedPassIds,
+        );
+        const homeMatches = await this.matchesDb.getHomeMatchesForSeason(seasonStartYear);
+
+        return validateCommitRows({
+            rows: dto.rows,
+            homeMatches,
+            selectedPassIds: dto.selectedPassIds,
+        });
     }
 
     async commit(userId: UserId, dto: CommitRequestDto): Promise<CommitResult> {

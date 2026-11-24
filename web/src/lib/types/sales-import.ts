@@ -42,6 +42,11 @@ export type PreviewSummary = {
     warnings: number;
 };
 
+export type ValidateResponse = {
+    rows: DraftRow[];
+    summary: PreviewSummary;
+};
+
 export type MissingMatch = {
     matchId: string;
     date: string;
