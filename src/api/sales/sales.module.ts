@@ -8,9 +8,9 @@ import { RecipientsDbModule } from '../../db/recipients/recipients.db.module';
 import { RedisModule } from '../../redis/redis.module';
 import { ISalesService } from './interfaces/sales.service.interface';
 import { UpdateSaleUsecaseModule } from './usecases/update-sale/update-sale.usecase.module';
-import { SaleAllocationsValidator } from './shared/sale-allocations.validator';
 import { UngiftSaleUsecaseModule } from './usecases/ungift-sale/ungift-sale.usecase.module';
 import { DeleteSaleUsecaseModule } from './usecases/delete-sale/delete-sale.usecase.module';
+import { CreateSaleUsecaseModule } from './usecases/create-sale/create-sale.usecase.module';
 
 @Module({
     imports: [
@@ -22,11 +22,9 @@ import { DeleteSaleUsecaseModule } from './usecases/delete-sale/delete-sale.usec
         UpdateSaleUsecaseModule,
         UngiftSaleUsecaseModule,
         DeleteSaleUsecaseModule,
+        CreateSaleUsecaseModule,
     ],
     controllers: [SalesController],
-    providers: [
-        { provide: ISalesService, useClass: SalesService },
-        SaleAllocationsValidator,
-    ],
+    providers: [{ provide: ISalesService, useClass: SalesService }],
 })
 export class SalesModule {}

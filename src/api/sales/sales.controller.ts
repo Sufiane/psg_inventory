@@ -9,7 +9,7 @@ import {
     SalesCommission,
 } from './interfaces/sales.service.interface';
 import type { Sale } from '../../db/sales/type/sale.type';
-import { AddSaleDto } from './dto/add-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
 import { GetSeasonSalesDto } from './dto/get-season-sales.dto';
@@ -72,7 +72,7 @@ export class SalesController {
     @Post('/')
     async addSale(
         @User() user: AuthenticatedUser,
-        @Body() payload: AddSaleDto,
+        @Body() payload: CreateSaleDto,
     ): Promise<{ id: string }> {
         return await this.salesService.addSale(user.id, payload);
     }

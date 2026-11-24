@@ -16,6 +16,7 @@ export enum ErrorCode {
     SALE_GIFT_RECIPIENT_NOT_FOUND = 'sale_gift_recipient_not_found',
     SALE_INVALID_STATUS_TRANSITION = 'sale_invalid_status_transition',
     SALE_GIFT_RECIPIENT_NOT_APPLICABLE = 'sale_gift_recipient_not_applicable',
+    SALE_LISTED_PRICE_REQUIRED = 'sale_listed_price_required',
     IMPORT_CSV_INVALID = 'import_csv_invalid',
     IMPORT_ROWS_INVALID = 'import_rows_invalid',
     IMPORT_PASSES_MIXED_SEASONS = 'import_passes_mixed_seasons',

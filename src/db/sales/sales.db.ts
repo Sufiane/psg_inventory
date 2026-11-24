@@ -12,15 +12,8 @@ import { saleQuery } from './sales.query';
 import { Sale, SalesGroup } from './type/sale.type';
 import { SaleWithFullMatch } from './type/sale-with-full-match.type';
 import { OldestMatchSale } from './type/oldest-match-sale.type';
-import { ISalesDbService, SaleAllocationInput } from './sales.db.interface';
+import { ISalesDbService } from './sales.db.interface';
 import { buildInclusiveDateRangeFilter } from '../shared/date-range.util';
-
-function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
-    return allocations.reduce(
-        (total, allocation) => total + allocation.nbTickets,
-        0,
-    ) as TicketCount;
-}
 
 @Injectable()
 export class SalesDb implements ISalesDbService {
@@ -136,46 +129,6 @@ export class SalesDb implements ISalesDbService {
         );
 
         return (result ?? []) as Sale[];
-    }
-
-    async addSale(payload: {
-        userId: UserId;
-        profit: Profit;
-        invest: Invest;
-        matchId: MatchId;
-        listedPrice: ListedPrice;
-        allocations: SaleAllocationInput[];
-    }): Promise<{ id: SaleId }> {
-        const nbTickets = sumTickets(payload.allocations);
-
-        const dbResult = await this.prisma.sales.create({
-            data: {
-                userId: payload.userId,
-                profit: payload.profit,
-                invest: payload.invest,
-                matchId: payload.matchId,
-                listedPrice: payload.listedPrice,
-                nbTickets,
-                status: SaleStatus.PENDING,
-                Allocations: {
-                    create: payload.allocations.map((allocation) => ({
-                        seasonPassId: allocation.seasonPassId,
-                        nbTickets: allocation.nbTickets,
-                    })),
-                },
-            },
-            select: {
-                id: true,
-            },
-        });
-
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateSales(payload.userId),
-        );
-
-        return {
-            id: dbResult.id as SaleId,
-        };
     }
 
     getOneByWithFullMatch(query: {

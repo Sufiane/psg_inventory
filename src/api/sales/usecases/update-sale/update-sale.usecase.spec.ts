@@ -16,6 +16,7 @@ import { DomainException } from '../../../../common/exceptions/domain.exception'
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { UpdateSaleDto } from '../../dto/update-sale.dto';
 import { SaleAllocationsValidator } from '../../shared/sale-allocations.validator';
+import { GiftRecipientResolver } from '../../shared/gift-recipient.resolver';
 import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import {
     giftFixture,
@@ -58,6 +59,7 @@ describe('UpdateSaleUsecase', () => {
                 },
                 { provide: RedisService, useValue: mockDeep<RedisService>() },
                 SaleAllocationsValidator,
+                GiftRecipientResolver,
                 SalesCacheInvalidator,
             ],
         }).compile();

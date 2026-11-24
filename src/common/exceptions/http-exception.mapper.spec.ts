@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    ConflictException,
+    NotFoundException,
+} from '@nestjs/common';
 
 import { toHttpException } from './http-exception.mapper';
 import { DomainException } from './domain.exception';
@@ -22,6 +26,17 @@ describe('toHttpException', () => {
 
             expect(result).toBeInstanceOf(ConflictException);
             expect(result.getStatus()).toBe(409);
+        });
+    });
+
+    describe('when the error is SALE_LISTED_PRICE_REQUIRED', () => {
+        it('maps to 400', () => {
+            const result = toHttpException(
+                new DomainException(ErrorCode.SALE_LISTED_PRICE_REQUIRED),
+            );
+
+            expect(result).toBeInstanceOf(BadRequestException);
+            expect(result.getStatus()).toBe(400);
         });
     });
 });

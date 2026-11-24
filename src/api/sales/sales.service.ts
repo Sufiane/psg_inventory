@@ -9,12 +9,11 @@ import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { ISalesDbService } from '../../db/sales/sales.db.interface';
 import { Sale } from '../../db/sales/type/sale.type';
 import { computeProfit } from './shared/profit.util';
-import { SaleAllocationsValidator } from './shared/sale-allocations.validator';
 import {
     getSeasonWindow,
     seasonStartYearFromDate,
 } from '../../shared/utils/season.utils';
-import { AddSaleDto } from './dto/add-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import {
     FormattedSale,
@@ -26,15 +25,16 @@ import { PSG_COMMISSION } from '../../shared/constants';
 import { IUngiftSaleUsecase } from './usecases/ungift-sale/ungift-sale.usecase';
 import { IDeleteSaleUsecase } from './usecases/delete-sale/delete-sale.usecase';
 import { IUpdateSaleUsecase } from './usecases/update-sale/update-sale.usecase';
+import { ICreateSaleUsecase } from './usecases/create-sale/create-sale.usecase';
 
 @Injectable()
 export class SalesService implements ISalesService {
     constructor(
         private readonly salesDbService: ISalesDbService,
-        private readonly saleAllocationsValidator: SaleAllocationsValidator,
         private readonly ungiftSaleUsecase: IUngiftSaleUsecase,
         private readonly deleteSaleUsecase: IDeleteSaleUsecase,
         private readonly updateSaleUsecase: IUpdateSaleUsecase,
+        private readonly createSaleUsecase: ICreateSaleUsecase,
     ) {}
 
     getCommission(): SalesCommission {
@@ -107,23 +107,8 @@ export class SalesService implements ISalesService {
         };
     }
 
-    async addSale(userId: UserId, payload: AddSaleDto): Promise<{ id: SaleId }> {
-        await this.saleAllocationsValidator.validate(
-            userId,
-            payload.matchId,
-            payload.allocations,
-        );
-
-        const sale = await this.salesDbService.addSale({
-            userId,
-            matchId: payload.matchId,
-            listedPrice: payload.listedPrice,
-            invest: payload.invest,
-            profit: this.getProfit(payload.listedPrice),
-            allocations: payload.allocations,
-        });
-
-        return { id: sale.id };
+    async addSale(userId: UserId, payload: CreateSaleDto): Promise<{ id: SaleId }> {
+        return this.createSaleUsecase.execute(userId, payload);
     }
 
     async updateSale(userId: UserId, payload: UpdateSaleDto): Promise<void> {
