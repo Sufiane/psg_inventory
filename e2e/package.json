@@ -13,7 +13,7 @@
         "@playwright/test": "1.65.1",
         "@types/node": "26.6.6",
         "eslint": "9.17.0",
-        "globals": "15.13.0",
+        "globals": "17.14.0",
         "typescript": "6.0.3",
         "typescript-eslint": "8.73.0"
     }
