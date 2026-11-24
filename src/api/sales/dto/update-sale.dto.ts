@@ -5,7 +5,7 @@ import { AddSaleDto } from './add-sale.dto';
 
 export type SaleStatusTarget = 'PENDING' | 'SOLD' | 'GIFTED';
 
-const SALE_STATUS_TARGETS: SaleStatusTarget[] = ['PENDING', 'SOLD', 'GIFTED'];
+export const SALE_STATUS_TARGETS: SaleStatusTarget[] = ['PENDING', 'SOLD', 'GIFTED'];
 
 export class UpdateSaleDto extends PartialType(AddSaleDto) {
     @IsString()

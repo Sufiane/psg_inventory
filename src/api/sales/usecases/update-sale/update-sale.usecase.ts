@@ -1,21 +1,18 @@
 import { Injectable } from '@nestjs/common';
 
-import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
+import type { SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { RawSaleStatus } from '../../../accounting/types/accounting-status.type';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
-import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
-import {
-    GiftRecipientInput,
-    SaleAllocationInput,
-} from '../../../../db/sales/sales.db.interface';
+import { SaleAllocationInput } from '../../../../db/sales/sales.db.interface';
 import { Sale } from '../../../../db/sales/type/sale.type';
-import { normalizeRecipientName } from '../../../../shared/utils/recipient-name.util';
 import { SaleStatusTarget, UpdateSaleDto } from '../../dto/update-sale.dto';
+import { GiftRecipientResolver } from '../../shared/gift-recipient.resolver';
 import { SaleAllocationsValidator } from '../../shared/sale-allocations.validator';
 import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import { computeProfit } from '../../shared/profit.util';
+import { assertNotAfterKickoff } from '../../shared/sale-kickoff.guard';
 import { IUpdateSaleUsecaseDb } from './update-sale.usecase.db';
 
 type UpdateIntent = 'enter_gift' | 'update_gift' | 'plain';
@@ -44,7 +41,7 @@ export abstract class IUpdateSaleUsecase {
 export class UpdateSaleUsecase implements IUpdateSaleUsecase {
     constructor(
         private readonly db: IUpdateSaleUsecaseDb,
-        private readonly recipientsDbService: IRecipientsDbService,
+        private readonly giftRecipientResolver: GiftRecipientResolver,
         private readonly saleAllocationsValidator: SaleAllocationsValidator,
         private readonly salesCacheInvalidator: SalesCacheInvalidator,
     ) {}
@@ -59,7 +56,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         const target = payload.status;
 
         assertLegalTransition(existing.status, target);
-        assertNotAfterKickoff(existing, target);
+        assertNotAfterKickoff(existing.Match.date, existing.status, target);
 
         if (payload.allocations != null) {
             await this.saleAllocationsValidator.validate(
@@ -147,7 +144,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         const gift = await this.db.giftSale({
             ...fieldPatch,
             currentSale: existing,
-            recipient: await this.resolveNewGiftRecipient(userId, payload),
+            recipient: await this.giftRecipientResolver.resolveNew(userId, payload),
         });
 
         if (gift == null) {
@@ -161,7 +158,10 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
 
     private async updateExistingGift(context: UpdateContext): Promise<void> {
         const { userId, payload, existing, fieldPatch } = context;
-        const recipient = await this.resolveExistingGiftRecipient(userId, payload);
+        const recipient = await this.giftRecipientResolver.resolveExisting(
+            userId,
+            payload,
+        );
         const gift = await this.db.updateGift({
             ...fieldPatch,
             currentSale: existing,
@@ -193,64 +193,6 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
 
         await this.salesCacheInvalidator.afterWrite(userId, { recipientChanged: false });
     }
-
-    // Entry into GIFTED. A recipient is mandatory (spec D9): the combobox always
-    // sends one, and an empty submit is a user error, not a gift with no name.
-    private async resolveNewGiftRecipient(
-        userId: UserId,
-        payload: UpdateSaleDto,
-    ): Promise<GiftRecipientInput> {
-        if (payload.recipientId != null) {
-            return {
-                recipientId: await this.assertOwnedRecipient(userId, payload.recipientId),
-            };
-        }
-
-        const name = normalizeRecipientName(payload.recipientName ?? '');
-
-        if (name.length === 0) {
-            throw new DomainException(ErrorCode.SALE_GIFT_RECIPIENT_REQUIRED);
-        }
-
-        return { recipientName: name };
-    }
-
-    // A sale that is already GIFTED. `undefined` means "leave the recipient
-    // alone" — the genuine no-op of an unrelated-field edit that resubmits the
-    // unchanged status (spec D9). Every gift now has a recipient, so a blank
-    // name here can only mean "keep the current one" — there is no longer a
-    // recipient-less state that would make a blank name an error.
-    private async resolveExistingGiftRecipient(
-        userId: UserId,
-        payload: UpdateSaleDto,
-    ): Promise<GiftRecipientInput | undefined> {
-        if (payload.recipientId != null) {
-            return {
-                recipientId: await this.assertOwnedRecipient(userId, payload.recipientId),
-            };
-        }
-
-        const name = normalizeRecipientName(payload.recipientName ?? '');
-
-        if (name.length === 0) {
-            return undefined;
-        }
-
-        return { recipientName: name };
-    }
-
-    private async assertOwnedRecipient(
-        userId: UserId,
-        recipientId: RecipientId,
-    ): Promise<RecipientId> {
-        const owned = await this.recipientsDbService.findByIdForUser(recipientId, userId);
-
-        if (owned == null) {
-            throw new DomainException(ErrorCode.SALE_GIFT_RECIPIENT_NOT_FOUND);
-        }
-
-        return owned.id;
-    }
 }
 
 // The legal manual transitions, per docs/specs/2026-09-11-gifted-sale-status-design.md
@@ -280,30 +222,4 @@ function assertLegalTransition(
     if (target !== undefined && !isLegalTransition(current, target)) {
         throw new DomainException(ErrorCode.SALE_INVALID_STATUS_TRANSITION);
     }
-}
-
-function assertNotAfterKickoff(
-    existing: Sale,
-    target: SaleStatusTarget | undefined,
-): void {
-    if (
-        target !== undefined &&
-        isKickoffGuarded(existing.status, target) &&
-        existing.Match.date.getTime() <= Date.now()
-    ) {
-        throw new DomainException(ErrorCode.SALE_AFTER_KICKOFF);
-    }
-}
-
-// Selling and giving a ticket away are both decisions taken before the match,
-// so entering either state after kickoff is refused. GIFTED -> GIFTED is NOT
-// entry: it moves no status, and correcting who received a gift is not a
-// decision that has to precede the match, so it is deliberately exempt
-// (spec D5/D10 — guarding on the target alone breaks that exemption).
-function isKickoffGuarded(current: RawSaleStatus, target: SaleStatusTarget): boolean {
-    if (target === 'SOLD') {
-        return true;
-    }
-
-    return target === 'GIFTED' && current !== 'GIFTED';
 }

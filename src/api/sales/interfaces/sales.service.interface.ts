@@ -3,7 +3,7 @@ import type { ListedPrice, Profit } from '@psg/shared/money';
 import type { Percentage } from '@psg/shared/percentage';
 import type { SeasonYear } from '@psg/shared/time';
 import { Sale } from '../../../db/sales/type/sale.type';
-import { AddSaleDto } from '../dto/add-sale.dto';
+import { CreateSaleDto } from '../dto/create-sale.dto';
 import { UpdateSaleDto } from '../dto/update-sale.dto';
 
 // The wire shape is the stored shape: a sale carries its gift as the joined
@@ -33,7 +33,7 @@ export abstract class ISalesService {
         seasonStartYear: SeasonYear,
     ): Promise<FormattedSale[]>;
     abstract getMatchSales(userId: UserId, matchId: MatchId): Promise<FormattedSale[]>;
-    abstract addSale(userId: UserId, payload: AddSaleDto): Promise<{ id: SaleId }>;
+    abstract addSale(userId: UserId, payload: CreateSaleDto): Promise<{ id: SaleId }>;
     abstract updateSale(userId: UserId, payload: UpdateSaleDto): Promise<void>;
     abstract getProfit(price: ListedPrice): Profit;
     abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;

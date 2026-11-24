@@ -28,15 +28,6 @@ export abstract class ISalesDbService {
         userId: UserId,
         range: { from: Date; to: Date },
     ): Promise<SalesGroup>;
-    abstract addSale(payload: {
-        userId: UserId;
-        profit: Profit;
-        invest: Invest;
-        matchId: MatchId;
-        listedPrice: ListedPrice;
-        allocations: SaleAllocationInput[];
-    }): Promise<{ id: SaleId }>;
-
     abstract getSalesByMatch(userId: UserId, matchId: MatchId): Promise<Sale[]>;
 
     abstract getOneByWithFullMatch(query: {

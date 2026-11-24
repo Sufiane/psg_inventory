@@ -196,7 +196,7 @@ Admin endpoints additionally require the `ADMIN` role.
 |---|---|---|---|
 | GET | `/sales` | JWT | List the authenticated user's sales |
 | GET | `/sales/:saleId` | JWT | Get a single sale |
-| POST | `/sales` | JWT | Create a new sale |
+| POST | `/sales` | JWT | Create a sale (optional `status`, `recipientName`; `listedPrice` optional for GIFTED) |
 | POST | `/sales/update` | JWT | Update an existing sale |
 | DELETE | `/sales/:saleId` | JWT | Delete a sale |
 

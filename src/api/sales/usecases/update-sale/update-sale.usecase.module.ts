@@ -8,6 +8,7 @@ import { SeasonPassesDbModule } from '../../../../db/season-passes/season-passes
 import { IUpdateSaleUsecase, UpdateSaleUsecase } from './update-sale.usecase';
 import { IUpdateSaleUsecaseDb, UpdateSaleUsecaseDb } from './update-sale.usecase.db';
 import { SaleAllocationsValidator } from '../../shared/sale-allocations.validator';
+import { GiftRecipientResolver } from '../../shared/gift-recipient.resolver';
 import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 
 @Module({
@@ -23,6 +24,7 @@ import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
         { provide: IUpdateSaleUsecaseDb, useClass: UpdateSaleUsecaseDb },
         { provide: IUpdateSaleUsecase, useClass: UpdateSaleUsecase },
         SaleAllocationsValidator,
+        GiftRecipientResolver,
         SalesCacheInvalidator,
     ],
     exports: [IUpdateSaleUsecase],

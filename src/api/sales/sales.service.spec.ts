@@ -9,37 +9,33 @@ import { MatchesDb } from '../../db/matches/matches.db';
 import { IMatchesDbService } from '../../db/matches/matches.db.interface';
 import { SeasonPassesDb } from '../../db/season-passes/season-passes.db';
 import { ISeasonPassesDbService } from '../../db/season-passes/season-passes.db.interface';
-import { ErrorCode } from '../../common/exceptions/error-codes.enum';
 import { PSG_COMMISSION } from '../../shared/constants';
 import { SaleAllocationsValidator } from './shared/sale-allocations.validator';
-import { AddSaleDto } from './dto/add-sale.dto';
+import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { IUngiftSaleUsecase } from './usecases/ungift-sale/ungift-sale.usecase';
 import { IDeleteSaleUsecase } from './usecases/delete-sale/delete-sale.usecase';
 import { IUpdateSaleUsecase } from './usecases/update-sale/update-sale.usecase';
+import { ICreateSaleUsecase } from './usecases/create-sale/create-sale.usecase';
 import {
     giftFixture,
-    matchFixture,
     matchId,
-    passFixture,
     passId,
     saleFixture,
     saleId,
     userId,
 } from './test-support/sales.fixtures';
 import type { TicketCount } from '@psg/shared/counts';
-import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
+import type { RecipientId, SaleId } from '@psg/shared/ids';
 import type { Invest, ListedPrice } from '@psg/shared/money';
-import type { SeasonYear } from '@psg/shared/time';
 
 describe('SalesService', () => {
     let service: SalesService;
     let salesDbService: DeepMockProxy<SalesDb>;
-    let matchesDbService: DeepMockProxy<MatchesDb>;
-    let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
     let ungiftSaleUsecase: DeepMockProxy<IUngiftSaleUsecase>;
     let deleteSaleUsecase: DeepMockProxy<IDeleteSaleUsecase>;
     let updateSaleUsecase: DeepMockProxy<IUpdateSaleUsecase>;
+    let createSaleUsecase: DeepMockProxy<ICreateSaleUsecase>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -55,16 +51,16 @@ describe('SalesService', () => {
                 { provide: IUngiftSaleUsecase, useValue: mockDeep<IUngiftSaleUsecase>() },
                 { provide: IDeleteSaleUsecase, useValue: mockDeep<IDeleteSaleUsecase>() },
                 { provide: IUpdateSaleUsecase, useValue: mockDeep<IUpdateSaleUsecase>() },
+                { provide: ICreateSaleUsecase, useValue: mockDeep<ICreateSaleUsecase>() },
             ],
         }).compile();
 
         service = module.get(SalesService);
         salesDbService = module.get(ISalesDbService);
-        matchesDbService = module.get(IMatchesDbService);
-        seasonPassesDbService = module.get(ISeasonPassesDbService);
         ungiftSaleUsecase = module.get(IUngiftSaleUsecase);
         deleteSaleUsecase = module.get(IDeleteSaleUsecase);
         updateSaleUsecase = module.get(IUpdateSaleUsecase);
+        createSaleUsecase = module.get(ICreateSaleUsecase);
 
         module.useLogger(false);
     });
@@ -231,75 +227,20 @@ describe('SalesService', () => {
         });
     });
 
-    describe('addSale allocations', () => {
-        const validPayload: AddSaleDto = {
-            matchId,
-            allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
-            listedPrice: 100 as ListedPrice,
-            invest: 0 as Invest,
-        };
+    describe('addSale', () => {
+        it('delegates to CreateSaleUsecase.execute and returns its result', async () => {
+            const payload: CreateSaleDto = {
+                matchId,
+                allocations: [{ seasonPassId: passId, nbTickets: 2 as TicketCount }],
+                listedPrice: 100 as ListedPrice,
+                invest: 0 as Invest,
+            };
+            createSaleUsecase.execute.mockResolvedValueOnce({ id: 'new-sale' as SaleId });
 
-        it('creates the sale when allocations match the user and season', async () => {
-            matchesDbService.getOneMatch.mockResolvedValueOnce(
-                matchFixture(new Date('2024-09-15')),
-            );
-            seasonPassesDbService.findById.mockResolvedValueOnce(passFixture());
-            salesDbService.addSale.mockResolvedValueOnce({ id: 'new-sale' as SaleId });
-
-            const result = await service.addSale(userId, validPayload);
+            const result = await service.addSale(userId, payload);
 
             expect(result).toEqual({ id: 'new-sale' });
-            expect(salesDbService.addSale).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    userId,
-                    matchId,
-                    allocations: validPayload.allocations,
-                }),
-            );
-        });
-
-        it('rejects when an allocation references a pass owned by another user', async () => {
-            matchesDbService.getOneMatch.mockResolvedValueOnce(
-                matchFixture(new Date('2024-09-15')),
-            );
-            seasonPassesDbService.findById.mockResolvedValueOnce(
-                passFixture({ userId: 'someone-else' as UserId }),
-            );
-
-            await expect(service.addSale(userId, validPayload)).rejects.toMatchObject({
-                code: ErrorCode.SALE_ALLOCATION_PASS_MISMATCH,
-            });
-        });
-
-        it('rejects when the pass belongs to a different season than the match', async () => {
-            matchesDbService.getOneMatch.mockResolvedValueOnce(
-                matchFixture(new Date('2024-09-15')),
-            );
-            seasonPassesDbService.findById.mockResolvedValueOnce(
-                passFixture({ seasonStartYear: 2023 as SeasonYear }),
-            );
-
-            await expect(service.addSale(userId, validPayload)).rejects.toMatchObject({
-                code: ErrorCode.SALE_ALLOCATION_PASS_MISMATCH,
-            });
-        });
-
-        it('rejects duplicate allocations to the same pass', async () => {
-            matchesDbService.getOneMatch.mockResolvedValueOnce(
-                matchFixture(new Date('2024-09-15')),
-            );
-
-            await expect(
-                service.addSale(userId, {
-                    ...validPayload,
-                    allocations: [
-                        { seasonPassId: passId, nbTickets: 1 as TicketCount },
-                        { seasonPassId: passId, nbTickets: 1 as TicketCount },
-                    ],
-                }),
-            ).rejects.toMatchObject({
-                code: ErrorCode.SALE_INVALID_ALLOCATIONS,
-            });
+            expect(createSaleUsecase.execute).toHaveBeenCalledWith(userId, payload);
         });
     });
 });
