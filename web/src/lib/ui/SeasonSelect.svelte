@@ -22,7 +22,7 @@
             id="season-select"
             name="year"
             class="min-h-11 sm:min-h-9 rounded border border-line-strong bg-surface text-ink px-2 text-sm hover:border-ink transition-colors"
-            onchange={(event) => event.currentTarget.form?.requestSubmit()}
+            onchange={(event): void => event.currentTarget.form?.requestSubmit()}
         >
             {#each choices as choice (choice.year)}
                 <option value={choice.year} selected={selected === choice.year}>

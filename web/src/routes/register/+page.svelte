@@ -33,7 +33,7 @@
         use:enhance={() => {
             submitting = true;
 
-            return async ({ update }) => {
+            return async ({ update }): Promise<void> => {
                 await update();
                 submitting = false;
             };

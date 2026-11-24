@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, type ActionFailure } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { JWT_COOKIE } from '$lib/api';
 import { backendUrl } from '$lib/env';
@@ -14,12 +14,17 @@ type FormValues = {
     lastName: string;
 };
 
+type FailureData = FormValues & {
+    message: string;
+    fieldErrors: Partial<Record<keyof FormValues | 'password', string>>;
+};
+
 function failWith(
     status: number,
     values: FormValues,
     message: string,
     fieldErrors: Partial<Record<keyof FormValues | 'password', string>> = {},
-) {
+): ActionFailure<FailureData> {
     return fail(status, { ...values, message, fieldErrors });
 }
 

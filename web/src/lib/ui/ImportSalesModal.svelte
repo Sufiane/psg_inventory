@@ -272,7 +272,9 @@
                     selectedPassIds={selectedPassIds}
                     passes={passes}
                     onCommitted={handleCommitted}
-                    onBack={() => (step = 'source')}
+                    onBack={(): void => {
+                        step = 'source';
+                    }}
                     onCancel={handleClose}
                 />
             </div>

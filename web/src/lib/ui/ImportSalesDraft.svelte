@@ -263,7 +263,7 @@
                                     type="date"
                                     aria-label="Date"
                                     value={row.date}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             date: (event.currentTarget as HTMLInputElement).value,
                                         })}
@@ -275,7 +275,7 @@
                                     type="text"
                                     aria-label="Opponent"
                                     value={row.opponent}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             opponent: (event.currentTarget as HTMLInputElement).value,
                                         })}
@@ -288,7 +288,7 @@
                                     min="0"
                                     aria-label="Price"
                                     value={row.listedPrice}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             listedPrice: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
@@ -303,7 +303,7 @@
                                     min="1"
                                     aria-label="Tickets"
                                     value={row.nbTickets}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             nbTickets: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
@@ -318,7 +318,7 @@
                                     min="0"
                                     aria-label="Invest"
                                     value={row.invest}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             invest: Number(
                                                 (event.currentTarget as HTMLInputElement).value,
@@ -331,7 +331,7 @@
                                 <select
                                     aria-label="Sale status"
                                     value={row.status}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             status: (event.currentTarget as HTMLSelectElement)
                                                 .value as DraftRow['status'],
@@ -354,7 +354,7 @@
                                     disabled={row.status !== 'GIFTED'}
                                     placeholder={recipientMissing ? 'Recipient required' : 'Name'}
                                     aria-invalid={recipientMissing ? 'true' : undefined}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             recipient:
                                                 (event.currentTarget as HTMLInputElement).value ||
@@ -372,7 +372,7 @@
                                     title={row.status === 'GIFTED'
                                         ? 'Leave blank to use the match date.'
                                         : undefined}
-                                    onchange={(event) =>
+                                    onchange={(event): void =>
                                         updateRow(index, {
                                             soldAt: ((event.currentTarget as HTMLInputElement)
                                                 .value || undefined) as IsoDateString | undefined,
@@ -389,7 +389,7 @@
                                                 type="number"
                                                 min="0"
                                                 value={allocationFor(row, pass.id)}
-                                                onchange={(event) =>
+                                                onchange={(event): void =>
                                                     updateAllocation(
                                                         index,
                                                         pass.id,
@@ -412,7 +412,7 @@
                                 <button
                                     type="button"
                                     class="flex min-h-9 min-w-9 items-center justify-center rounded text-negative-strong hover:bg-negative/10"
-                                    onclick={() => deleteRow(index)}
+                                    onclick={(): void => deleteRow(index)}
                                     aria-label="Delete row"
                                 >
                                     ×
@@ -436,7 +436,7 @@
                             <button
                                 type="button"
                                 class="inline-flex min-h-11 items-center px-2 text-sm font-medium text-primary underline"
-                                onclick={() => addRow(match)}
+                                onclick={(): void => addRow(match)}
                             >
                                 + add sale
                             </button>

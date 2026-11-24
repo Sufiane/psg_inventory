@@ -45,7 +45,7 @@
             type="checkbox"
             class="size-4 accent-brand"
             checked={selectedPassIds.includes(pass.id)}
-            onchange={() => onToggle(pass.id)}
+            onchange={(): void => onToggle(pass.id)}
         />
         <span class="flex min-w-0 flex-col">
             <span class="truncate font-medium">{pass.label}</span>

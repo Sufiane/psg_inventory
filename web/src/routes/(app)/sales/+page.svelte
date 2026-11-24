@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { tick } from 'svelte';
@@ -331,7 +332,7 @@
         void goto(urlClosed(), { keepFocus: false, noScroll: true });
     }
 
-    function trackCreate({ cancel }: { cancel: () => void }) {
+    function trackCreate({ cancel }: { cancel: () => void }): ReturnType<SubmitFunction> {
         if (submitting !== null) {
             cancel();
 
@@ -340,13 +341,13 @@
 
         submitting = 'create';
 
-        return async ({ update }: { update: () => Promise<void> }) => {
+        return async ({ update }: { update: () => Promise<void> }): Promise<void> => {
             await update();
             submitting = null;
         };
     }
 
-    function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }) {
+    function trackSubmit({ action, cancel }: { action: URL; cancel: () => void }): ReturnType<SubmitFunction> {
         const which: 'update' | 'delete' = action.search.includes('delete')
             ? 'delete'
             : 'update';
@@ -359,7 +360,7 @@
 
         submitting = which;
 
-        return async ({ update }: { update: () => Promise<void> }) => {
+        return async ({ update }: { update: () => Promise<void> }): Promise<void> => {
             await update();
             submitting = null;
         };
@@ -455,7 +456,7 @@
         <button
             type="button"
             aria-label="Remove a ticket from {pass.label}"
-            onclick={(event) => stepAllocation(event, -1)}
+            onclick={(event): void => stepAllocation(event, -1)}
             class="size-10 text-ink-muted hover:text-ink transition-colors"
         >
             −
@@ -473,7 +474,7 @@
         <button
             type="button"
             aria-label="Add a ticket to {pass.label}"
-            onclick={(event) => stepAllocation(event, 1)}
+            onclick={(event): void => stepAllocation(event, 1)}
             class="size-10 text-ink-muted hover:text-ink transition-colors"
         >
             +
@@ -633,8 +634,9 @@
                                 step="1"
                                 inputmode="numeric"
                                 value={draftListedPrice}
-                                oninput={(event) =>
-                                    (draftListedPrice = event.currentTarget.value)}
+                                oninput={(event): void => {
+                                    draftListedPrice = event.currentTarget.value;
+                                }}
                                 class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
                             />
                             <span
@@ -658,7 +660,9 @@
                                 step="1"
                                 inputmode="numeric"
                                 value={draftInvest}
-                                oninput={(event) => (draftInvest = event.currentTarget.value)}
+                                oninput={(event): void => {
+                                    draftInvest = event.currentTarget.value;
+                                }}
                                 aria-describedby={passCostHint ? `edit-invest-hint-${layout}` : undefined}
                                 class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
                             />
@@ -807,7 +811,9 @@
                     <button
                         bind:this={newPanelFirstEl}
                         type="button"
-                        onclick={() => (importOpen = true)}
+                        onclick={(): void => {
+                            importOpen = true;
+                        }}
                         class="text-primary font-medium hover:text-primary-hover hover:underline"
                     >
                         Use Import CSV instead.
@@ -1072,13 +1078,17 @@
     canCreate={data.canCreate}
     showActions={!isNew}
     newHref={urlWithNew(true)}
-    onImport={() => (importOpen = true)}
+    onImport={(): void => {
+        importOpen = true;
+    }}
 />
 
 <ImportSalesModal
     open={importOpen}
     passes={data.passes}
-    onClose={() => (importOpen = false)}
+    onClose={(): void => {
+        importOpen = false;
+    }}
     onCommitted={onImportCommitted}
 />
 
@@ -1110,7 +1120,9 @@
         {#if sortKey !== null}
             <button
                 type="button"
-                onclick={() => (sortDir = sortDir === 'desc' ? 'asc' : 'desc')}
+                onclick={(): void => {
+                    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+                }}
                 class="rounded border border-line-strong bg-surface text-ink-muted hover:text-ink hover:border-ink px-2 py-1.5 transition-colors font-mono"
                 aria-label="Toggle sort direction"
             >
@@ -1145,7 +1157,7 @@
                         <button
                             type="button"
                             class="inline-flex items-center gap-1 hover:text-ink transition-colors w-full justify-end"
-                            onclick={() => toggleSort('nbTickets')}
+                            onclick={(): void => toggleSort('nbTickets')}
                         >
                             Tickets
                             <span aria-hidden="true" class="font-mono w-3 text-ink">
@@ -1161,7 +1173,7 @@
                         <button
                             type="button"
                             class="inline-flex items-center gap-1 hover:text-ink transition-colors w-full justify-end"
-                            onclick={() => toggleSort('listedPrice')}
+                            onclick={(): void => toggleSort('listedPrice')}
                         >
                             Price
                             <span aria-hidden="true" class="font-mono w-3 text-ink">
@@ -1176,7 +1188,7 @@
                         <button
                             type="button"
                             class="inline-flex items-center gap-1 hover:text-ink transition-colors w-full justify-end"
-                            onclick={() => toggleSort('invest')}
+                            onclick={(): void => toggleSort('invest')}
                         >
                             Invest
                             <span aria-hidden="true" class="font-mono w-3 text-ink">
@@ -1191,7 +1203,7 @@
                         <button
                             type="button"
                             class="inline-flex items-center gap-1 hover:text-ink transition-colors w-full justify-end"
-                            onclick={() => toggleSort('profit')}
+                            onclick={(): void => toggleSort('profit')}
                         >
                             Profit
                             <span aria-hidden="true" class="font-mono w-3 text-ink">
