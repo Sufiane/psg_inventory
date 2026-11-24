@@ -133,7 +133,7 @@
                         use:enhance={() => {
                             submittingKey = 'demo1';
 
-                            return async ({ update }) => {
+                            return async ({ update }): Promise<void> => {
                                 await update();
                                 submittingKey = null;
                             };
@@ -171,7 +171,7 @@
                         use:enhance={() => {
                             submittingKey = 'demo2';
 
-                            return async ({ update }) => {
+                            return async ({ update }): Promise<void> => {
                                 await update();
                                 submittingKey = null;
                             };

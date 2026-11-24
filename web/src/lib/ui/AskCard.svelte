@@ -16,15 +16,9 @@
     } = $props();
 
     let pending = $state(false);
-    // svelte-ignore state_referenced_locally -- intentional seed; the
-    // $effect below re-syncs `value` whenever `question` changes later
-    // (AskCard is reused across same-route navigations, so it does).
-    let value = $state(question);
+    // Writable derived: AskCard is reused across same-route navigations, so `value` re-seeds when `question` changes.
+    let value = $derived(question);
     let formEl: HTMLFormElement | undefined;
-
-    $effect(() => {
-        value = question;
-    });
 
     const EXAMPLES = [
         'How is the current season going?',
@@ -85,7 +79,7 @@
         use:enhance={() => {
             pending = true;
 
-            return async ({ update }) => {
+            return async ({ update }): Promise<void> => {
                 await update({ reset: false });
                 pending = false;
             };
@@ -110,7 +104,7 @@
             <button
                 type="button"
                 disabled={pending}
-                onclick={() => askExample(example)}
+                onclick={(): Promise<void> => askExample(example)}
                 class="rounded-full border border-line px-3 py-1 text-xs text-ink-muted transition-colors hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {example}

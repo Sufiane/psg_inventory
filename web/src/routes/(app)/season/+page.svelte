@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
     import { money } from '$lib/format';
     import Button from '$lib/ui/Button.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
@@ -53,7 +54,7 @@
                             method="POST"
                             action="?/update"
                             class="space-y-3"
-                            use:enhance={({ action, cancel }) => {
+                            use:enhance={({ action, cancel }): ReturnType<SubmitFunction> => {
                                 if (submitting !== null) {
                                     cancel();
 
@@ -71,7 +72,7 @@
                                     ? `remove:${pass.id}`
                                     : `update:${pass.id}`;
 
-                                return async ({ update }) => {
+                                return async ({ update }): Promise<void> => {
                                     await update();
                                     submitting = null;
                                 };
@@ -153,7 +154,7 @@
                                     formnovalidate
                                     disabled={submitting !== null}
                                     class="rounded border border-negative text-negative-strong px-4 py-2 text-sm font-medium hover:bg-negative/5 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                                    onclick={(event) => {
+                                    onclick={(event): void => {
                                         if (!confirm(`Delete pass "${pass.label}"?`)) {
                                             event.preventDefault();
 
@@ -192,7 +193,7 @@
                 use:enhance={() => {
                     submitting = 'create';
 
-                    return async ({ update }) => {
+                    return async ({ update }): Promise<void> => {
                         await update();
                         submitting = null;
                     };

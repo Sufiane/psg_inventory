@@ -8,16 +8,9 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
     let submitting = $state(false);
-    // svelte-ignore state_referenced_locally -- intentional seed; the
-    // $effect below re-syncs `selectedMatchId` whenever `data` changes later.
-    let selectedMatchId = $state(data.presetMatchId ?? '');
-
-    // SvelteKit reuses this component across same-route navigations (e.g. a
-    // link to /sales/new?matchId=B while already on /sales/new?matchId=A) —
-    // only `data` swaps, so re-seed the selection whenever the preset changes.
-    $effect(() => {
-        selectedMatchId = data.presetMatchId ?? '';
-    });
+    // Writable derived: SvelteKit reuses this component across same-route navigations
+    // (/sales/new?matchId=A to ?matchId=B), so the selection re-seeds when the preset changes.
+    let selectedMatchId = $derived(data.presetMatchId ?? '');
 
     let selectedMatch = $derived(
         data.matches.find((match) => match.id === selectedMatchId) ?? null,
@@ -40,7 +33,7 @@
     use:enhance={() => {
         submitting = true;
 
-        return async ({ update }) => {
+        return async ({ update }): Promise<void> => {
             await update();
             submitting = false;
         };

@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
     import { competitionLabel } from '$lib/format';
     import Button from '$lib/ui/Button.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
@@ -18,7 +19,7 @@
         return () => {
             submitting = op;
 
-            return async ({ update }: { update: () => Promise<void> }) => {
+            return async ({ update }: { update: () => Promise<void> }): Promise<void> => {
                 await update();
                 submitting = null;
             };
@@ -36,7 +37,7 @@
         }: {
             formElement: HTMLFormElement;
             cancel: () => void;
-        }) => {
+        }): ReturnType<SubmitFunction> => {
             // Gated here, not on the button's onclick: Enter inside the
             // email field submits the form without ever dispatching a click
             // on the button, so a click-only guard would silently skip the
@@ -56,7 +57,7 @@
             }: {
                 result: FlushResult;
                 update: () => Promise<void>;
-            }) => {
+            }): Promise<void> => {
                 submitting = null;
                 // Also populate `form` so the inline banner at the top of the
                 // page reports the outcome, not just the toast. PRODUCT.md:
@@ -254,7 +255,7 @@
                 type="submit"
                 disabled={submitting !== null}
                 class="rounded bg-warning-strong text-surface px-4 py-2 text-sm font-medium hover:bg-warning disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-                onclick={(event) => {
+                onclick={(event): void => {
                     if (!confirm('Force-cancel stale unrealized sales now?')) {
                         event.preventDefault();
                     }

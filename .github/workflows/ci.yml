@@ -15,12 +15,22 @@ jobs:
         with:
           node-version: 24.21.0
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
 
       - run: npm ci
+
+      - run: npm ci
+        working-directory: web
 
       - run: npm run typecheck
 
       - run: npm run lint
+
+      - name: Lint web
+        run: npm run lint
+        working-directory: web
 
       - run: npm run lint:deps
 

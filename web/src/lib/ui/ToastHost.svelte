@@ -17,7 +17,7 @@
             <span class="flex-1">{toast.message}</span>
             <button
                 type="button"
-                onclick={() => toastStore.dismiss(toast.id)}
+                onclick={(): void => toastStore.dismiss(toast.id)}
                 class="opacity-60 hover:opacity-100"
                 aria-label="Dismiss"
             >

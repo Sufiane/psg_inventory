@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ActionData, PageData } from './$types';
     import { enhance } from '$app/forms';
+    import type { SubmitFunction } from '@sveltejs/kit';
     import { dateTime, signedMoney } from '$lib/format';
     import { profitTone } from '$lib/sale-helpers';
     import Spinner from '$lib/ui/Spinner.svelte';
@@ -84,7 +85,7 @@
     method="POST"
     action="?/update"
     class="max-w-lg bg-surface rounded-lg border border-line p-6 space-y-4"
-    use:enhance={({ action, cancel }) => {
+    use:enhance={({ action, cancel }): ReturnType<SubmitFunction> => {
         const which: 'update' | 'delete' = action.search.includes('delete')
             ? 'delete'
             : 'update';
@@ -97,7 +98,7 @@
 
         submitting = which;
 
-        return async ({ update }) => {
+        return async ({ update }): Promise<void> => {
             await update();
             submitting = null;
         };
@@ -204,7 +205,7 @@
             type="submit"
             disabled={submitting !== null}
             class="rounded bg-brand text-on-brand px-4 py-2 font-medium hover:bg-brand-hover disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 transition-colors"
-            onclick={(event) => confirmIfPast(event, 'save')}
+            onclick={(event): void => confirmIfPast(event, 'save')}
         >
             {#if submitting === 'update'}
                 <Spinner size="1em" />
