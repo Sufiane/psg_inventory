@@ -3,6 +3,7 @@ import type {
     DraftRow,
     PreviewResponse,
     RevertResult,
+    ValidateResponse,
 } from '$lib/types/sales-import';
 
 export async function previewImport(
@@ -41,6 +42,23 @@ export async function commitImport(
     }
 
     return (await response.json()) as CommitResult;
+}
+
+export async function validateImport(
+    selectedPassIds: string[],
+    rows: DraftRow[],
+): Promise<ValidateResponse> {
+    const response = await fetch('/api/sales-import/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedPassIds, rows }),
+    });
+
+    if (!response.ok) {
+        throw new Error(await extractMessage(response));
+    }
+
+    return (await response.json()) as ValidateResponse;
 }
 
 export async function revertImport(batchId: string): Promise<RevertResult> {
