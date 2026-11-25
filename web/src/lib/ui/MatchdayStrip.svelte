@@ -71,21 +71,28 @@
             <ol aria-label="Matchday strip" class="flex w-max gap-2">
                 {#each segments as segment (segment.matchId)}
                     {@const label = `${segment.opponent}, ${shortDate(segment.date)}, ${segment.status ?? 'no sale'}${segment.atHome ? '' : ', away'}${segment.isBreakEven ? ', break-even' : ''}`}
-                    <li class="w-24 shrink-0 snap-start" aria-label={label} title={label}>
-                        <span
-                            class="flex h-7 items-center justify-center rounded-sm {fillFor(
-                                segment.status,
-                            )}"
-                            aria-hidden="true"
+                    <li class="w-24 shrink-0 snap-start">
+                        <a
+                            href="/matches/{segment.matchId}"
+                            aria-label={label}
+                            title={label}
+                            class="block rounded-sm hover:opacity-90 focus-visible:outline-2 focus-visible:-outline-offset-2"
                         >
-                            {#if segment.isBreakEven}<span class="text-surface-subtle">★</span>{/if}
-                        </span>
-                        <span class="mt-1 block text-xs text-ink-faint">
-                            {shortDate(segment.date)}
-                        </span>
-                        <span class="block text-xs text-ink line-clamp-2 break-words">
-                            {stripOpponent(segment)}
-                        </span>
+                            <span
+                                class="flex h-7 items-center justify-center rounded-sm {fillFor(
+                                    segment.status,
+                                )}"
+                                aria-hidden="true"
+                            >
+                                {#if segment.isBreakEven}<span class="text-surface-subtle">★</span>{/if}
+                            </span>
+                            <span class="mt-1 block text-xs text-ink-faint">
+                                {shortDate(segment.date)}
+                            </span>
+                            <span class="block text-xs text-ink line-clamp-2 break-words">
+                                {stripOpponent(segment)}
+                            </span>
+                        </a>
                     </li>
                 {/each}
             </ol>
