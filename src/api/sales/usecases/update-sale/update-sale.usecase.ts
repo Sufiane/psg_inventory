@@ -151,7 +151,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
-        await this.salesCacheInvalidator.afterWrite(userId, {
+        await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
             recipientChanged: true,
         });
     }
@@ -173,7 +173,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         }
         const { recipientId } = gift;
 
-        await this.salesCacheInvalidator.afterWrite(userId, {
+        await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
             recipientChanged: recipientId !== (existing.Gift?.recipientId ?? null),
         });
     }
@@ -191,7 +191,9 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
 
-        await this.salesCacheInvalidator.afterWrite(userId, { recipientChanged: false });
+        await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
+            recipientChanged: false,
+        });
     }
 }
 

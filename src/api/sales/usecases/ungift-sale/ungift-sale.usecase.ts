@@ -5,6 +5,7 @@ import type { ListedPrice } from '@psg/shared/money';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { computeProfit } from '../../shared/profit.util';
+import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import { IUngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 
 export abstract class IUngiftSaleUsecase {
@@ -18,7 +19,10 @@ export abstract class IUngiftSaleUsecase {
 export class UngiftSaleUsecase implements IUngiftSaleUsecase {
     private readonly logger = new Logger(UngiftSaleUsecase.name);
 
-    constructor(private readonly usecaseDb: IUngiftSaleUsecaseDb) {}
+    constructor(
+        private readonly usecaseDb: IUngiftSaleUsecaseDb,
+        private readonly salesCacheInvalidator: SalesCacheInvalidator,
+    ) {}
 
     async execute(userId: UserId, saleId: SaleId, price?: ListedPrice): Promise<void> {
         const existing = await this.usecaseDb.loadSale(userId, saleId);
@@ -48,6 +52,10 @@ export class UngiftSaleUsecase implements IUngiftSaleUsecase {
         if (outcome === 'not_found') {
             throw new DomainException(ErrorCode.SALE_NOT_FOUND);
         }
+
+        await this.salesCacheInvalidator.afterWrite(userId, saleId, {
+            recipientChanged: true,
+        });
     }
 
     private assertPriceRule(

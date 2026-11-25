@@ -3,7 +3,6 @@ import { SaleStatus } from '@prisma/client';
 
 import { UpdateSaleUsecaseDb } from './update-sale.usecase.db';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
 import { ISalesDbService } from '../../../../db/sales/sales.db.interface';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
 import {
@@ -29,7 +28,6 @@ describe('UpdateSaleUsecaseDb against a real database', () => {
     beforeEach(() => {
         usecaseDb = new UpdateSaleUsecaseDb(
             prisma,
-            mockDeep<RedisService>(),
             mockDeep<ISalesDbService>(),
             mockDeep<IRecipientsDbService>(),
         );

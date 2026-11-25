@@ -4,8 +4,6 @@ import { Prisma, SaleStatus } from '@prisma/client';
 import type { SaleId, UserId } from '@psg/shared/ids';
 import type { ListedPrice, Profit } from '@psg/shared/money';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 
 export type SaleRowSnapshot = {
     id: string;
@@ -34,10 +32,7 @@ export abstract class IUngiftSaleUsecaseDb {
 export class UngiftSaleUsecaseDb implements IUngiftSaleUsecaseDb {
     private readonly logger = new Logger(UngiftSaleUsecaseDb.name);
 
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly redisService: RedisService,
-    ) {}
+    constructor(private readonly prisma: PrismaService) {}
 
     async loadSale(userId: UserId, saleId: SaleId): Promise<SaleRowSnapshot | null> {
         return this.prisma.sales.findUnique({
@@ -76,19 +71,6 @@ export class UngiftSaleUsecaseDb implements IUngiftSaleUsecaseDb {
                     },
                 });
             });
-
-            // Invalidate all four cache namespaces — written path only. On
-            // not_found the transaction rolled back, nothing is stale because
-            // of us, and the pre-fix throw also fired before any invalidation
-            // (spec D2 / behaviour item 4).
-            await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-            await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
-            await this.redisService.invalidatePattern(
-                CACHE_KEYS.invalidateAccounting(userId),
-            );
-            await this.redisService.invalidatePattern(
-                CACHE_KEYS.invalidateRecipients(userId),
-            );
 
             return 'written';
         } catch (error) {

@@ -6,15 +6,12 @@ import { Prisma, SaleStatus } from '@prisma/client';
 
 import { UngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import type { SaleId, UserId } from '@psg/shared/ids';
 import type { ListedPrice, Profit } from '@psg/shared/money';
 
 describe('UngiftSaleUsecaseDb', () => {
     let usecaseDb: UngiftSaleUsecaseDb;
     let prisma: DeepMockProxy<PrismaService>;
-    let redisService: DeepMockProxy<RedisService>;
     let warnSpy: Mock<typeof Logger.prototype.warn>;
 
     const userId = 'user-uuid' as UserId;
@@ -40,13 +37,11 @@ describe('UngiftSaleUsecaseDb', () => {
             providers: [
                 UngiftSaleUsecaseDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
-                { provide: RedisService, useValue: mockDeep<RedisService>() },
             ],
         }).compile();
 
         usecaseDb = module.get(UngiftSaleUsecaseDb);
         prisma = module.get(PrismaService);
-        redisService = module.get(RedisService);
 
         module.useLogger(false);
 
@@ -144,25 +139,6 @@ describe('UngiftSaleUsecaseDb', () => {
             });
         });
 
-        it('invalidates all four cache namespaces', async () => {
-            mockTransaction();
-
-            await usecaseDb.ungiftSale(userId, saleId, currentSale);
-
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateSales(userId),
-            );
-            expect(redisService.invalidate).toHaveBeenCalledWith(
-                CACHE_KEYS.sale(userId, saleId),
-            );
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateAccounting(userId),
-            );
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateRecipients(userId),
-            );
-        });
-
         it('does not re-read the sale row — the usecase already loaded it', async () => {
             mockTransaction();
 
@@ -173,7 +149,7 @@ describe('UngiftSaleUsecaseDb', () => {
     });
 
     describe('when the sale row is deleted between the load and the write', () => {
-        it('reports not_found, skips cache invalidation and re-reads nothing', async () => {
+        it('reports not_found and re-reads nothing', async () => {
             const tx = mockTransaction();
             tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
 
@@ -181,8 +157,6 @@ describe('UngiftSaleUsecaseDb', () => {
 
             expect(result).toBe('not_found');
             expect(prisma.sales.findUnique).not.toHaveBeenCalled();
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
         it('logs the caught P2025 before returning not_found', async () => {
@@ -203,7 +177,7 @@ describe('UngiftSaleUsecaseDb', () => {
     });
 
     describe('when the transaction rejects with an unexpected error', () => {
-        it('ungiftSale rethrows it unchanged and does not invalidate the caches', async () => {
+        it('ungiftSale rethrows it unchanged', async () => {
             const tx = mockTransaction();
             const failure = new Error('connection lost');
             tx.sales.update.mockRejectedValueOnce(failure);
@@ -211,9 +185,6 @@ describe('UngiftSaleUsecaseDb', () => {
             await expect(usecaseDb.ungiftSale(userId, saleId, currentSale)).rejects.toBe(
                 failure,
             );
-
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
     });
 });

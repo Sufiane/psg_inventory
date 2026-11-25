@@ -7,12 +7,14 @@ import { IUngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import type { SaleId, UserId } from '@psg/shared/ids';
 import type { ListedPrice } from '@psg/shared/money';
+import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import { computeProfit } from '../../shared/profit.util';
 import type { Sale } from '../../../../db/sales/type/sale.type';
 
 describe('UngiftSaleUsecase', () => {
     let usecase: UngiftSaleUsecase;
     let usecaseDb: DeepMockProxy<IUngiftSaleUsecaseDb>;
+    let invalidator: DeepMockProxy<SalesCacheInvalidator>;
 
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
@@ -48,11 +50,16 @@ describe('UngiftSaleUsecase', () => {
                     provide: IUngiftSaleUsecaseDb,
                     useValue: mockDeep<IUngiftSaleUsecaseDb>(),
                 },
+                {
+                    provide: SalesCacheInvalidator,
+                    useValue: mockDeep<SalesCacheInvalidator>(),
+                },
             ],
         }).compile();
 
         usecase = module.get(UngiftSaleUsecase);
         usecaseDb = module.get(IUngiftSaleUsecaseDb);
+        invalidator = module.get(SalesCacheInvalidator);
 
         module.useLogger(false);
     });
@@ -72,6 +79,17 @@ describe('UngiftSaleUsecase', () => {
                 undefined,
             );
         });
+
+        it('invalidates caches including recipients', async () => {
+            usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED));
+            usecaseDb.ungiftSale.mockResolvedValueOnce('written');
+
+            await usecase.execute(userId, saleId);
+
+            expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, saleId, {
+                recipientChanged: true,
+            });
+        });
     });
 
     describe('when the row is deleted between the load and the write', () => {
@@ -82,6 +100,7 @@ describe('UngiftSaleUsecase', () => {
             await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
                 code: ErrorCode.SALE_NOT_FOUND,
             });
+            expect(invalidator.afterWrite).not.toHaveBeenCalled();
         });
     });
 

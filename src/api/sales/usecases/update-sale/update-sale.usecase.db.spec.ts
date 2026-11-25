@@ -8,8 +8,6 @@ import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import { UpdateSaleUsecaseDb } from './update-sale.usecase.db';
 import type { SaleRowSnapshot } from './update-sale.usecase.db';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import { ISalesDbService } from '../../../../db/sales/sales.db.interface';
 import { SalesDb } from '../../../../db/sales/sales.db';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
@@ -22,7 +20,6 @@ describe('UpdateSaleUsecaseDb', () => {
 
     let usecaseDb: UpdateSaleUsecaseDb;
     let prisma: DeepMockProxy<PrismaService>;
-    let redisService: DeepMockProxy<RedisService>;
     let salesDbService: DeepMockProxy<SalesDb>;
     let recipientsDbService: DeepMockProxy<RecipientsDb>;
     let warnSpy: Mock<typeof Logger.prototype.warn>;
@@ -61,7 +58,6 @@ describe('UpdateSaleUsecaseDb', () => {
             providers: [
                 UpdateSaleUsecaseDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
-                { provide: RedisService, useValue: mockDeep<RedisService>() },
                 { provide: ISalesDbService, useValue: mockDeep<SalesDb>() },
                 { provide: IRecipientsDbService, useValue: mockDeep<RecipientsDb>() },
             ],
@@ -69,7 +65,6 @@ describe('UpdateSaleUsecaseDb', () => {
 
         usecaseDb = module.get(UpdateSaleUsecaseDb);
         prisma = module.get(PrismaService);
-        redisService = module.get(RedisService);
         salesDbService = module.get(ISalesDbService);
         recipientsDbService = module.get(IRecipientsDbService);
 
@@ -109,25 +104,6 @@ describe('UpdateSaleUsecaseDb', () => {
             );
             expect(tx.gifts.create).not.toHaveBeenCalled();
             expect(result).toBe('written');
-        });
-
-        it('invalidates the sales-list and single-sale caches', async () => {
-            mockTransaction();
-
-            await usecaseDb.updateSale({
-                saleId,
-                userId,
-                profit: undefined,
-                status: 'SOLD',
-                currentSale: currentSaleRow(),
-            });
-
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateSales(userId),
-            );
-            expect(redisService.invalidate).toHaveBeenCalledWith(
-                CACHE_KEYS.sale(userId, saleId),
-            );
         });
 
         it('does not re-read the sale row — the usecase already loaded it', async () => {
@@ -251,25 +227,6 @@ describe('UpdateSaleUsecaseDb', () => {
                 expect(result).toEqual({ recipientId: 'r5' });
             });
         });
-
-        it('invalidates the sales-list and single-sale caches', async () => {
-            mockTransaction();
-
-            await usecaseDb.giftSale({
-                saleId,
-                userId,
-                profit: undefined,
-                recipient: { recipientId: 'r5' as RecipientId },
-                currentSale: currentSaleRow(),
-            });
-
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateSales(userId),
-            );
-            expect(redisService.invalidate).toHaveBeenCalledWith(
-                CACHE_KEYS.sale(userId, saleId),
-            );
-        });
     });
 
     describe('updateGift', () => {
@@ -317,32 +274,10 @@ describe('UpdateSaleUsecaseDb', () => {
                 expect(result).toEqual({ recipientId: 'r1' });
             });
         });
-
-        it('invalidates the sales-list and single-sale caches', async () => {
-            const tx = mockTransaction();
-
-            (tx.gifts.findUniqueOrThrow as Mock).mockResolvedValueOnce({
-                recipientId: 'r1',
-            });
-
-            await usecaseDb.updateGift({
-                saleId,
-                userId,
-                profit: undefined,
-                currentSale: currentSaleRow({ status: SaleStatus.GIFTED }),
-            });
-
-            expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                CACHE_KEYS.invalidateSales(userId),
-            );
-            expect(redisService.invalidate).toHaveBeenCalledWith(
-                CACHE_KEYS.sale(userId, saleId),
-            );
-        });
     });
 
     describe('when the sale row is deleted between the load and the write', () => {
-        it('updateSale reports not_found, skips cache invalidation and re-reads nothing', async () => {
+        it('updateSale reports not_found and re-reads nothing', async () => {
             const tx = mockTransaction();
             tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
 
@@ -356,11 +291,9 @@ describe('UpdateSaleUsecaseDb', () => {
 
             expect(result).toBe('not_found');
             expect(prisma.sales.findUnique).not.toHaveBeenCalled();
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
-        it('giftSale reports null, skips cache invalidation and re-reads nothing', async () => {
+        it('giftSale reports null and re-reads nothing', async () => {
             const tx = mockTransaction();
             tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
 
@@ -374,11 +307,9 @@ describe('UpdateSaleUsecaseDb', () => {
 
             expect(result).toBeNull();
             expect(prisma.sales.findUnique).not.toHaveBeenCalled();
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
-        it('updateGift reports null, skips cache invalidation and re-reads nothing', async () => {
+        it('updateGift reports null and re-reads nothing', async () => {
             const tx = mockTransaction();
             tx.sales.update.mockRejectedValueOnce(p2025RecordGone());
 
@@ -392,8 +323,6 @@ describe('UpdateSaleUsecaseDb', () => {
 
             expect(result).toBeNull();
             expect(prisma.sales.findUnique).not.toHaveBeenCalled();
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
         it('updateSale logs the caught P2025 before returning not_found', async () => {
@@ -464,7 +393,7 @@ describe('UpdateSaleUsecaseDb', () => {
     });
 
     describe('when the transaction rejects with an unexpected error', () => {
-        it('updateSale rethrows it unchanged and does not invalidate the caches', async () => {
+        it('updateSale rethrows it unchanged', async () => {
             const tx = mockTransaction();
             const failure = new Error('connection lost');
             tx.sales.update.mockRejectedValueOnce(failure);
@@ -478,12 +407,9 @@ describe('UpdateSaleUsecaseDb', () => {
                     currentSale: currentSaleRow(),
                 }),
             ).rejects.toBe(failure);
-
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
-        it('giftSale rethrows it unchanged and does not invalidate the caches', async () => {
+        it('giftSale rethrows it unchanged', async () => {
             const tx = mockTransaction();
             const failure = new Error('connection lost');
             tx.sales.update.mockRejectedValueOnce(failure);
@@ -497,12 +423,9 @@ describe('UpdateSaleUsecaseDb', () => {
                     currentSale: currentSaleRow(),
                 }),
             ).rejects.toBe(failure);
-
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
 
-        it('updateGift rethrows it unchanged and does not invalidate the caches', async () => {
+        it('updateGift rethrows it unchanged', async () => {
             const tx = mockTransaction();
             const failure = new Error('connection lost');
             tx.sales.update.mockRejectedValueOnce(failure);
@@ -516,9 +439,6 @@ describe('UpdateSaleUsecaseDb', () => {
                     currentSale: currentSaleRow({ status: SaleStatus.GIFTED }),
                 }),
             ).rejects.toBe(failure);
-
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
-            expect(redisService.invalidate).not.toHaveBeenCalled();
         });
     });
 });
