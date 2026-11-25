@@ -82,3 +82,14 @@ export function leadDaysLabel(days: number): string {
 
     return `${days} d ahead`;
 }
+
+const PERCENT = new Intl.NumberFormat('fr-FR', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    signDisplay: 'exceptZero',
+});
+
+export function percent(fraction: number): string {
+    return PERCENT.format(fraction);
+}

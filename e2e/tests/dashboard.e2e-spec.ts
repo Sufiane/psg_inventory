@@ -16,5 +16,13 @@ test.describe('dashboard', () => {
             page.getByRole('heading', { name: 'Season pass recovery' }),
         ).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Recent sales' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Average ticket price' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Average net per match' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'ROI' })).toBeVisible();
+        await expect(
+            page
+                .getByRole('img', { name: /Cumulative sold proceeds/ })
+                .or(page.getByText('No sold sales with a sold date yet.')),
+        ).toBeVisible();
     });
 });

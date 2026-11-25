@@ -33,3 +33,12 @@ and tab counts are computed client-side over the full list, so paging needs serv
 aggregates; payload is about 100-200 KB after several seasons. Acting costs backend
 pagination plus an aggregate endpoint, plus web changes (two tickets). Trigger: p95 payload
 over about 1 MB or a user with thousands of sales.
+
+## `totalSales` is a listed-price sum, rendered as a count (PSG-88)
+
+`Accounting.totalSales` is `sum(listedPrice)` (`format-aggregate.util.ts`), but the Dashboard
+pending / cancelled / gifted tiles and the Accounting page pending line render it as a sale or
+ticket count. Found while checking the accounting API for PSG-88; PSG-88 does not read it.
+Tracked as PSG-108 (backend field) and PSG-109 (web consumers). Deferred because the fix spans
+the API field and every consumer. Acting costs a backend rename or a real count field plus web
+consumer changes: two tickets.
