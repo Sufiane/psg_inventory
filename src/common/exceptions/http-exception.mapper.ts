@@ -51,6 +51,8 @@ const map: Record<ErrorCode, () => HttpException> = {
         new BadRequestException(ErrorCode.SALE_GIFT_RECIPIENT_NOT_APPLICABLE),
     [ErrorCode.SALE_LISTED_PRICE_REQUIRED]: () =>
         new BadRequestException(ErrorCode.SALE_LISTED_PRICE_REQUIRED),
+    [ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE]: () =>
+        new BadRequestException(ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE),
     [ErrorCode.IMPORT_CSV_INVALID]: () =>
         new BadRequestException(ErrorCode.IMPORT_CSV_INVALID),
     [ErrorCode.IMPORT_ROWS_INVALID]: () =>

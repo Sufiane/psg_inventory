@@ -2,13 +2,16 @@
 import { NestFactory } from '@nestjs/core';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice } from '@psg/shared/money';
 import { AppModule } from '../src/app.module';
 import { ISalesService } from '../src/api/sales/interfaces/sales.service.interface';
 import type { Sale } from '../src/db/sales/type/sale.type';
 import { DomainException } from '../src/common/exceptions/domain.exception';
 import { ErrorCode } from '../src/common/exceptions/error-codes.enum';
 
-const USAGE = 'usage: npm run ungift -- <userId> <saleId> --yes';
+const USAGE = 'usage: npm run ungift -- <userId> <saleId> [--price <whole euros>] --yes';
+
+const PRICE_FLAG = '--price';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,17 +36,74 @@ function assertUuidShaped(value: string, argName: 'userId' | 'saleId'): void {
     process.exit(1);
 }
 
+function parsePriceArg(rawArgs: string[]): ListedPrice | undefined {
+    const flagIndex = rawArgs.indexOf(PRICE_FLAG);
+
+    if (flagIndex === -1) {
+        return undefined;
+    }
+
+    const rawValue = rawArgs[flagIndex + 1] ?? '';
+    const price = Number(rawValue);
+
+    if (!/^\d+$/.test(rawValue) || !Number.isSafeInteger(price) || price < 1) {
+        console.error(
+            `error: --price must be a positive whole number of euros, got "${rawValue}".\n${USAGE}`,
+        );
+        process.exit(1);
+    }
+
+    return price as ListedPrice;
+}
+
+function assertNoUnknownFlags(positionalArgs: string[]): void {
+    const unknown = positionalArgs.find(
+        (arg) => arg.startsWith('-') && arg !== '--yes' && arg !== '-y',
+    );
+
+    if (unknown == null) {
+        return;
+    }
+
+    console.error(
+        `error: unknown or malformed flag "${unknown}" (use "--price <n>", not "--price=<n>").\n${USAGE}`,
+    );
+    process.exit(1);
+}
+
+function stripPriceArg(rawArgs: string[]): string[] {
+    const flagIndex = rawArgs.indexOf(PRICE_FLAG);
+
+    if (flagIndex === -1) {
+        return rawArgs;
+    }
+
+    return rawArgs.filter(
+        (_arg, index) => index !== flagIndex && index !== flagIndex + 1,
+    );
+}
+
 // The sanctioned repair for a sale gifted by mistake. GIFTED is terminal in the
 // app (spec D5), and since the gift row pins the sale's status at the database
 // level (spec D15), `UPDATE sales SET status = 'PENDING'` typed into psql now
 // fails outright. This is the supported way to do it: one command, one
 // transaction, caches invalidated.
 //
-//   npm run ungift -- <userId> <saleId> --yes
+//   npm run ungift -- <userId> <saleId> [--price <whole euros>] --yes
+//
+// A gift created without a price has price 0; --price is then required, and
+// is rejected for a sale that already has a price.
 async function main(): Promise<void> {
     const rawArgs = process.argv.slice(2);
-    const confirmed = rawArgs.includes('--yes') || rawArgs.includes('-y');
-    const [userId, saleId] = rawArgs.filter((arg) => arg !== '--yes' && arg !== '-y');
+    const price = parsePriceArg(rawArgs);
+    const positionalArgs = stripPriceArg(rawArgs);
+
+    assertNoUnknownFlags(positionalArgs);
+
+    const confirmed = positionalArgs.includes('--yes') || positionalArgs.includes('-y');
+    const [userId, saleId] = positionalArgs.filter(
+        (arg) => arg !== '--yes' && arg !== '-y',
+    );
 
     if (userId == null || saleId == null) {
         console.error(USAGE);
@@ -89,6 +149,26 @@ async function main(): Promise<void> {
         console.log(`  recipient: ${sale.Gift?.Recipient.name ?? '(none)'}`);
         console.log(`  giftedAt: ${sale.Gift?.giftedAt.toISOString() ?? '(none)'}`);
 
+        if (sale.listedPrice === 0 && price == null) {
+            console.error('error: sale has no price; re-run with --price <whole euros>');
+            process.exitCode = 1;
+
+            return;
+        }
+
+        if (sale.listedPrice > 0 && price != null) {
+            console.error(
+                `error: sale ${saleId} already has a price; drop --price so it is kept.`,
+            );
+            process.exitCode = 1;
+
+            return;
+        }
+
+        if (price != null) {
+            console.log(`  price to apply: ${price}`);
+        }
+
         if (!confirmed) {
             console.error(
                 'refusing to un-gift without confirmation. Re-run with --yes (or -y) once the details above look right.',
@@ -99,7 +179,7 @@ async function main(): Promise<void> {
         }
 
         try {
-            await salesService.ungiftSale(userId as UserId, saleId as SaleId);
+            await salesService.ungiftSale(userId as UserId, saleId as SaleId, price);
         } catch (error) {
             if (
                 error instanceof DomainException &&
@@ -108,6 +188,30 @@ async function main(): Promise<void> {
                 console.error(
                     `error: sale ${saleId} exists but is not currently GIFTED, so there is nothing to un-gift. ` +
                         'This is the single most likely real mistake here — double-check this is the sale you meant.',
+                );
+                process.exitCode = 1;
+
+                return;
+            }
+
+            if (
+                error instanceof DomainException &&
+                error.code === ErrorCode.SALE_LISTED_PRICE_REQUIRED
+            ) {
+                console.error(
+                    'error: sale has no price; re-run with --price <whole euros>',
+                );
+                process.exitCode = 1;
+
+                return;
+            }
+
+            if (
+                error instanceof DomainException &&
+                error.code === ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE
+            ) {
+                console.error(
+                    `error: sale ${saleId} already has a price; drop --price so it is kept.`,
                 );
                 process.exitCode = 1;
 

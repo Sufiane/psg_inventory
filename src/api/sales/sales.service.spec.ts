@@ -213,9 +213,9 @@ describe('SalesService', () => {
 
     describe('ungiftSale', () => {
         it('delegates to UngiftSaleUsecase.execute', async () => {
-            await service.ungiftSale(userId, saleId);
+            await service.ungiftSale(userId, saleId, 120 as ListedPrice);
 
-            expect(ungiftSaleUsecase.execute).toHaveBeenCalledWith(userId, saleId);
+            expect(ungiftSaleUsecase.execute).toHaveBeenCalledWith(userId, saleId, 120);
         });
     });
 

@@ -107,7 +107,7 @@ describe('CreateSaleUsecase', () => {
         it('invalidates caches without recipients', async () => {
             await usecase.execute(userId, basePayload);
 
-            expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, {
+            expect(invalidator.afterCreate).toHaveBeenCalledWith(userId, {
                 recipientChanged: false,
             });
         });
@@ -176,14 +176,15 @@ describe('CreateSaleUsecase', () => {
                 });
             });
 
-            it('passes no price and no profit', async () => {
+            it('passes zero price and profit', async () => {
                 await usecase.execute(userId, giftWithoutPrice);
 
                 expect(db.createSale).toHaveBeenCalledWith(
                     expect.objectContaining({
                         status: 'GIFTED',
-                        listedPrice: undefined,
-                        profit: undefined,
+                        listedPrice: 0,
+                        profit: 0,
+                        invest: giftPayload.invest,
                         recipient: { recipientName: 'Marc' },
                     }),
                 );
@@ -200,7 +201,7 @@ describe('CreateSaleUsecase', () => {
             it('invalidates caches including recipients', async () => {
                 await usecase.execute(userId, giftWithoutPrice);
 
-                expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, {
+                expect(invalidator.afterCreate).toHaveBeenCalledWith(userId, {
                     recipientChanged: true,
                 });
             });
@@ -335,7 +336,7 @@ describe('CreateSaleUsecase', () => {
         it('does not invalidate caches', async () => {
             await usecase.execute(userId, basePayload).catch(() => undefined);
 
-            expect(invalidator.afterWrite).not.toHaveBeenCalled();
+            expect(invalidator.afterCreate).not.toHaveBeenCalled();
         });
     });
 });

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SaleStatus } from '@prisma/client';
 
-import type { TicketCount } from '@psg/shared/counts';
 import type { MatchId, RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { IMatchesDbService } from '../../../../db/matches/matches.db.interface';
@@ -11,24 +10,16 @@ import {
     SaleAllocationInput,
 } from '../../../../db/sales/sales.db.interface';
 import { PrismaService } from '../../../../db/prisma.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
-import { RedisService } from '../../../../redis/redis.service';
 import { SaleStatusTarget } from '../../dto/update-sale.dto';
-
-function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
-    return allocations.reduce(
-        (total, allocation) => total + allocation.nbTickets,
-        0,
-    ) as TicketCount;
-}
+import { sumTickets } from '../../shared/sum-tickets.util';
 
 export type CreateSaleWrite = {
     userId: UserId;
     matchId: MatchId;
     status: SaleStatusTarget;
-    listedPrice?: ListedPrice | undefined;
-    profit?: Profit | undefined;
-    invest?: Invest | undefined;
+    listedPrice: ListedPrice;
+    profit: Profit;
+    invest: Invest;
     allocations: SaleAllocationInput[];
     recipient?: GiftRecipientInput | undefined;
 };
@@ -44,7 +35,6 @@ export abstract class ICreateSaleUsecaseDb {
 export class CreateSaleUsecaseDb implements ICreateSaleUsecaseDb {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly redisService: RedisService,
         private readonly matchesDbService: IMatchesDbService,
         private readonly recipientsDbService: IRecipientsDbService,
     ) {}
@@ -56,14 +46,14 @@ export class CreateSaleUsecaseDb implements ICreateSaleUsecaseDb {
     }
 
     async createSale(payload: CreateSaleWrite): Promise<CreatedSale> {
-        const created = await this.prisma.$transaction(async (tx) => {
+        return this.prisma.$transaction(async (tx) => {
             const sale = await tx.sales.create({
                 data: {
                     userId: payload.userId,
                     matchId: payload.matchId,
-                    listedPrice: payload.listedPrice ?? (0 as ListedPrice),
-                    profit: payload.profit ?? (0 as Profit),
-                    invest: payload.invest ?? (0 as Invest),
+                    listedPrice: payload.listedPrice,
+                    profit: payload.profit,
+                    invest: payload.invest,
                     nbTickets: sumTickets(payload.allocations),
                     status: SaleStatus[payload.status],
                     ...(payload.status === 'SOLD' ? { soldAt: new Date() } : {}),
@@ -100,12 +90,6 @@ export class CreateSaleUsecaseDb implements ICreateSaleUsecaseDb {
 
             return { id: saleId, recipientId };
         });
-
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateSales(payload.userId),
-        );
-
-        return created;
     }
 
     private async resolveRecipientId(

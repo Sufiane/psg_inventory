@@ -39,5 +39,9 @@ export abstract class ISalesService {
     abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;
     // Manual repair for a sale gifted by mistake — not exposed by the
     // controller, since GIFTED is terminal in the app (spec D5/D16).
-    abstract ungiftSale(userId: UserId, saleId: SaleId): Promise<void>;
+    abstract ungiftSale(
+        userId: UserId,
+        saleId: SaleId,
+        price?: ListedPrice,
+    ): Promise<void>;
 }

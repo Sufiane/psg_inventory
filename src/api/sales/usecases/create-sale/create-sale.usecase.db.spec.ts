@@ -5,10 +5,8 @@ import { Prisma, SaleStatus } from '@prisma/client';
 
 import { CreateSaleUsecaseDb, CreateSaleWrite } from './create-sale.usecase.db';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
 import { IMatchesDbService } from '../../../../db/matches/matches.db.interface';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import { matchFixture, matchId, passId, userId } from '../../test-support/sales.fixtures';
 import type { TicketCount } from '@psg/shared/counts';
 import type { RecipientId, SaleId } from '@psg/shared/ids';
@@ -17,7 +15,6 @@ import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 describe('CreateSaleUsecaseDb', () => {
     let usecaseDb: CreateSaleUsecaseDb;
     let prisma: DeepMockProxy<PrismaService>;
-    let redisService: DeepMockProxy<RedisService>;
     let matchesDbService: DeepMockProxy<IMatchesDbService>;
     let recipientsDbService: DeepMockProxy<IRecipientsDbService>;
 
@@ -42,7 +39,6 @@ describe('CreateSaleUsecaseDb', () => {
             providers: [
                 CreateSaleUsecaseDb,
                 { provide: PrismaService, useValue: mockDeep<PrismaService>() },
-                { provide: RedisService, useValue: mockDeep<RedisService>() },
                 { provide: IMatchesDbService, useValue: mockDeep<IMatchesDbService>() },
                 {
                     provide: IRecipientsDbService,
@@ -53,7 +49,6 @@ describe('CreateSaleUsecaseDb', () => {
 
         usecaseDb = module.get(CreateSaleUsecaseDb);
         prisma = module.get(PrismaService);
-        redisService = module.get(RedisService);
         matchesDbService = module.get(IMatchesDbService);
         recipientsDbService = module.get(IRecipientsDbService);
 
@@ -140,14 +135,6 @@ describe('CreateSaleUsecaseDb', () => {
                 expect(tx.gifts.create).not.toHaveBeenCalled();
             });
 
-            it('invalidates the sales cache', async () => {
-                await usecaseDb.createSale(basePayload);
-
-                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
-                    CACHE_KEYS.invalidateSales(userId),
-                );
-            });
-
             it('returns the id with no recipient', async () => {
                 const result = await usecaseDb.createSale(basePayload);
 
@@ -170,15 +157,15 @@ describe('CreateSaleUsecaseDb', () => {
             });
         });
 
-        describe('when the price, profit and invest are missing', () => {
-            it('stores zero for each', async () => {
+        describe('when the amounts are zero', () => {
+            it('writes them as given', async () => {
                 const tx = mockTransaction();
 
                 await usecaseDb.createSale({
-                    userId,
-                    matchId,
-                    status: 'PENDING',
-                    allocations: basePayload.allocations,
+                    ...basePayload,
+                    listedPrice: 0 as ListedPrice,
+                    profit: 0 as Profit,
+                    invest: 0 as Invest,
                 });
 
                 const call = tx.sales.create.mock.calls[0]?.[0];
@@ -276,22 +263,6 @@ describe('CreateSaleUsecaseDb', () => {
                 });
             });
 
-            describe('and no price is given', () => {
-                it('stores zero price and profit', async () => {
-                    await usecaseDb.createSale({
-                        userId,
-                        matchId,
-                        status: 'GIFTED',
-                        allocations: basePayload.allocations,
-                        recipient: { recipientName: 'Marc' },
-                    });
-
-                    const call = tx.sales.create.mock.calls[0]?.[0];
-
-                    expect(call?.data).toMatchObject({ listedPrice: 0, profit: 0 });
-                });
-            });
-
             describe('when the gift write fails', () => {
                 beforeEach(() => {
                     tx.gifts.create.mockRejectedValueOnce(new Error('fk violation'));
@@ -305,18 +276,6 @@ describe('CreateSaleUsecaseDb', () => {
                             recipient: { recipientName: 'Marc' },
                         }),
                     ).rejects.toThrow('fk violation');
-                });
-
-                it('does not invalidate the cache', async () => {
-                    await usecaseDb
-                        .createSale({
-                            ...basePayload,
-                            status: 'GIFTED',
-                            recipient: { recipientName: 'Marc' },
-                        })
-                        .catch(() => undefined);
-
-                    expect(redisService.invalidatePattern).not.toHaveBeenCalled();
                 });
             });
         });

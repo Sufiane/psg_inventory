@@ -49,4 +49,46 @@ describe('SalesCacheInvalidator', () => {
             );
         });
     });
+
+    describe('afterCreate', () => {
+        describe('when redis works', () => {
+            it('invalidates sales and accounting', async () => {
+                await invalidator.afterCreate(userId, { recipientChanged: false });
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateSales(userId),
+                );
+                expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateAccounting(userId),
+                );
+                expect(redisService.invalidatePattern).not.toHaveBeenCalledWith(
+                    CACHE_KEYS.invalidateRecipients(userId),
+                );
+            });
+
+            describe('and the recipient changed', () => {
+                it('also invalidates recipients', async () => {
+                    await invalidator.afterCreate(userId, { recipientChanged: true });
+
+                    expect(redisService.invalidatePattern).toHaveBeenCalledWith(
+                        CACHE_KEYS.invalidateRecipients(userId),
+                    );
+                });
+            });
+        });
+
+        describe('when redis rejects', () => {
+            beforeEach(() => {
+                redisService.invalidatePattern.mockRejectedValue(new Error('redis down'));
+            });
+
+            it('resolves and still tries every pattern', async () => {
+                await expect(
+                    invalidator.afterCreate(userId, { recipientChanged: true }),
+                ).resolves.toBeUndefined();
+
+                expect(redisService.invalidatePattern).toHaveBeenCalledTimes(3);
+            });
+        });
+    });
 });

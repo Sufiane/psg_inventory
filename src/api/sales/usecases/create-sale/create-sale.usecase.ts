@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
+import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import { GiftRecipientInput } from '../../../../db/sales/sales.db.interface';
@@ -12,6 +13,9 @@ import { SaleAllocationsValidator } from '../../shared/sale-allocations.validato
 import { assertNotAfterKickoff } from '../../shared/sale-kickoff.guard';
 import { SalesCacheInvalidator } from '../../shared/sales-cache.invalidator';
 import { ICreateSaleUsecaseDb } from './create-sale.usecase.db';
+
+const NO_PRICE = 0 as ListedPrice;
+const NO_PROFIT = 0 as Profit;
 
 export abstract class ICreateSaleUsecase {
     abstract execute(userId: UserId, payload: CreateSaleDto): Promise<{ id: SaleId }>;
@@ -46,21 +50,31 @@ export class CreateSaleUsecase implements ICreateSaleUsecase {
             userId,
             matchId: payload.matchId,
             status,
-            listedPrice: payload.listedPrice,
-            profit:
-                payload.listedPrice != null
-                    ? computeProfit(payload.listedPrice)
-                    : undefined,
-            invest: payload.invest,
+            ...this.resolveAmounts(payload),
             allocations: payload.allocations,
             recipient,
         });
 
-        await this.salesCacheInvalidator.afterWrite(userId, {
+        await this.salesCacheInvalidator.afterCreate(userId, {
             recipientChanged: status === 'GIFTED',
         });
 
         return { id: created.id };
+    }
+
+    private resolveAmounts(payload: CreateSaleDto): {
+        listedPrice: ListedPrice;
+        profit: Profit;
+        invest: Invest;
+    } {
+        return {
+            listedPrice: payload.listedPrice ?? NO_PRICE,
+            profit:
+                payload.listedPrice != null
+                    ? computeProfit(payload.listedPrice)
+                    : NO_PROFIT,
+            invest: payload.invest,
+        };
     }
 
     private assertFieldRules(status: SaleStatusTarget, payload: CreateSaleDto): void {

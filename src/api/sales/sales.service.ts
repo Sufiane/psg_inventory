@@ -119,8 +119,8 @@ export class SalesService implements ISalesService {
         return computeProfit(price);
     }
 
-    async ungiftSale(userId: UserId, saleId: SaleId): Promise<void> {
-        return this.ungiftSaleUsecase.execute(userId, saleId);
+    async ungiftSale(userId: UserId, saleId: SaleId, price?: ListedPrice): Promise<void> {
+        return this.ungiftSaleUsecase.execute(userId, saleId, price);
     }
 
     async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {

@@ -33,11 +33,3 @@ and tab counts are computed client-side over the full list, so paging needs serv
 aggregates; payload is about 100-200 KB after several seasons. Acting costs backend
 pagination plus an aggregate endpoint, plus web changes (two tickets). Trigger: p95 payload
 over about 1 MB or a user with thousands of sales.
-
-## Un-gifting a price-less gift leaves a PENDING sale at price 0 (PSG-104)
-
-A gift created through `POST /sales` without a price stores `listedPrice = 0` and
-`profit = 0`. `ungift-sale` returns a sale to PENDING unchanged, so the result is a PENDING
-sale at price 0 that nothing forces the user to price. Deferred because the un-gift usecase
-is out of scope for atomic create. Acting costs requiring a price on un-gift when the stored
-price is 0, plus a web prompt: about 80 lines across two layers, so two tickets.

@@ -21,19 +21,13 @@ export class GiftRecipientResolver {
         userId: UserId,
         payload: RecipientPayload,
     ): Promise<GiftRecipientInput> {
-        if (payload.recipientId != null) {
-            return {
-                recipientId: await this.assertOwnedRecipient(userId, payload.recipientId),
-            };
-        }
+        const given = await this.resolveGiven(userId, payload);
 
-        const name = normalizeRecipientName(payload.recipientName ?? '');
-
-        if (name.length === 0) {
+        if (given == null) {
             throw new DomainException(ErrorCode.SALE_GIFT_RECIPIENT_REQUIRED);
         }
 
-        return { recipientName: name };
+        return given;
     }
 
     // Already-GIFTED sale: `undefined` means keep the current recipient, since a
@@ -42,6 +36,15 @@ export class GiftRecipientResolver {
         userId: UserId,
         payload: RecipientPayload,
     ): Promise<GiftRecipientInput | undefined> {
+        const given = await this.resolveGiven(userId, payload);
+
+        return given ?? undefined;
+    }
+
+    private async resolveGiven(
+        userId: UserId,
+        payload: RecipientPayload,
+    ): Promise<GiftRecipientInput | null> {
         if (payload.recipientId != null) {
             return {
                 recipientId: await this.assertOwnedRecipient(userId, payload.recipientId),
@@ -51,7 +54,7 @@ export class GiftRecipientResolver {
         const name = normalizeRecipientName(payload.recipientName ?? '');
 
         if (name.length === 0) {
-            return undefined;
+            return null;
         }
 
         return { recipientName: name };
