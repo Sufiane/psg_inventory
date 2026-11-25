@@ -28,6 +28,16 @@ async function failedProperties(
     return errors.map((error) => error.property);
 }
 
+async function constraintsFor(
+    dtoClass: ClassConstructor<object>,
+    payload: Record<string, unknown>,
+    property: string,
+): Promise<Record<string, string> | undefined> {
+    const errors = await validate(plainToInstance(dtoClass, payload));
+
+    return errors.find((error) => error.property === property)?.constraints;
+}
+
 describe.each([
     ['AddSaleDto', AddSaleDto],
     ['UpdateSaleDto', UpdateSaleDto],
@@ -38,6 +48,12 @@ describe.each([
 
             expect(failed).toContain('listedPrice');
         });
+
+        it('reports listed_price_must_be_integer', async () => {
+            const constraints = await constraintsFor(dtoClass, buildPayload({ listedPrice: 33.5 }), 'listedPrice');
+
+            expect(constraints?.isInt).toBe('listed_price_must_be_integer');
+        });
     });
 
     describe('when invest is a fraction', () => {
@@ -45,6 +61,12 @@ describe.each([
             const failed = await failedProperties(dtoClass, buildPayload({ invest: 2.5 }));
 
             expect(failed).toContain('invest');
+        });
+
+        it('reports invest_must_be_integer', async () => {
+            const constraints = await constraintsFor(dtoClass, buildPayload({ invest: 2.5 }), 'invest');
+
+            expect(constraints?.isInt).toBe('invest_must_be_integer');
         });
     });
 
