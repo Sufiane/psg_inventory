@@ -72,6 +72,15 @@ test.describe('sale lifecycle', () => {
 
         await expect(drawer).toBeVisible();
         await expect(drawer.getByRole('region', { name: 'Profit calculation' })).toBeVisible();
+
+        const listedPriceInput = drawer.getByLabel('Listed price');
+        const wholeEuroHint = drawer.getByText('Whole euros only.');
+
+        await listedPriceInput.fill('33.5');
+        await expect(wholeEuroHint).toBeVisible();
+        await listedPriceInput.fill('33');
+        await expect(wholeEuroHint).toBeHidden();
+        await listedPriceInput.fill(SOLD_PRICE);
         await drawer.getByRole('radio', { name: 'Sold' }).check({ force: true });
         await drawer.getByRole('button', { name: 'Save changes' }).click();
         await page.waitForURL('**/sales');

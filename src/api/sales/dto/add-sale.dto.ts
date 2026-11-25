@@ -24,11 +24,11 @@ export class AddSaleDto {
     allocations!: SaleAllocationDto[];
 
     @IsOptional()
-    @IsInt()
+    @IsInt({ message: 'invest_must_be_integer' })
     @Min(0)
     invest: Invest = 0 as Invest;
 
-    @IsInt()
+    @IsInt({ message: 'listed_price_must_be_integer' })
     @Min(1)
     listedPrice!: ListedPrice;
 }

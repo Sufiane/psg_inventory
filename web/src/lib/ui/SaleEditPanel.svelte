@@ -10,6 +10,7 @@
         saveConfirmMessage,
     } from '$lib/sale-edit';
     import { passesForSale } from '$lib/sale-passes';
+    import { wholeEuroHint } from '$lib/whole-euro';
     import type { SaleDetail, SaleStatus, SeasonPass } from '$lib/types';
     import SaleProfitBlock from '$lib/ui/SaleProfitBlock.svelte';
     import Spinner from '$lib/ui/Spinner.svelte';
@@ -63,11 +64,21 @@
     let draftStatus = $derived<SaleStatus>(sale.status);
     let draftListedPrice = $derived(String(sale.listedPrice));
     let draftInvest = $derived(String(sale.invest));
+    let listedPriceHint = $derived(wholeEuroHint(draftListedPrice));
+    let investHint = $derived(wholeEuroHint(draftInvest));
     let statusChanged = $derived(draftStatus !== sale.status);
     let matchDate = $derived(new Date(sale.Match.date));
     let isPastMatch = $derived(matchDate.getTime() < Date.now());
     let visiblePasses = $derived(passesForSale(passes, sale));
     let passCostHint = $derived(passCostBasisHint(visiblePasses, sale.Allocations, homeFixtures));
+    let investDescribedBy = $derived(
+        [
+            investHint ? `edit-invest-whole-hint-${layout}` : null,
+            passCostHint ? `edit-invest-hint-${layout}` : null,
+        ]
+            .filter((id) => id !== null)
+            .join(' ') || undefined,
+    );
 
     function stepAllocation(event: Event, delta: 1 | -1): void {
         const input = (event.currentTarget as HTMLElement).parentElement?.querySelector('input');
@@ -292,6 +303,9 @@
                         oninput={(event): void => {
                             draftListedPrice = event.currentTarget.value;
                         }}
+                        aria-describedby={listedPriceHint
+                            ? `edit-listed-price-hint-${layout}`
+                            : undefined}
                         class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
                     />
                     <span
@@ -300,6 +314,11 @@
                         >€</span
                     >
                 </div>
+                {#if listedPriceHint}
+                    <p id="edit-listed-price-hint-{layout}" class="text-xs text-negative">
+                        {listedPriceHint}
+                    </p>
+                {/if}
             </div>
 
             <div class="space-y-1">
@@ -318,7 +337,7 @@
                         oninput={(event): void => {
                             draftInvest = event.currentTarget.value;
                         }}
-                        aria-describedby={passCostHint ? `edit-invest-hint-${layout}` : undefined}
+                        aria-describedby={investDescribedBy}
                         class="w-full min-h-11 rounded border border-line-strong bg-surface text-ink pl-3 pr-8 font-mono"
                     />
                     <span
@@ -327,6 +346,11 @@
                         >€</span
                     >
                 </div>
+                {#if investHint}
+                    <p id="edit-invest-whole-hint-{layout}" class="text-xs text-negative">
+                        {investHint}
+                    </p>
+                {/if}
                 {#if passCostHint}
                     <p id="edit-invest-hint-{layout}" class="text-xs text-ink-faint">
                         {passCostHint}

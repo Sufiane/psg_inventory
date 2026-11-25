@@ -26,3 +26,15 @@ export function validateWholeEuro(field: WholeEuroField, value: number): string 
 
     return null;
 }
+
+export const WHOLE_EURO_HINT = 'Whole euros only.';
+
+export function wholeEuroHint(raw: string): string | null {
+    if (raw.trim() === '') {
+        return null;
+    }
+
+    const value = Number(raw);
+
+    return Number.isFinite(value) && !Number.isInteger(value) ? WHOLE_EURO_HINT : null;
+}
