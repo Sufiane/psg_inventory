@@ -180,7 +180,9 @@ describe('saveConfirmMessage', () => {
 
         describe('when the match is in the past', () => {
             it('returns the historical sale copy', () => {
-                expect(saveConfirmMessage(input({ draft: 'SOLD', isPastMatch: true }))).toBe(
+                expect(
+                    saveConfirmMessage(input({ draft: 'SOLD', isPastMatch: true })),
+                ).toBe(
                     `Mark the Lyon sale as sold? Match was on ${dateTime(MATCH_DATE)}; this writes a historical sale.`,
                 );
             });
@@ -198,9 +200,9 @@ describe('saveConfirmMessage', () => {
 
         describe('when the match is in the past', () => {
             it('returns the revert copy', () => {
-                expect(saveConfirmMessage(input({ current: 'SOLD', isPastMatch: true }))).toBe(
-                    revertCopy,
-                );
+                expect(
+                    saveConfirmMessage(input({ current: 'SOLD', isPastMatch: true })),
+                ).toBe(revertCopy);
             });
         });
     });
@@ -210,7 +212,11 @@ describe('deleteConfirmMessage', () => {
     describe('when the match is in the future', () => {
         it('returns the short copy', () => {
             expect(
-                deleteConfirmMessage({ opponent: 'Lyon', isPastMatch: false, matchDate: MATCH_DATE }),
+                deleteConfirmMessage({
+                    opponent: 'Lyon',
+                    isPastMatch: false,
+                    matchDate: MATCH_DATE,
+                }),
             ).toBe('Delete the Lyon sale?');
         });
     });
@@ -218,7 +224,11 @@ describe('deleteConfirmMessage', () => {
     describe('when the match is in the past', () => {
         it('returns the rewrite copy', () => {
             expect(
-                deleteConfirmMessage({ opponent: 'Lyon', isPastMatch: true, matchDate: MATCH_DATE }),
+                deleteConfirmMessage({
+                    opponent: 'Lyon',
+                    isPastMatch: true,
+                    matchDate: MATCH_DATE,
+                }),
             ).toBe(
                 `Delete the Lyon sale? The match was on ${dateTime(MATCH_DATE)}; this rewrites historical numbers.`,
             );

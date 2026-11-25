@@ -17,9 +17,7 @@ const DEMO_ACCOUNTS = {
 type DemoKey = keyof typeof DEMO_ACCOUNTS;
 
 export type DemoStatus =
-    | { kind: 'ok' }
-    | { kind: 'backend-down'; reason: string }
-    | { kind: 'db-down' };
+    { kind: 'ok' } | { kind: 'backend-down'; reason: string } | { kind: 'db-down' };
 
 export type Showcase = {
     netProfit: number;
@@ -100,13 +98,10 @@ async function fetchShowcase(
         // is currently in.  The seed script creates data for the season
         // that was "current" when it last ran; switching seasons would
         // blank the showcase if we pinned to current-season.
-        const accountingResponse = await event.fetch(
-            `${base}/accounting/all-time`,
-            {
-                headers: { Authorization: `Bearer ${accessToken}` },
-                signal: controller.signal,
-            },
-        );
+        const accountingResponse = await event.fetch(`${base}/accounting/all-time`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+        });
 
         if (!accountingResponse.ok) {
             return cacheShowcase(null, now);

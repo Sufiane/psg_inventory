@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { displayScore, matchOutcome, matchSummary, type MatchSummary } from './matches-view';
+import {
+    displayScore,
+    matchOutcome,
+    matchSummary,
+    type MatchSummary,
+} from './matches-view';
 import type { FormattedMatch, SaleListItem, SaleStatus } from './types';
 
 function sale(status: SaleStatus, overrides: Partial<SaleListItem> = {}): SaleListItem {

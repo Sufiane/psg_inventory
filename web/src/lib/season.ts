@@ -63,7 +63,8 @@ export function resolveSeasonYear(url: URL, now: Date = new Date()): SeasonYear 
 }
 
 export function seasonScope(pathname: string): SeasonScope {
-    const path = pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+    const path =
+        pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 
     if (SEASON_ONLY_PATHS.has(path)) {
         return 'season';

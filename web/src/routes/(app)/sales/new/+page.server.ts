@@ -47,7 +47,8 @@ export const actions: Actions = {
             return fail(400, { message: listedPriceError });
         }
 
-        const investError = invest === undefined ? null : validateWholeEuro('invest', invest);
+        const investError =
+            invest === undefined ? null : validateWholeEuro('invest', invest);
 
         if (investError !== null) {
             return fail(400, { message: investError });

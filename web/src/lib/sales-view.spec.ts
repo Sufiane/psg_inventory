@@ -30,7 +30,9 @@ function ids(sales: SaleListItem[]): string[] {
 describe('parseStatusParam', () => {
     describe('when the param is lower case gifted', () => {
         it('returns GIFTED', () => {
-            expect(parseStatusParam(new URL('http://x/sales?status=gifted'))).toBe('GIFTED');
+            expect(parseStatusParam(new URL('http://x/sales?status=gifted'))).toBe(
+                'GIFTED',
+            );
         });
     });
 
@@ -163,8 +165,12 @@ describe('statusTabs', () => {
         it('marks only the Sold tab active with a lower case status href', () => {
             const tabs = statusTabs(new URL('http://x/sales?status=sold'));
 
-            expect(tabs.filter((tab) => tab.active).map((tab) => tab.label)).toEqual(['Sold']);
-            expect(tabs.find((tab) => tab.label === 'Sold')?.href).toContain('status=sold');
+            expect(tabs.filter((tab) => tab.active).map((tab) => tab.label)).toEqual([
+                'Sold',
+            ]);
+            expect(tabs.find((tab) => tab.label === 'Sold')?.href).toContain(
+                'status=sold',
+            );
         });
     });
 

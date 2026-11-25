@@ -316,18 +316,17 @@ describe('filterSegments', () => {
 
     describe('when the venue is home', () => {
         it('keeps only home segments', () => {
-            expect(filterSegments(segments, 'home').map((segment) => segment.matchId)).toEqual([
-                'm1',
-                'm3',
-            ]);
+            expect(
+                filterSegments(segments, 'home').map((segment) => segment.matchId),
+            ).toEqual(['m1', 'm3']);
         });
     });
 
     describe('when the venue is away', () => {
         it('keeps only away segments', () => {
-            expect(filterSegments(segments, 'away').map((segment) => segment.matchId)).toEqual([
-                'm2',
-            ]);
+            expect(
+                filterSegments(segments, 'away').map((segment) => segment.matchId),
+            ).toEqual(['m2']);
         });
     });
 
@@ -387,9 +386,9 @@ describe('venueHref', () => {
 
     describe('when no params remain', () => {
         it('returns the bare path', () => {
-            expect(venueHref(new URL('http://x.test/accounting?venue=away'), 'both')).toBe(
-                '/accounting',
-            );
+            expect(
+                venueHref(new URL('http://x.test/accounting?venue=away'), 'both'),
+            ).toBe('/accounting');
         });
     });
 });
@@ -397,7 +396,9 @@ describe('venueHref', () => {
 describe('stripOpponent', () => {
     describe('when the match is away', () => {
         it('prefixes the opponent with @', () => {
-            expect(stripOpponent({ ...venueSegment('Rival FC', false) })).toBe('@ Rival FC');
+            expect(stripOpponent({ ...venueSegment('Rival FC', false) })).toBe(
+                '@ Rival FC',
+            );
         });
     });
 
