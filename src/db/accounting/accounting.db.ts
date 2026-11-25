@@ -34,6 +34,7 @@ export class AccountingDb implements IAccountingDbService {
             _avg: fields,
             _min: omit(fields, ['invest']),
             _max: omit(fields, ['invest']),
+            _count: { _all: true },
             where: {
                 userId,
                 status: { in: statuses },

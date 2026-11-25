@@ -22,6 +22,7 @@ type ExtremeSaleInfo = {
 };
 
 export type AggregatePayload = {
+    count: number;
     sum: {
         listedPrice: ListedPrice;
         profit: Profit;

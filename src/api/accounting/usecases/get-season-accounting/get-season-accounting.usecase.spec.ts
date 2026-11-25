@@ -91,6 +91,7 @@ describe('GetSeasonAccountingUsecase', () => {
             const aggregate = {
                 _min: { profit: 1 },
                 _max: { profit: 1 },
+                _count: { _all: 3 },
             } as AccountingAggregate;
             const userId = 'userId' as UserId;
             const lowestMatch = {
@@ -133,6 +134,7 @@ describe('GetSeasonAccountingUsecase', () => {
                     expect(formatAggregateMocked).toHaveBeenCalledWith({
                         sum: aggregate._sum,
                         avg: aggregate._avg,
+                        count: aggregate._count._all,
                         min: {
                             ...aggregate._min,
                             match: {
@@ -216,6 +218,7 @@ describe('GetSeasonAccountingUsecase', () => {
                 db.getAccounting.mockResolvedValue({
                     _min: {},
                     _max: {},
+                    _count: { _all: 0 },
                 } as AccountingAggregate);
                 formatAggregateMocked
                     .mockReturnValueOnce(realized)
@@ -258,6 +261,7 @@ describe('GetSeasonAccountingUsecase', () => {
                 db.getAccounting.mockResolvedValue({
                     _min: {},
                     _max: {},
+                    _count: { _all: 0 },
                 } as AccountingAggregate);
                 formatAggregateMocked
                     .mockReturnValueOnce({} as FormattedAggregate)

@@ -17,7 +17,8 @@ const USER_ID = 'user-1' as UserId;
 
 const period = {
     realized: {
-        totalSales: 12,
+        totalListedValue: 12,
+        salesCount: 4,
         totalProfit: 840,
         totalInvest: 300,
         totalNbTickets: 24,
@@ -29,7 +30,8 @@ const period = {
     unrealized: null,
     gifted: null,
     pending: {
-        totalSales: 2,
+        totalListedValue: 2,
+        salesCount: 1,
         totalProfit: 40,
         totalInvest: 0,
         totalNbTickets: 3,

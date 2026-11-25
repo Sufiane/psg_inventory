@@ -1,4 +1,4 @@
-import type { TicketCount } from '@psg/shared/counts';
+import type { SaleCount, TicketCount } from '@psg/shared/counts';
 import type {
     AvgProfit,
     AvgTicketPrice,
@@ -12,6 +12,7 @@ import { formatAggregate } from './format-aggregate.util';
 describe('formatAggregate', () => {
     it('return a formatted aggregate', () => {
         const payload: AggregatePayload = {
+            count: 4 as SaleCount,
             sum: {
                 listedPrice: 1 as ListedPrice,
                 profit: 1 as Profit,
@@ -47,7 +48,8 @@ describe('formatAggregate', () => {
         };
 
         const expected = {
-            totalSales: payload.sum.listedPrice,
+            totalListedValue: payload.sum.listedPrice,
+            salesCount: payload.count,
             totalProfit: payload.sum.profit,
             totalInvest: payload.sum.invest,
             totalNbTickets: payload.sum.nbTickets,

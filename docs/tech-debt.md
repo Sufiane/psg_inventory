@@ -42,3 +42,6 @@ ticket count. Found while checking the accounting API for PSG-88; PSG-88 does no
 Tracked as PSG-108 (backend field) and PSG-109 (web consumers). Deferred because the fix spans
 the API field and every consumer. Acting costs a backend rename or a real count field plus web
 consumer changes: two tickets.
+
+Status: backend done in PSG-108 (renamed to `totalListedValue`, added `salesCount`, accounting
+cache keys moved to `v2`). Web consumers remain in PSG-109; remove this entry when it merges.

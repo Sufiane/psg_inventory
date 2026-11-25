@@ -164,6 +164,7 @@ export class GetSeasonAccountingUsecase implements IGetSeasonAccountingUsecase {
         return formatAggregate({
             sum: aggregate._sum,
             avg: aggregate._avg,
+            count: aggregate._count._all,
             min: {
                 ...aggregate._min,
                 match: {

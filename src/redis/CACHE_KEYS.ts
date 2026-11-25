@@ -16,13 +16,13 @@ export default {
         start: Date,
         end?: Date,
     ): CacheKey<TimePeriodAccounting> =>
-        `accounting:user:id:${userId}:start:${start.toISOString()}:end:${end?.toISOString()}` as CacheKey<TimePeriodAccounting>,
+        `accounting:v2:user:id:${userId}:start:${start.toISOString()}:end:${end?.toISOString()}` as CacheKey<TimePeriodAccounting>,
     amortization: (userId: UserId, seasonStartYear: SeasonYear): CacheKey<Amortization> =>
-        `accounting:user:id:${userId}:amortization:${seasonStartYear}` as CacheKey<Amortization>,
+        `accounting:v2:user:id:${userId}:amortization:${seasonStartYear}` as CacheKey<Amortization>,
     askRateLimit: (userId: UserId, hourBucket: string): CacheKey<number> =>
         `ask:user:id:${userId}:hour:${hourBucket}` as CacheKey<number>,
     invalidateAccounting: (userId: UserId): CacheKeyPattern =>
-        `accounting:user:id:${userId}:*` as CacheKeyPattern,
+        `accounting:v2:user:id:${userId}:*` as CacheKeyPattern,
     // Cache keys are built from the query *window* start (a season boundary),
     // never from a match's own kickoff, so there is no correct narrower
     // pattern to offer. createMatch and loadMatches both flush the namespace.
