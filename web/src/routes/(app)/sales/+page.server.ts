@@ -43,11 +43,13 @@ export const load: PageServerLoad = async (event) => {
     let commissionPercent: number | null = null;
 
     if (editId && !isNew) {
-        const [saleResult, recipientsResult, commissionResult] = await Promise.allSettled([
-            api<SaleDetail>(event, `/sales/${editId}`),
-            api<RecipientListItem[]>(event, '/recipients'),
-            api<CommissionResponse>(event, '/sales/commission'),
-        ]);
+        const [saleResult, recipientsResult, commissionResult] = await Promise.allSettled(
+            [
+                api<SaleDetail>(event, `/sales/${editId}`),
+                api<RecipientListItem[]>(event, '/recipients'),
+                api<CommissionResponse>(event, '/sales/commission'),
+            ],
+        );
 
         if (saleResult.status === 'fulfilled') {
             editSale = saleResult.value;
@@ -183,7 +185,8 @@ export const actions: Actions = {
             return fail(400, { message: listedPriceError });
         }
 
-        const investError = invest === undefined ? null : validateWholeEuro('invest', invest);
+        const investError =
+            invest === undefined ? null : validateWholeEuro('invest', invest);
 
         if (investError !== null) {
             return fail(400, { message: investError });

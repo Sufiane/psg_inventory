@@ -39,10 +39,7 @@ export type SessionUser = {
 };
 
 export type Competition =
-    | 'CHAMPIONS_LEAGUE'
-    | 'CHAMPIONSHIP'
-    | 'FRENCH_CUP'
-    | 'LEAGUE_CUP';
+    'CHAMPIONS_LEAGUE' | 'CHAMPIONSHIP' | 'FRENCH_CUP' | 'LEAGUE_CUP';
 
 export const COMPETITIONS: Competition[] = [
     'CHAMPIONS_LEAGUE',

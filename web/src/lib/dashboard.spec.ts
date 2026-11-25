@@ -3,7 +3,10 @@ import { breakEvenCaption, netTone, recentSales } from './dashboard';
 import { money } from './format';
 import type { SaleListItem } from './types';
 
-function sale(id: string, overrides: Partial<Record<string, unknown>> = {}): SaleListItem {
+function sale(
+    id: string,
+    overrides: Partial<Record<string, unknown>> = {},
+): SaleListItem {
     return {
         id,
         matchId: 'match-1',
@@ -113,17 +116,17 @@ describe('breakEvenCaption', () => {
 
     describe('when remaining is positive', () => {
         it('states the amount still to recover', () => {
-            expect(
-                breakEvenCaption({ hasPass: true, remaining: 250, surplus: 0 }),
-            ).toBe(`${money(250)} still to recover`);
+            expect(breakEvenCaption({ hasPass: true, remaining: 250, surplus: 0 })).toBe(
+                `${money(250)} still to recover`,
+            );
         });
     });
 
     describe('when remaining is 0 and surplus is positive', () => {
         it('states the surplus', () => {
-            expect(
-                breakEvenCaption({ hasPass: true, remaining: 0, surplus: 80 }),
-            ).toBe(`Pass recovered, ${money(80)} surplus`);
+            expect(breakEvenCaption({ hasPass: true, remaining: 0, surplus: 80 })).toBe(
+                `Pass recovered, ${money(80)} surplus`,
+            );
         });
     });
 

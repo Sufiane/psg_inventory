@@ -50,7 +50,13 @@ describe('summarizeSales', () => {
     describe('when a PENDING and a SOLD sale are given', () => {
         const summary = summarizeSales([
             sale({ status: 'SOLD', profit: 100, invest: 30, nbTickets: 2 }),
-            sale({ id: 'sale-2', status: 'PENDING', profit: 50, invest: 20, nbTickets: 3 }),
+            sale({
+                id: 'sale-2',
+                status: 'PENDING',
+                profit: 50,
+                invest: 20,
+                nbTickets: 3,
+            }),
         ]);
 
         it('counts proceeds from SOLD rows only', () => {
@@ -176,12 +182,18 @@ describe('cancelledFrom', () => {
 
 describe('realizedNet', () => {
     function period(realized: Accounting | null): TimePeriodAccounting {
-        return { realized, totalSeasonInvestment: 100 } as unknown as TimePeriodAccounting;
+        return {
+            realized,
+            totalSeasonInvestment: 100,
+        } as unknown as TimePeriodAccounting;
     }
 
     describe('when realized sales exist', () => {
         it('subtracts invest and season investment from proceeds', () => {
-            const realized = { totalProfit: 500, totalInvest: 150 } as unknown as Accounting;
+            const realized = {
+                totalProfit: 500,
+                totalInvest: 150,
+            } as unknown as Accounting;
 
             expect(realizedNet(period(realized))).toBe(250);
         });
@@ -196,12 +208,18 @@ describe('realizedNet', () => {
 
 describe('realizedFigures', () => {
     function period(realized: Accounting | null): TimePeriodAccounting {
-        return { realized, totalSeasonInvestment: 100 } as unknown as TimePeriodAccounting;
+        return {
+            realized,
+            totalSeasonInvestment: 100,
+        } as unknown as TimePeriodAccounting;
     }
 
     describe('when realized sales exist', () => {
         it('returns proceeds, invest, season invest and net', () => {
-            const realized = { totalProfit: 500, totalInvest: 150 } as unknown as Accounting;
+            const realized = {
+                totalProfit: 500,
+                totalInvest: 150,
+            } as unknown as Accounting;
 
             expect(realizedFigures(period(realized))).toEqual({
                 proceeds: 500,
@@ -251,13 +269,17 @@ describe('computeSaleBreakdown', () => {
 
     describe('when invest exceeds proceeds', () => {
         it('returns a negative net', () => {
-            expect(computeSaleBreakdown({ listedPrice: 100, invest: 120 }, 12).net).toBe(-32);
+            expect(computeSaleBreakdown({ listedPrice: 100, invest: 120 }, 12).net).toBe(
+                -32,
+            );
         });
     });
 
     describe('when the price is zero', () => {
         it('returns a net of minus invest', () => {
-            expect(computeSaleBreakdown({ listedPrice: 0, invest: 40 }, 12).net).toBe(-40);
+            expect(computeSaleBreakdown({ listedPrice: 0, invest: 40 }, 12).net).toBe(
+                -40,
+            );
         });
     });
 

@@ -68,11 +68,14 @@ describe('parseSeasonParam', () => {
         });
     });
 
-    describe.each(['0', 'abc', '2025abc', '12345', '', null])('when year is %j', (value) => {
-        it('returns null', () => {
-            expect(parseSeasonParam(urlWithYear(value))).toBeNull();
-        });
-    });
+    describe.each(['0', 'abc', '2025abc', '12345', '', null])(
+        'when year is %j',
+        (value) => {
+            it('returns null', () => {
+                expect(parseSeasonParam(urlWithYear(value))).toBeNull();
+            });
+        },
+    );
 });
 
 describe('resolveSeason', () => {
@@ -155,20 +158,26 @@ describe('carrySeason', () => {
 
     describe('when the href already has a year', () => {
         it('replaces it without duplicating', () => {
-            expect(carrySeason('/sales?year=2024&status=SOLD', new URL('https://x/matches?year=2025'))).toBe(
-                '/sales?year=2025&status=SOLD',
-            );
+            expect(
+                carrySeason(
+                    '/sales?year=2024&status=SOLD',
+                    new URL('https://x/matches?year=2025'),
+                ),
+            ).toBe('/sales?year=2025&status=SOLD');
         });
     });
 
     describe('when the href has a hash', () => {
         it('keeps the hash after the query', () => {
-            expect(carrySeason('/sales#top', new URL('https://x/matches?year=2025'))).toBe(
-                '/sales?year=2025#top',
-            );
-            expect(carrySeason('/sales?status=SOLD#top', new URL('https://x/matches?year=2025'))).toBe(
-                '/sales?status=SOLD&year=2025#top',
-            );
+            expect(
+                carrySeason('/sales#top', new URL('https://x/matches?year=2025')),
+            ).toBe('/sales?year=2025#top');
+            expect(
+                carrySeason(
+                    '/sales?status=SOLD#top',
+                    new URL('https://x/matches?year=2025'),
+                ),
+            ).toBe('/sales?status=SOLD&year=2025#top');
         });
     });
 

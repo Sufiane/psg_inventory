@@ -128,7 +128,9 @@ describe('readPayload', () => {
             it('rejects the update', () => {
                 const result = readPayload(editNumbersForm({ listedPrice: '33.5' }));
 
-                expect(result.error).toBe('Listed price must be a whole number of euros.');
+                expect(result.error).toBe(
+                    'Listed price must be a whole number of euros.',
+                );
                 expect(result.payload).toBeUndefined();
             });
         });

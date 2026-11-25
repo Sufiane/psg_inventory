@@ -32,7 +32,9 @@ export function passCostBasisHint(
     }
 
     const allocated = passes.filter((pass) =>
-        allocations?.some((alloc) => alloc.seasonPassId === pass.id && alloc.nbTickets > 0),
+        allocations?.some(
+            (alloc) => alloc.seasonPassId === pass.id && alloc.nbTickets > 0,
+        ),
     );
     const counted = allocated.length > 0 ? allocated : passes;
     const total = counted.reduce((sum, pass) => sum + pass.price, 0);
