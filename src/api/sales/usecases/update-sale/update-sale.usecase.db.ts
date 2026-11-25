@@ -12,8 +12,6 @@ import {
 } from '../../../../db/sales/sales.db.interface';
 import { Sale } from '../../../../db/sales/type/sale.type';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import { sumTickets } from '../../shared/sum-tickets.util';
 
 export type SaleRowSnapshot = {
@@ -81,7 +79,6 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly redisService: RedisService,
         private readonly salesDbService: ISalesDbService,
         private readonly recipientsDbService: IRecipientsDbService,
     ) {}
@@ -205,11 +202,6 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
         return resolved.id;
     }
 
-    private async invalidateSaleCaches(userId: UserId, saleId: SaleId): Promise<void> {
-        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-        await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
-    }
-
     // A caught P2025 is returned as the not-found outcome, which a caller
     // cannot tell apart from a real miss — so log the original error's
     // code/message/meta to keep an unexpected P2025 source (e.g. the
@@ -240,8 +232,6 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
             await this.prisma.$transaction(async (tx) => {
                 await this.applySaleWrite(tx, payload.currentSale, payload);
             });
-
-            await this.invalidateSaleCaches(payload.userId, payload.saleId);
 
             return 'written';
         } catch (error) {
@@ -303,8 +293,6 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
                 return resolvedRecipientId;
             });
 
-            await this.invalidateSaleCaches(payload.userId, payload.saleId);
-
             return { recipientId };
         } catch (error) {
             if (
@@ -361,8 +349,6 @@ export class UpdateSaleUsecaseDb implements IUpdateSaleUsecaseDb {
 
                 return resolvedRecipientId;
             });
-
-            await this.invalidateSaleCaches(payload.userId, payload.saleId);
 
             return { recipientId };
         } catch (error) {

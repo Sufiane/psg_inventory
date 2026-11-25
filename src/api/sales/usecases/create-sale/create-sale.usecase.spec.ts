@@ -107,7 +107,7 @@ describe('CreateSaleUsecase', () => {
         it('invalidates caches without recipients', async () => {
             await usecase.execute(userId, basePayload);
 
-            expect(invalidator.afterCreate).toHaveBeenCalledWith(userId, {
+            expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, newSaleId, {
                 recipientChanged: false,
             });
         });
@@ -201,7 +201,7 @@ describe('CreateSaleUsecase', () => {
             it('invalidates caches including recipients', async () => {
                 await usecase.execute(userId, giftWithoutPrice);
 
-                expect(invalidator.afterCreate).toHaveBeenCalledWith(userId, {
+                expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, newSaleId, {
                     recipientChanged: true,
                 });
             });
@@ -336,7 +336,7 @@ describe('CreateSaleUsecase', () => {
         it('does not invalidate caches', async () => {
             await usecase.execute(userId, basePayload).catch(() => undefined);
 
-            expect(invalidator.afterCreate).not.toHaveBeenCalled();
+            expect(invalidator.afterWrite).not.toHaveBeenCalled();
         });
     });
 });

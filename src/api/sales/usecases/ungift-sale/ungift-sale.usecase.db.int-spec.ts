@@ -1,11 +1,9 @@
-import { mockDeep } from 'vitest-mock-extended';
 import { SaleStatus } from '@prisma/client';
 
 import { UngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 import type { ListedPrice } from '@psg/shared/money';
 import { computeProfit } from '../../shared/profit.util';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
 import {
     createRealDbSale,
     deleteRealDbSale,
@@ -27,7 +25,7 @@ describe('UngiftSaleUsecaseDb against a real database', () => {
     });
 
     beforeEach(() => {
-        usecaseDb = new UngiftSaleUsecaseDb(prisma, mockDeep<RedisService>());
+        usecaseDb = new UngiftSaleUsecaseDb(prisma);
     });
 
     afterEach(async () => {

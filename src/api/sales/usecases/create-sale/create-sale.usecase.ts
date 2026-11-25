@@ -55,7 +55,7 @@ export class CreateSaleUsecase implements ICreateSaleUsecase {
             recipient,
         });
 
-        await this.salesCacheInvalidator.afterCreate(userId, {
+        await this.salesCacheInvalidator.afterWrite(userId, created.id, {
             recipientChanged: status === 'GIFTED',
         });
 
