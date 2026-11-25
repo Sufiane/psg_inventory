@@ -109,9 +109,6 @@ async function fetchShowcase(
 
         const accounting = (await accountingResponse.json()) as TimePeriodAccounting;
         const figures = realizedFigures(accounting);
-        // realized.totalSales is misnamed in the backend: it's actually
-        // SUM(listedPrice) on sold rows, not a row count. The honest "tickets
-        // sold" signal lives in totalNbTickets (sum of nbTickets per sale).
         const soldCount = accounting.realized?.totalNbTickets ?? 0;
         const seasonStartYear = accounting.seasonInvestments[0]?.seasonStartYear ?? null;
 

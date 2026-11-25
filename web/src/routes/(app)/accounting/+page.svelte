@@ -69,6 +69,7 @@
     <NetProfitSkeleton />
 {:then accounting}
     {@const figures = realizedFigures(accounting)}
+    {@const pendingSales = accounting.pending?.salesCount ?? 0}
     <section aria-labelledby="figures-heading" class="mb-6">
         <h2 id="figures-heading" class="text-sm font-medium text-ink-muted">Season figures</h2>
 
@@ -106,7 +107,7 @@
                     {signedMoney(accounting.pending?.totalProfit ?? 0)}
                 </p>
                 <p class="mt-1 text-xs text-ink-muted" data-numeric>
-                    {accounting.pending?.totalSales ?? 0} tickets
+                    {pendingSales} {pendingSales === 1 ? 'sale' : 'sales'}
                 </p>
             </div>
 
