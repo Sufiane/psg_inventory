@@ -131,6 +131,9 @@ create/SOLD/GIFTED/delete, and season-pass create/update/delete. `e2e/` is its o
 package (own `package.json`, own lockfile) — install its dependencies separately from
 the root.
 
+API checks go in `e2e/tests/*.api.e2e-spec.ts`, use the `request` fixture and
+`loginAsE2eUser`.
+
 Requires the local stack, a built+running backend, and a built+previewed frontend, all
 talking to each other on fixed ports. **`FRONTEND_ORIGIN` must be set to the frontend
 preview's origin (`:4173`), not left at its `:5173` dev-server default** — the backend's
