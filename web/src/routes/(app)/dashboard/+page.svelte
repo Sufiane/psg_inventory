@@ -8,12 +8,15 @@
     import Button from '$lib/ui/Button.svelte';
     import MathBlock from '$lib/ui/MathBlock.svelte';
     import NetProfitSkeleton from '$lib/ui/NetProfitSkeleton.svelte';
+    import PerTicketFigures from '$lib/ui/PerTicketFigures.svelte';
+    import ProceedsChart from '$lib/ui/ProceedsChart.svelte';
     import RecentSales from '$lib/ui/RecentSales.svelte';
     import Skeleton from '$lib/ui/Skeleton.svelte';
     import { money, signedMoney } from '$lib/format';
     import { breakEvenCaption, netTone, recentSales } from '$lib/dashboard';
     import { cancelledFrom, realizedFigures } from '$lib/sale-math';
     import { carrySeason, seasonLabel } from '$lib/season';
+    import { perTicketFigures, proceedsSeries } from '$lib/season-stats';
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -174,6 +177,24 @@
     </div>
 {/await}
 
+{#await Promise.all([data.accounting, data.sales])}
+    <div class="grid gap-4 sm:grid-cols-3 mb-6">
+        {#each Array(3) as _, i (i)}
+            <div class="bg-surface rounded-lg border border-line p-4 space-y-2">
+                <Skeleton width="40%" height="0.85rem" />
+                <Skeleton width="60%" height="1.5rem" />
+                <Skeleton width="50%" height="0.75rem" />
+            </div>
+        {/each}
+    </div>
+{:then [accounting, sales]}
+    <div in:fade={{ duration: 120, easing: cubicOut }}>
+        <PerTicketFigures figures={perTicketFigures(sales, accounting.totalSeasonInvestment)} />
+    </div>
+{:catch err}
+    <div class="mb-6">{@render failure('per-ticket figures', err)}</div>
+{/await}
+
 <section
     class="bg-surface rounded-lg border border-line p-5 mb-6"
     aria-labelledby="dashboard-breakeven-heading"
@@ -198,6 +219,20 @@
         </div>
     {:catch err}
         {@render failure('season pass recovery', err)}
+    {/await}
+
+    {#await Promise.all([data.amortization, data.sales])}
+        <div class="mt-4"><Skeleton height="15rem" width="100%" rounded="rounded-lg" /></div>
+    {:then [amortization, sales]}
+        <div in:fade={{ duration: 120, easing: cubicOut }} class="mt-4">
+            <ProceedsChart
+                series={proceedsSeries(sales, amortization.passPrice)}
+                passPrice={amortization.passPrice}
+                hasPass={amortization.hasPass}
+            />
+        </div>
+    {:catch err}
+        <div class="mt-4">{@render failure('proceeds chart', err)}</div>
     {/await}
 </section>
 
