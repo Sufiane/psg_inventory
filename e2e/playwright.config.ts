@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { E2E_AUTH_FILE } from './paths';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:4173';
+const apiURL = process.env.BACKEND_URL ?? 'http://localhost:7777';
 
 export default defineConfig({
     testDir: './tests',
@@ -26,6 +27,11 @@ export default defineConfig({
             name: 'authenticated',
             testMatch: /(sale|season-pass|accounting|matches|dashboard)\.e2e-spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: E2E_AUTH_FILE },
+        },
+        {
+            name: 'api',
+            testMatch: /\.api\.e2e-spec\.ts$/,
+            use: { baseURL: apiURL },
         },
     ],
 });
