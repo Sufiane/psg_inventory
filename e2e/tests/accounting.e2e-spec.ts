@@ -14,7 +14,7 @@ test.describe('season accounting', () => {
         const strip = page.getByRole('list', { name: 'Matchday strip' });
 
         await expect(
-            strip.getByRole('listitem', { name: new RegExp(E2E_OPPONENT_NAME) }),
+            strip.getByRole('link', { name: new RegExp(E2E_OPPONENT_NAME) }),
         ).toHaveCount(1);
 
         const scroller = page.getByRole('region', { name: 'Matchday strip scroller' });
@@ -25,6 +25,24 @@ test.describe('season accounting', () => {
         await expect(page.getByText('Net before season pass')).toBeVisible();
     });
 
+    test.describe('when clicking a matchday card', () => {
+        test('navigates to the match page', async ({ page }) => {
+            await page.goto('/accounting');
+            await page
+                .getByRole('list', { name: 'Matchday strip' })
+                .getByRole('link', { name: new RegExp(E2E_OPPONENT_NAME) })
+                .click();
+
+            await expect(page).toHaveURL(/\/matches\/[^/]+$/);
+            await expect(
+                page.getByRole('heading', {
+                    level: 1,
+                    name: new RegExp(E2E_OPPONENT_NAME),
+                }),
+            ).toBeVisible();
+        });
+    });
+
     test.describe('venue filter', () => {
         test.describe('when venue is home', () => {
             test('lists the seeded home match', async ({ page }) => {
@@ -33,7 +51,7 @@ test.describe('season accounting', () => {
                 const strip = page.getByRole('list', { name: 'Matchday strip' });
 
                 await expect(
-                    strip.getByRole('listitem', { name: new RegExp(E2E_OPPONENT_NAME) }),
+                    strip.getByRole('link', { name: new RegExp(E2E_OPPONENT_NAME) }),
                 ).toHaveCount(1);
             });
         });
@@ -42,8 +60,12 @@ test.describe('season accounting', () => {
             test('shows the empty message and no seeded match', async ({ page }) => {
                 await page.goto('/accounting?venue=away');
 
-                await expect(page.getByText('No away matches this season.')).toBeVisible();
-                await expect(page.getByRole('list', { name: 'Matchday strip' })).toHaveCount(0);
+                await expect(
+                    page.getByText('No away matches this season.'),
+                ).toBeVisible();
+                await expect(
+                    page.getByRole('list', { name: 'Matchday strip' }),
+                ).toHaveCount(0);
             });
         });
 
