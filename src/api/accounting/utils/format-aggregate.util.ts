@@ -1,10 +1,12 @@
 import type { SaleCount } from '@psg/shared/counts';
+import type { TotalListedValue } from '@psg/shared/money';
 import { AggregatePayload } from '../types/aggregate-payload.type';
 import { FormattedAggregate } from '../types/formatted-aggregate.type';
 
 export function formatAggregate(payload: AggregatePayload): FormattedAggregate {
     return {
-        totalSales: (payload.sum.listedPrice ?? 0) as unknown as SaleCount,
+        totalListedValue: (payload.sum.listedPrice ?? 0) as unknown as TotalListedValue,
+        salesCount: payload.count as SaleCount,
         totalProfit: payload.sum.profit ?? 0,
         totalInvest: payload.sum.invest ?? 0,
         totalNbTickets: payload.sum.nbTickets ?? 0,

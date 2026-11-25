@@ -8,6 +8,7 @@ import type {
 } from '@psg/shared/money';
 
 export type AccountingAggregate = {
+    _count: { _all: number };
     _sum: {
         profit: Profit;
         nbTickets: TicketCount;

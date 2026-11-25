@@ -1,4 +1,4 @@
-import type { TotalInvestment, TotalListedValue, Profit } from '@psg/shared/money';
+import type { TotalInvestment, Profit } from '@psg/shared/money';
 import type { SeasonYear } from '@psg/shared/time';
 
 import type { Amortization } from '../../accounting/types/amortization.type';
@@ -47,15 +47,7 @@ function toAccounting(raw: TimePeriodAccounting['realized']): AskAccounting | nu
     }
 
     return {
-        // raw.totalSales is a pre-existing misnomer upstream (it's actually
-        // SUM(listedPrice), not a count — see format-aggregate.util.ts) and
-        // is even branded as SaleCount there, which is itself wrong for the
-        // same reason. Renamed and re-branded as it crosses into AskContext
-        // so the model isn't handed a field that reads like a count. The
-        // double cast is necessary (not laziness): SaleCount and
-        // TotalListedValue are both `number`-based brands with no direct
-        // relationship, so TS won't allow a single-step reinterpretation.
-        totalListedValue: raw.totalSales as unknown as TotalListedValue,
+        totalListedValue: raw.totalListedValue,
         totalProfit: raw.totalProfit,
         totalInvest: raw.totalInvest,
         totalNbTickets: raw.totalNbTickets,
@@ -89,8 +81,7 @@ function toPeriod(period: TimePeriodAccounting): AskPeriod {
     const realized = toAccounting(period.realized);
     // Upstream is now SeasonPassPrice (PSG-40); AskPeriod's semantic brand
     // for this figure is TotalInvestment. The two brands have no direct
-    // relationship, so a double step is required — same reasoning as
-    // totalSales → TotalListedValue in toAccounting above.
+    // relationship, so a double step is required.
     const totalSeasonInvestment =
         period.totalSeasonInvestment as unknown as TotalInvestment;
 

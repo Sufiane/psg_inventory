@@ -5,10 +5,12 @@ import type {
     Invest,
     ListedPrice,
     Profit,
+    TotalListedValue,
 } from '@psg/shared/money';
 
 export type FormattedAggregate = {
-    totalSales: SaleCount;
+    totalListedValue: TotalListedValue;
+    salesCount: SaleCount;
     totalProfit: Profit;
     totalInvest: Invest;
     totalNbTickets: TicketCount;

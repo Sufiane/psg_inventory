@@ -17,7 +17,8 @@ const emptyPeriod = {
 
 const populatedPeriod = {
     realized: {
-        totalSales: 12,
+        totalListedValue: 12,
+        salesCount: 4,
         totalProfit: 840,
         totalInvest: 300,
         totalNbTickets: 24,

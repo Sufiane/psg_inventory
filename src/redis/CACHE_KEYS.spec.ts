@@ -1,8 +1,31 @@
 import type { MatchId, SaleId, UserId } from '@psg/shared/ids';
+import type { SeasonYear } from '@psg/shared/time';
 
 import CACHE_KEYS from './CACHE_KEYS';
 
 describe('CACHE_KEYS', () => {
+    describe('accounting keys', () => {
+        const userId = 'user-id' as UserId;
+
+        it('versions the period key', () => {
+            expect(
+                CACHE_KEYS.accounting(userId, new Date('2026-07-01T00:00:00.000Z')),
+            ).toMatch(/^accounting:v2:user:id:user-id:start:/);
+        });
+
+        it('versions the amortization key', () => {
+            expect(CACHE_KEYS.amortization(userId, 2026 as SeasonYear)).toBe(
+                'accounting:v2:user:id:user-id:amortization:2026',
+            );
+        });
+
+        it('versions the invalidation pattern', () => {
+            expect(CACHE_KEYS.invalidateAccounting(userId)).toBe(
+                'accounting:v2:user:id:user-id:*',
+            );
+        });
+    });
+
     describe('invalidateMatches', () => {
         it('returns the whole matches namespace', () => {
             expect(CACHE_KEYS.invalidateMatches()).toBe('matches:*');
