@@ -98,6 +98,9 @@ jobs:
 
       - run: npm run local:db:migrate
 
+      - name: Real-database integration specs
+        run: npm run test:integration
+
       - run: npm run local:db:seed:e2e
 
       - name: Build backend

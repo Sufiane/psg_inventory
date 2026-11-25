@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "sale_histories" ALTER COLUMN "profit" SET DATA TYPE DOUBLE PRECISION;

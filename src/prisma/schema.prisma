@@ -193,7 +193,7 @@ model SaleHistories {
   id          String     @id @default(uuid())
   saleId      String     @map("sale_id")
   listedPrice Int        @map("listed_price")
-  profit      Int
+  profit      Float
   status      SaleStatus
   createdAt   DateTime   @default(now()) @map("created_at")
 
