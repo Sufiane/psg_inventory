@@ -44,6 +44,54 @@ jobs:
       - name: Verify the build emitted a runnable entrypoint
         run: test -f dist/main.js
 
+  schema-drift:
+    name: Schema drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: psg_inventory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psg_inventory
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psg_shadow
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.21.0
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Apply migrations to the CI database
+        run: npx prisma migrate deploy
+
+      - name: Create the shadow database
+        run: psql "postgresql://postgres:postgres@localhost:5432/postgres" -c 'CREATE DATABASE psg_shadow'
+
+      - name: Schema matches the migrated database
+        run: npx prisma migrate diff --exit-code --from-url "$DATABASE_URL" --to-schema-datamodel src/prisma/schema.prisma
+
+      - name: Schema matches the migration history
+        run: >-
+          npx prisma migrate diff --exit-code
+          --from-migrations src/prisma/migrations
+          --shadow-database-url "$SHADOW_DATABASE_URL"
+          --to-schema-datamodel src/prisma/schema.prisma
+
   e2e:
     name: E2E
     runs-on: ubuntu-latest
