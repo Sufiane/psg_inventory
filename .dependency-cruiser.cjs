@@ -7,7 +7,7 @@ module.exports = {
                 'Prisma may only be imported by the db layer: anything under src/db/, or any *.db.ts file wherever it lives (so a colocated *.usecase.db.ts under src/api/ stays legal). Api services and controllers go through a db token.',
             severity: 'error',
             from: {
-                pathNot: ['^src/db/', '\\.db\\.ts$', '\\.spec\\.ts$'],
+                pathNot: ['^src/db/', '\\.db\\.ts$', '\\.(int-)?spec\\.ts$', '/test-support/'],
             },
             to: {
                 path: ['^node_modules/(@prisma/client|\\.prisma/client)'],
@@ -27,7 +27,7 @@ module.exports = {
             comment:
                 "PrismaService is the db layer's own handle on the ORM. Api services, controllers and their modules reach the database through a db token, never by importing PrismaService. PrismaModule is listed too: importing it hands PrismaService to every provider in the importing module, which is the same leak by another route. Usecase modules are exempt because they wire PrismaModule into usecase-db providers that own their own transactions.",
             severity: 'error',
-            from: { pathNot: ['^src/db/', '\\.db\\.ts$', '\\.module\\.ts$', '\\.spec\\.ts$'] },
+            from: { pathNot: ['^src/db/', '\\.db\\.ts$', '\\.module\\.ts$', '\\.(int-)?spec\\.ts$', '/test-support/'] },
             to: {
                 path: ['^src/db/prisma\\.service\\.ts$', '^src/db/prisma\\.module\\.ts$'],
             },
@@ -55,7 +55,8 @@ module.exports = {
                 orphan: true,
                 pathNot: [
                     '\\.d\\.ts$',
-                    '\\.spec\\.ts$',
+                    '\\.(int-)?spec\\.ts$',
+                    '/test-support/',
                     '(^|/)tsconfig\\.json$',
                     '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$',
                     '^src/main\\.ts$',
@@ -68,7 +69,7 @@ module.exports = {
             comment:
                 'db files return raw query results or null; deciding to throw a DomainException belongs to the service/usecase (CLAUDE.md hexagonal split).',
             severity: 'error',
-            from: { path: ['^src/db/', '\\.db\\.ts$'], pathNot: ['\\.spec\\.ts$'] },
+            from: { path: ['^src/db/', '\\.db\\.ts$'], pathNot: ['\\.(int-)?spec\\.ts$', '/test-support/'] },
             to: { path: ['^src/common/exceptions/(domain\\.exception|error-codes\\.enum)\\.ts$'] },
         },
     ],
