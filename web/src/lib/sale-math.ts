@@ -109,7 +109,7 @@ export function cancelledFrom(
     gifted: Accounting | null,
 ): { count: number; amount: number } {
     return {
-        count: (unrealized?.totalSales ?? 0) - (gifted?.totalSales ?? 0),
+        count: (unrealized?.salesCount ?? 0) - (gifted?.salesCount ?? 0),
         amount: (unrealized?.totalProfit ?? 0) - (gifted?.totalProfit ?? 0),
     };
 }

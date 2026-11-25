@@ -61,8 +61,8 @@
     {@const figures = realizedFigures(accounting)}
     {@const hasPass = accounting.seasonInvestments.length > 0}
     {@const cancelled = cancelledFrom(accounting.unrealized, accounting.gifted)}
-    {@const giftedCount = accounting.gifted?.totalSales ?? 0}
-    {@const pendingCount = accounting.pending?.totalSales ?? 0}
+    {@const giftedCount = accounting.gifted?.salesCount ?? 0}
+    {@const pendingCount = accounting.pending?.salesCount ?? 0}
 
     <section
         in:fade={{ duration: 120, easing: cubicOut }}

@@ -28,8 +28,8 @@ function sale(overrides: Partial<Record<string, unknown>> = {}): SaleListItem {
     } as unknown as SaleListItem;
 }
 
-function accounting(totalSales: number, totalProfit: number): Accounting {
-    return { totalSales, totalProfit } as unknown as Accounting;
+function accounting(salesCount: number, totalProfit: number): Accounting {
+    return { salesCount, totalProfit } as unknown as Accounting;
 }
 
 describe('saleNet', () => {

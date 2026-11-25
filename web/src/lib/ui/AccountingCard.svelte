@@ -83,7 +83,7 @@
                 {signedMoney(data.totalProfit)}
             </p>
             <p class="mt-1 text-xs text-ink-muted">
-                <span class="font-mono">{money(data.totalSales)}</span> listed value
+                <span class="font-mono">{money(data.totalListedValue)}</span> listed value
             </p>
         {/if}
 
@@ -102,7 +102,7 @@
         {:else}
             <dl class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
                 <dt class="text-ink-muted">Total sales</dt>
-                <dd class="text-right font-mono text-ink">{money(data.totalSales)}</dd>
+                <dd class="text-right font-mono text-ink">{money(data.totalListedValue)}</dd>
 
                 <dt class="text-ink-muted">Tickets</dt>
                 <dd class="text-right font-mono text-ink" data-numeric>

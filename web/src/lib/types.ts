@@ -170,7 +170,8 @@ type MaxMinData = {
 };
 
 export type Accounting = {
-    totalSales: SaleCount;
+    totalListedValue: TotalListedValue;
+    salesCount: SaleCount;
     totalProfit: Profit;
     totalInvest: Invest;
     totalNbTickets: TicketCount;
