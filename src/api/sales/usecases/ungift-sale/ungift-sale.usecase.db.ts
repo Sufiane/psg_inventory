@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SaleStatus } from '@prisma/client';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice, Profit } from '@psg/shared/money';
 import { PrismaService } from '../../../../db/prisma.service';
 import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
@@ -17,12 +18,15 @@ export type SaleRowSnapshot = {
 // imports (spec D2; keeps the D4 dependency-cruiser rule valid).
 export type SaleWriteOutcome = 'written' | 'not_found';
 
+export type UngiftPricing = { listedPrice: ListedPrice; profit: Profit };
+
 export abstract class IUngiftSaleUsecaseDb {
     abstract loadSale(userId: UserId, saleId: SaleId): Promise<SaleRowSnapshot | null>;
     abstract ungiftSale(
         userId: UserId,
         saleId: SaleId,
         currentSale: SaleRowSnapshot,
+        pricing?: UngiftPricing,
     ): Promise<SaleWriteOutcome>;
 }
 
@@ -46,6 +50,7 @@ export class UngiftSaleUsecaseDb implements IUngiftSaleUsecaseDb {
         userId: UserId,
         saleId: SaleId,
         currentSale: SaleRowSnapshot,
+        pricing?: UngiftPricing,
     ): Promise<SaleWriteOutcome> {
         try {
             await this.prisma.$transaction(async (tx) => {
@@ -56,7 +61,7 @@ export class UngiftSaleUsecaseDb implements IUngiftSaleUsecaseDb {
                 // Reset status to PENDING. Timestamps only change for
                 // SOLD/CANCELLED transitions — GIFTED → PENDING touches neither.
                 await tx.sales.update({
-                    data: { status: SaleStatus.PENDING },
+                    data: { status: SaleStatus.PENDING, ...pricing },
                     where: { id: saleId, userId },
                 });
 

@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, SaleStatus } from '@prisma/client';
 import { shake } from 'radash';
 
-import type { TicketCount } from '@psg/shared/counts';
 import type { RecipientId, SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
 import { IRecipientsDbService } from '../../../../db/recipients/recipients.db.interface';
@@ -15,13 +14,7 @@ import { Sale } from '../../../../db/sales/type/sale.type';
 import { PrismaService } from '../../../../db/prisma.service';
 import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
-
-function sumTickets(allocations: SaleAllocationInput[]): TicketCount {
-    return allocations.reduce(
-        (total, allocation) => total + allocation.nbTickets,
-        0,
-    ) as TicketCount;
-}
+import { sumTickets } from '../../shared/sum-tickets.util';
 
 export type SaleRowSnapshot = {
     id: string;

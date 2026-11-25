@@ -6,6 +6,8 @@ import { UngiftSaleUsecase } from './ungift-sale.usecase';
 import { IUngiftSaleUsecaseDb } from './ungift-sale.usecase.db';
 import { ErrorCode } from '../../../../common/exceptions/error-codes.enum';
 import type { SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice } from '@psg/shared/money';
+import { computeProfit } from '../../shared/profit.util';
 import type { Sale } from '../../../../db/sales/type/sale.type';
 
 describe('UngiftSaleUsecase', () => {
@@ -15,13 +17,13 @@ describe('UngiftSaleUsecase', () => {
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
 
-    function saleFixture(status: SaleStatus): Sale {
+    function saleFixture(status: SaleStatus, listedPrice = 100): Sale {
         return {
             id: saleId,
             userId,
             matchId: 'match-uuid',
-            listedPrice: 100,
-            profit: 90,
+            listedPrice,
+            profit: computeProfit(listedPrice as ListedPrice),
             invest: 50,
             nbTickets: 1,
             status,
@@ -63,7 +65,12 @@ describe('UngiftSaleUsecase', () => {
 
             await usecase.execute(userId, saleId);
 
-            expect(usecaseDb.ungiftSale).toHaveBeenCalledWith(userId, saleId, loaded);
+            expect(usecaseDb.ungiftSale).toHaveBeenCalledWith(
+                userId,
+                saleId,
+                loaded,
+                undefined,
+            );
         });
     });
 
@@ -95,6 +102,54 @@ describe('UngiftSaleUsecase', () => {
 
             await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
                 code: ErrorCode.SALE_NOT_FOUND,
+            });
+        });
+    });
+
+    describe('when the stored price is 0', () => {
+        beforeEach(() => {
+            usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED, 0));
+            usecaseDb.ungiftSale.mockResolvedValueOnce('written');
+        });
+
+        describe('and no price is given', () => {
+            it('rejects with SALE_LISTED_PRICE_REQUIRED', async () => {
+                await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_LISTED_PRICE_REQUIRED,
+                });
+                expect(usecaseDb.ungiftSale).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('and a price is given', () => {
+            it('writes the price and its profit', async () => {
+                const price = 120 as ListedPrice;
+
+                await usecase.execute(userId, saleId, price);
+
+                expect(usecaseDb.ungiftSale).toHaveBeenCalledWith(
+                    userId,
+                    saleId,
+                    expect.objectContaining({ listedPrice: 0 }),
+                    { listedPrice: price, profit: computeProfit(price) },
+                );
+            });
+        });
+    });
+
+    describe('when the stored price is above 0', () => {
+        beforeEach(() => {
+            usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED, 90));
+        });
+
+        describe('and a price is given', () => {
+            it('rejects with SALE_LISTED_PRICE_NOT_APPLICABLE', async () => {
+                await expect(
+                    usecase.execute(userId, saleId, 120 as ListedPrice),
+                ).rejects.toMatchObject({
+                    code: ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE,
+                });
+                expect(usecaseDb.ungiftSale).not.toHaveBeenCalled();
             });
         });
     });

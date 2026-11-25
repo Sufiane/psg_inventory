@@ -9,6 +9,7 @@ import { PrismaService } from '../../../../db/prisma.service';
 import { RedisService } from '../../../../redis/redis.service';
 import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 import type { SaleId, UserId } from '@psg/shared/ids';
+import type { ListedPrice, Profit } from '@psg/shared/money';
 
 describe('UngiftSaleUsecaseDb', () => {
     let usecaseDb: UngiftSaleUsecaseDb;
@@ -125,6 +126,22 @@ describe('UngiftSaleUsecaseDb', () => {
                 },
             });
             expect(result).toBe('written');
+        });
+
+        describe('when pricing is given', () => {
+            it('writes the price and profit with the status reset', async () => {
+                const tx = mockTransaction();
+
+                await usecaseDb.ungiftSale(userId, saleId, currentSale, {
+                    listedPrice: 120 as ListedPrice,
+                    profit: 108 as Profit,
+                });
+
+                expect(tx.sales.update).toHaveBeenCalledWith({
+                    data: { status: SaleStatus.PENDING, listedPrice: 120, profit: 108 },
+                    where: { id: saleId, userId },
+                });
+            });
         });
 
         it('invalidates all four cache namespaces', async () => {
