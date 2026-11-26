@@ -25,7 +25,8 @@ export default defineConfig({
         },
         {
             name: 'authenticated',
-            testMatch: /(sale|season-pass|accounting|matches|dashboard)\.e2e-spec\.ts/,
+            testMatch:
+                /(sale|sales-import|season-pass|accounting|matches|dashboard)\.e2e-spec\.ts/,
             use: { ...devices['Desktop Chrome'], storageState: E2E_AUTH_FILE },
         },
         {
