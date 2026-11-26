@@ -3,27 +3,18 @@ import { SaleStatus } from '@prisma/client';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
 import { PrismaService } from '../../../../db/prisma.service';
-import { RedisService } from '../../../../redis/redis.service';
-import CACHE_KEYS from '../../../../redis/CACHE_KEYS';
 
 export abstract class IDeleteSaleUsecaseDb {
     abstract loadSale(
         userId: UserId,
         saleId: SaleId,
     ): Promise<{ id: string; status: SaleStatus } | null>;
-    abstract deleteSale(
-        userId: UserId,
-        saleId: SaleId,
-        saleStatus: SaleStatus,
-    ): Promise<void>;
+    abstract deleteSale(userId: UserId, saleId: SaleId): Promise<void>;
 }
 
 @Injectable()
 export class DeleteSaleUsecaseDb implements IDeleteSaleUsecaseDb {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly redisService: RedisService,
-    ) {}
+    constructor(private readonly prisma: PrismaService) {}
 
     async loadSale(
         userId: UserId,
@@ -35,30 +26,12 @@ export class DeleteSaleUsecaseDb implements IDeleteSaleUsecaseDb {
         });
     }
 
-    async deleteSale(
-        userId: UserId,
-        saleId: SaleId,
-        saleStatus: SaleStatus,
-    ): Promise<void> {
+    async deleteSale(userId: UserId, saleId: SaleId): Promise<void> {
         await this.prisma.$transaction(async (tx) => {
             await tx.gifts.deleteMany({ where: { saleId } });
             await tx.saleHistories.deleteMany({ where: { saleId } });
             await tx.salePassAllocations.deleteMany({ where: { saleId } });
             await tx.sales.delete({ where: { id: saleId, userId } });
         });
-
-        // Invalidate all sale-level caches.
-        await this.redisService.invalidatePattern(CACHE_KEYS.invalidateSales(userId));
-        await this.redisService.invalidate(CACHE_KEYS.sale(userId, saleId));
-        // Accounting cache always.
-        await this.redisService.invalidatePattern(
-            CACHE_KEYS.invalidateAccounting(userId),
-        );
-        // Recipients cache only when a gift was destroyed (giftCount moves).
-        if (saleStatus === SaleStatus.GIFTED) {
-            await this.redisService.invalidatePattern(
-                CACHE_KEYS.invalidateRecipients(userId),
-            );
-        }
     }
 }
