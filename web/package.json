@@ -17,7 +17,7 @@
   "devDependencies": {
     "@eslint/js": "9.17.0",
     "@sveltejs/adapter-cloudflare": "7.2.10",
-    "@sveltejs/kit": "2.70.4",
+    "@sveltejs/kit": "3.4.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tailwindcss/vite": "4.3.5",
     "@types/node": "26.6.6",
