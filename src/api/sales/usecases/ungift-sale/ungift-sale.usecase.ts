@@ -28,7 +28,7 @@ export class UngiftSaleUsecase implements IUngiftSaleUsecase {
         const existing = await this.usecaseDb.loadSale(userId, saleId);
 
         if (!existing) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, saleId);
         }
 
         if (existing.status !== 'GIFTED') {
@@ -50,7 +50,7 @@ export class UngiftSaleUsecase implements IUngiftSaleUsecase {
         );
 
         if (outcome === 'not_found') {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, saleId);
         }
 
         await this.salesCacheInvalidator.afterWrite(userId, saleId, {
@@ -76,5 +76,11 @@ export class UngiftSaleUsecase implements IUngiftSaleUsecase {
 
             throw new DomainException(ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE);
         }
+    }
+
+    private throwNotFound(userId: UserId, saleId: SaleId): never {
+        this.logger.warn(`Sale ${saleId} not found for user ${userId}`);
+
+        throw new DomainException(ErrorCode.SALE_NOT_FOUND);
     }
 }

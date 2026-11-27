@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
 import type { Invest, ListedPrice, Profit } from '@psg/shared/money';
@@ -39,6 +39,8 @@ export abstract class IUpdateSaleUsecase {
 
 @Injectable()
 export class UpdateSaleUsecase implements IUpdateSaleUsecase {
+    private readonly logger = new Logger(UpdateSaleUsecase.name);
+
     constructor(
         private readonly db: IUpdateSaleUsecaseDb,
         private readonly giftRecipientResolver: GiftRecipientResolver,
@@ -50,7 +52,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         const existing = await this.db.getOneSale(userId, payload.saleId);
 
         if (!existing) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, payload.saleId);
         }
 
         const target = payload.status;
@@ -148,7 +150,7 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         });
 
         if (gift == null) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, existing.id);
         }
 
         await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
@@ -169,8 +171,9 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         });
 
         if (gift == null) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, existing.id);
         }
+
         const { recipientId } = gift;
 
         await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
@@ -188,12 +191,18 @@ export class UpdateSaleUsecase implements IUpdateSaleUsecase {
         });
 
         if (outcome === 'not_found') {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, existing.id);
         }
 
         await this.salesCacheInvalidator.afterWrite(userId, existing.id, {
             recipientChanged: false,
         });
+    }
+
+    private throwNotFound(userId: UserId, saleId: SaleId): never {
+        this.logger.warn(`Sale ${saleId} not found for user ${userId}`);
+
+        throw new DomainException(ErrorCode.SALE_NOT_FOUND);
     }
 }
 
