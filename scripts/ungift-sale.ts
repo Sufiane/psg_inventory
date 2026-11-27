@@ -83,6 +83,79 @@ function stripPriceArg(rawArgs: string[]): string[] {
     );
 }
 
+function noPriceMessage(): string {
+    return 'error: sale has no price; re-run with --price <whole euros>';
+}
+
+function alreadyPricedMessage(saleId: string): string {
+    return `error: sale ${saleId} already has a price; drop --price so it is kept.`;
+}
+
+function priceArgMismatch(
+    sale: Sale,
+    price: ListedPrice | undefined,
+    saleId: string,
+): string | undefined {
+    if (sale.listedPrice === 0 && price == null) {
+        return noPriceMessage();
+    }
+
+    if (sale.listedPrice > 0 && price != null) {
+        return alreadyPricedMessage(saleId);
+    }
+
+    return undefined;
+}
+
+function describeUngiftError(error: unknown, saleId: string): string | undefined {
+    if (!(error instanceof DomainException)) {
+        return undefined;
+    }
+
+    switch (error.code) {
+        case ErrorCode.SALE_INVALID_STATUS_TRANSITION:
+            return (
+                `error: sale ${saleId} exists but is not currently GIFTED, so there is nothing to un-gift. ` +
+                'This is the single most likely real mistake here — double-check this is the sale you meant.'
+            );
+        case ErrorCode.SALE_LISTED_PRICE_REQUIRED:
+            return noPriceMessage();
+        case ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE:
+            return alreadyPricedMessage(saleId);
+        default:
+            return undefined;
+    }
+}
+
+async function loadSale(
+    salesService: ISalesService,
+    userId: string,
+    saleId: string,
+): Promise<Sale> {
+    try {
+        return await salesService.getSale(userId as UserId, saleId as SaleId);
+    } catch (error) {
+        if (error instanceof DomainException && error.code === ErrorCode.SALE_NOT_FOUND) {
+            console.error(
+                `error: no sale ${saleId} found for user ${userId}. ` +
+                    `Double-check both ids, and that the argument order is <userId> <saleId>.`,
+            );
+            process.exit(1);
+        }
+
+        throw error;
+    }
+}
+
+function printSaleSummary(sale: Sale, saleId: string): void {
+    console.log(`about to un-gift sale ${saleId}:`);
+    console.log(
+        `  match: ${sale.Match.Opponent.name} on ${sale.Match.date.toISOString().slice(0, 10)}`,
+    );
+    console.log(`  recipient: ${sale.Gift?.Recipient.name ?? '(none)'}`);
+    console.log(`  giftedAt: ${sale.Gift?.giftedAt.toISOString() ?? '(none)'}`);
+}
+
 // The sanctioned repair for a sale gifted by mistake. GIFTED is terminal in the
 // app (spec D5), and since the gift row pins the sale's status at the database
 // level (spec D15), `UPDATE sales SET status = 'PENDING'` typed into psql now
@@ -125,41 +198,14 @@ async function main(): Promise<void> {
         // Loaded — and printed — before the delete, so the terminal scrollback
         // is the record even if nobody was watching. This is no longer the only
         // safety net: the --yes flag below is the actual gate on the decision.
-        const sale: Sale = await salesService
-            .getSale(userId as UserId, saleId as SaleId)
-            .catch((error: unknown) => {
-                if (
-                    error instanceof DomainException &&
-                    error.code === ErrorCode.SALE_NOT_FOUND
-                ) {
-                    console.error(
-                        `error: no sale ${saleId} found for user ${userId}. ` +
-                            `Double-check both ids, and that the argument order is <userId> <saleId>.`,
-                    );
-                    process.exit(1);
-                }
+        const sale = await loadSale(salesService, userId, saleId);
 
-                throw error;
-            });
+        printSaleSummary(sale, saleId);
 
-        console.log(`about to un-gift sale ${saleId}:`);
-        console.log(
-            `  match: ${sale.Match.Opponent.name} on ${sale.Match.date.toISOString().slice(0, 10)}`,
-        );
-        console.log(`  recipient: ${sale.Gift?.Recipient.name ?? '(none)'}`);
-        console.log(`  giftedAt: ${sale.Gift?.giftedAt.toISOString() ?? '(none)'}`);
+        const mismatch = priceArgMismatch(sale, price, saleId);
 
-        if (sale.listedPrice === 0 && price == null) {
-            console.error('error: sale has no price; re-run with --price <whole euros>');
-            process.exitCode = 1;
-
-            return;
-        }
-
-        if (sale.listedPrice > 0 && price != null) {
-            console.error(
-                `error: sale ${saleId} already has a price; drop --price so it is kept.`,
-            );
+        if (mismatch != null) {
+            console.error(mismatch);
             process.exitCode = 1;
 
             return;
@@ -181,44 +227,16 @@ async function main(): Promise<void> {
         try {
             await salesService.ungiftSale(userId as UserId, saleId as SaleId, price);
         } catch (error) {
-            if (
-                error instanceof DomainException &&
-                error.code === ErrorCode.SALE_INVALID_STATUS_TRANSITION
-            ) {
-                console.error(
-                    `error: sale ${saleId} exists but is not currently GIFTED, so there is nothing to un-gift. ` +
-                        'This is the single most likely real mistake here — double-check this is the sale you meant.',
-                );
-                process.exitCode = 1;
+            const message = describeUngiftError(error, saleId);
 
-                return;
+            if (message == null) {
+                throw error;
             }
 
-            if (
-                error instanceof DomainException &&
-                error.code === ErrorCode.SALE_LISTED_PRICE_REQUIRED
-            ) {
-                console.error(
-                    'error: sale has no price; re-run with --price <whole euros>',
-                );
-                process.exitCode = 1;
+            console.error(message);
+            process.exitCode = 1;
 
-                return;
-            }
-
-            if (
-                error instanceof DomainException &&
-                error.code === ErrorCode.SALE_LISTED_PRICE_NOT_APPLICABLE
-            ) {
-                console.error(
-                    `error: sale ${saleId} already has a price; drop --price so it is kept.`,
-                );
-                process.exitCode = 1;
-
-                return;
-            }
-
-            throw error;
+            return;
         }
 
         console.log(`sale ${saleId} is no longer gifted — status is PENDING`);
