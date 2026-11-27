@@ -34,7 +34,7 @@ export default [
         ignores: ['**/*.spec.ts'],
         plugins: { sonarjs },
         rules: {
-            'sonarjs/cognitive-complexity': ['error', 27],
+            'sonarjs/cognitive-complexity': ['error', 18],
         },
     },
 ];
