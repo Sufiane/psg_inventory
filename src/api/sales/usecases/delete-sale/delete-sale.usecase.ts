@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import type { SaleId, UserId } from '@psg/shared/ids';
 import { DomainException } from '../../../../common/exceptions/domain.exception';
@@ -12,6 +12,8 @@ export abstract class IDeleteSaleUsecase {
 
 @Injectable()
 export class DeleteSaleUsecase implements IDeleteSaleUsecase {
+    private readonly logger = new Logger(DeleteSaleUsecase.name);
+
     constructor(
         private readonly usecaseDb: IDeleteSaleUsecaseDb,
         private readonly salesCacheInvalidator: SalesCacheInvalidator,
@@ -21,13 +23,23 @@ export class DeleteSaleUsecase implements IDeleteSaleUsecase {
         const existing = await this.usecaseDb.loadSale(userId, saleId);
 
         if (!existing) {
-            throw new DomainException(ErrorCode.SALE_NOT_FOUND);
+            this.throwNotFound(userId, saleId);
         }
 
-        await this.usecaseDb.deleteSale(userId, saleId);
+        const deleted = await this.usecaseDb.deleteSale(userId, saleId);
+
+        if (!deleted) {
+            this.throwNotFound(userId, saleId);
+        }
 
         await this.salesCacheInvalidator.afterWrite(userId, saleId, {
-            recipientChanged: existing.status === 'GIFTED',
+            recipientChanged: true,
         });
+    }
+
+    private throwNotFound(userId: UserId, saleId: SaleId): never {
+        this.logger.warn(`Sale ${saleId} not found for user ${userId}`);
+
+        throw new DomainException(ErrorCode.SALE_NOT_FOUND);
     }
 }
