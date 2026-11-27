@@ -99,7 +99,7 @@ function resolveSoldAtStatus(
 // row maps to nothing, so those take precedence. Recipient and kickoff are
 // both about the row's own values, and a row that trips both must report the
 // same one every time — the position in the chain is arbitrary but it must
-// be identical here and in validateCommitRows, or a preview and its commit
+// be identical here and in validateCommitRow, or a preview and its commit
 // disagree on which error a tampered/edited row shows (spec D10).
 function resolveGiftRecipientStatus(raw: {
     status: SaleRowStatus;
@@ -187,166 +187,159 @@ export type ValidateOutput = {
     summary: { total: number; errors: number; warnings: number };
 };
 
+function errorOnly(status: DraftRowStatus | null): DraftRowStatus | null {
+    return status?.startsWith('error:') ? status : null;
+}
+
+function firstStatus(candidates: ReadonlyArray<DraftRowStatus | null>): DraftRowStatus {
+    return candidates.find((candidate) => candidate != null) ?? 'ok';
+}
+
+function countIssues(rows: DraftRowDto[]): { errors: number; warnings: number } {
+    return {
+        errors: rows.filter((row) => row.rowStatus.startsWith('error:')).length,
+        warnings: rows.filter((row) => row.rowStatus.startsWith('warn:')).length,
+    };
+}
+
+function toCommitRaw(row: DraftRowDto): RawImportRow {
+    return {
+        rowIndex: row.rowIndex,
+        date: row.date,
+        opponent: row.opponent,
+        listedPrice: row.listedPrice,
+        nbTickets: row.nbTickets,
+        invest: row.invest,
+        status: row.status,
+        soldAt: (row.soldAt ?? null) as IsoDateString | null,
+        recipient: (row.recipient ?? null) as string | null,
+    };
+}
+
+function hasValidAllocations(row: DraftRowDto, selected: Set<string>): boolean {
+    const allocationsSum = row.allocations.reduce(
+        (total, allocation) => total + allocation.nbTickets,
+        0,
+    );
+
+    return (
+        row.allocations.length > 0 &&
+        allocationsSum === row.nbTickets &&
+        row.allocations.every((allocation) => selected.has(allocation.seasonPassId))
+    );
+}
+
+function validateCommitRow(
+    row: DraftRowDto,
+    byDate: Map<string, Match[]>,
+    selected: Set<string>,
+): DraftRowDto {
+    const raw = toCommitRaw(row);
+
+    if (isInvalidRow(raw)) {
+        return { ...row, rowStatus: 'error:invalid-cell' };
+    }
+
+    const { match, status: matchStatus } = resolveMatch(raw, byDate);
+    const matchIdSpread = match != null ? { matchId: match.id } : {};
+
+    if (matchStatus?.startsWith('error:')) {
+        return { ...row, ...matchIdSpread, rowStatus: matchStatus };
+    }
+
+    const rowStatus = firstStatus([
+        hasValidAllocations(row, selected) ? null : 'error:unallocated',
+        resolveGiftRecipientStatus(raw),
+        resolveSoldAtStatus(raw, match),
+        matchStatus,
+    ]);
+
+    return { ...row, ...matchIdSpread, rowStatus };
+}
+
 export function validateCommitRows(input: ValidateInput): ValidateOutput {
     const byDate = matchesByDate(input.homeMatches);
     const selected = new Set(input.selectedPassIds);
-    const rows: DraftRowDto[] = [];
-    let errors = 0;
-    let warnings = 0;
-
-    for (const row of input.rows) {
-        const raw = {
-            rowIndex: row.rowIndex,
-            date: row.date,
-            opponent: row.opponent,
-            listedPrice: row.listedPrice,
-            nbTickets: row.nbTickets,
-            invest: row.invest,
-            status: row.status,
-            soldAt: (row.soldAt ?? null) as IsoDateString | null,
-            recipient: (row.recipient ?? null) as string | null,
-        };
-        let rowStatus: DraftRowStatus = 'ok';
-        let matchId: string | undefined;
-
-        if (isInvalidRow(raw)) {
-            rowStatus = 'error:invalid-cell';
-        } else {
-            const { match, status: matchStatus } = resolveMatch(raw, byDate);
-
-            if (match != null) {
-                matchId = match.id;
-            }
-
-            if (matchStatus?.startsWith('error:')) {
-                rowStatus = matchStatus;
-            } else {
-                const allocationsSum = row.allocations.reduce(
-                    (total, allocation) => total + allocation.nbTickets,
-                    0,
-                );
-                const allValid = row.allocations.every((allocation) =>
-                    selected.has(allocation.seasonPassId),
-                );
-                const giftRecipientStatus = resolveGiftRecipientStatus(raw);
-                const soldAtStatus = resolveSoldAtStatus(raw, match);
-
-                if (
-                    row.allocations.length === 0 ||
-                    allocationsSum !== row.nbTickets ||
-                    !allValid
-                ) {
-                    rowStatus = 'error:unallocated';
-                } else if (giftRecipientStatus != null) {
-                    rowStatus = giftRecipientStatus;
-                } else if (soldAtStatus != null) {
-                    rowStatus = soldAtStatus;
-                } else if (matchStatus != null) {
-                    rowStatus = matchStatus;
-                }
-            }
-        }
-
-        if (rowStatus.startsWith('error:')) {
-            errors++;
-        } else if (rowStatus.startsWith('warn:')) {
-            warnings++;
-        }
-
-        rows.push({
-            ...row,
-            ...(matchId != null ? { matchId } : {}),
-            rowStatus,
-        });
-    }
+    const rows = input.rows.map((row) => validateCommitRow(row, byDate, selected));
+    const { errors, warnings } = countIssues(rows);
 
     return { rows, summary: { total: input.rows.length, errors, warnings } };
 }
 
-export function resolveDraftRows(input: ResolveInput): ResolveOutput {
-    const byDate = matchesByDate(input.homeMatches);
-    const rows: DraftRowDto[] = [];
-    const usedMatchIds = new Set<string>();
-    let errors = 0;
-    let warnings = 0;
+function toDraftRowBase(
+    raw: RawImportRow,
+): Omit<DraftRowDto, 'allocations' | 'rowStatus' | 'matchId'> {
+    return {
+        rowIndex: raw.rowIndex,
+        date: raw.date,
+        opponent: raw.opponent,
+        listedPrice: raw.listedPrice,
+        nbTickets: raw.nbTickets,
+        invest: raw.invest,
+        status: raw.status,
+        ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
+        ...(raw.recipient != null ? { recipient: raw.recipient } : {}),
+    };
+}
 
-    for (const raw of input.rawRows) {
-        if (isInvalidRow(raw)) {
-            rows.push({
-                rowIndex: raw.rowIndex,
-                date: raw.date,
-                opponent: raw.opponent,
-                listedPrice: raw.listedPrice,
-                nbTickets: raw.nbTickets,
-                invest: raw.invest,
-                status: raw.status,
-                ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
-                ...(raw.recipient != null ? { recipient: raw.recipient } : {}),
-                allocations: [],
-                rowStatus: 'error:invalid-cell',
-            });
-            errors++;
-            continue;
-        }
-
-        const { match, status: matchStatus } = resolveMatch(raw, byDate);
-        const allocationResult = buildAllocations(raw.nbTickets, input.selectedPassIds);
-        const giftRecipientStatus = resolveGiftRecipientStatus(raw);
-        const soldAtStatus = resolveSoldAtStatus(raw, match);
-
-        let finalStatus: DraftRowStatus = 'ok';
-
-        if (matchStatus?.startsWith('error:')) {
-            finalStatus = matchStatus;
-        } else if (allocationResult.status?.startsWith('error:')) {
-            finalStatus = allocationResult.status;
-        } else if (giftRecipientStatus != null) {
-            finalStatus = giftRecipientStatus;
-        } else if (soldAtStatus != null) {
-            finalStatus = soldAtStatus;
-        } else if (matchStatus != null) {
-            finalStatus = matchStatus;
-        } else if (allocationResult.status != null) {
-            finalStatus = allocationResult.status;
-        }
-
-        if (finalStatus.startsWith('error:')) {
-            errors++;
-        } else if (finalStatus.startsWith('warn:')) {
-            warnings++;
-        }
-
-        if (match != null) {
-            usedMatchIds.add(match.id);
-        }
-
-        rows.push({
-            rowIndex: raw.rowIndex,
-            date: raw.date,
-            opponent: raw.opponent,
-            listedPrice: raw.listedPrice,
-            nbTickets: raw.nbTickets,
-            invest: raw.invest,
-            status: raw.status,
-            ...(raw.soldAt != null ? { soldAt: raw.soldAt } : {}),
-            ...(raw.recipient != null ? { recipient: raw.recipient } : {}),
-            ...(match != null ? { matchId: match.id } : {}),
-            allocations: allocationResult.allocations,
-            rowStatus: finalStatus,
-        });
+function resolveDraftRow(
+    raw: RawImportRow,
+    byDate: Map<string, Match[]>,
+    selectedPassIds: string[],
+): DraftRowDto {
+    if (isInvalidRow(raw)) {
+        return {
+            ...toDraftRowBase(raw),
+            allocations: [],
+            rowStatus: 'error:invalid-cell',
+        };
     }
 
-    const missingMatches: MissingMatch[] = input.homeMatches
+    const { match, status: matchStatus } = resolveMatch(raw, byDate);
+    const allocationResult = buildAllocations(raw.nbTickets, selectedPassIds);
+    const giftRecipientStatus = resolveGiftRecipientStatus(raw);
+    const soldAtStatus = resolveSoldAtStatus(raw, match);
+    const rowStatus = firstStatus([
+        errorOnly(matchStatus),
+        errorOnly(allocationResult.status),
+        giftRecipientStatus,
+        soldAtStatus,
+        matchStatus,
+        allocationResult.status,
+    ]);
+
+    return {
+        ...toDraftRowBase(raw),
+        ...(match != null ? { matchId: match.id } : {}),
+        allocations: allocationResult.allocations,
+        rowStatus,
+    };
+}
+
+function findMissingMatches(homeMatches: Match[], rows: DraftRowDto[]): MissingMatch[] {
+    const usedMatchIds = new Set(
+        rows.flatMap((row) => (row.matchId != null ? [row.matchId] : [])),
+    );
+
+    return homeMatches
         .filter((match) => !usedMatchIds.has(match.id))
         .map((match) => ({
             matchId: match.id,
             date: isoDate(match.date),
             opponentName: match.Opponent.name,
         }));
+}
+
+export function resolveDraftRows(input: ResolveInput): ResolveOutput {
+    const byDate = matchesByDate(input.homeMatches);
+    const rows = input.rawRows.map((raw) =>
+        resolveDraftRow(raw, byDate, input.selectedPassIds),
+    );
+    const { errors, warnings } = countIssues(rows);
 
     return {
         rows,
-        missingMatches,
+        missingMatches: findMissingMatches(input.homeMatches, rows),
         summary: {
             total: input.rawRows.length,
             errors,
