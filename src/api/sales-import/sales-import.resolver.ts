@@ -229,22 +229,31 @@ function hasValidAllocations(row: DraftRowDto, selected: Set<string>): boolean {
     );
 }
 
+function withoutMatchId(row: DraftRowDto): Omit<DraftRowDto, 'matchId'> {
+    const copy = { ...row };
+
+    delete copy.matchId;
+
+    return copy;
+}
+
 function validateCommitRow(
     row: DraftRowDto,
     byDate: Map<string, Match[]>,
     selected: Set<string>,
 ): DraftRowDto {
     const raw = toCommitRaw(row);
+    const serverRow = withoutMatchId(row);
 
     if (isInvalidRow(raw)) {
-        return { ...row, rowStatus: 'error:invalid-cell' };
+        return { ...serverRow, rowStatus: 'error:invalid-cell' };
     }
 
     const { match, status: matchStatus } = resolveMatch(raw, byDate);
     const matchIdSpread = match != null ? { matchId: match.id } : {};
 
     if (matchStatus?.startsWith('error:')) {
-        return { ...row, ...matchIdSpread, rowStatus: matchStatus };
+        return { ...serverRow, ...matchIdSpread, rowStatus: matchStatus };
     }
 
     const rowStatus = firstStatus([
@@ -254,7 +263,7 @@ function validateCommitRow(
         matchStatus,
     ]);
 
-    return { ...row, ...matchIdSpread, rowStatus };
+    return { ...serverRow, ...matchIdSpread, rowStatus };
 }
 
 export function validateCommitRows(input: ValidateInput): ValidateOutput {

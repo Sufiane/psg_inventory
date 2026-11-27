@@ -74,6 +74,7 @@ const marseille = makeMatch({
     opponentName: 'Marseille',
 });
 const lyon = makeMatch({ id: 'm2', date: '2025-09-21', opponentName: 'Lyon' });
+const nice = makeMatch({ id: 'm3', date: '2025-09-14', opponentName: 'Nice' });
 const passA = makePass('pass-a');
 const passB = makePass('pass-b');
 
@@ -392,6 +393,74 @@ describe('resolveDraftRows', () => {
             });
         });
     });
+
+    describe('when several matches share the date and none has the opponent', () => {
+        let result: ReturnType<typeof resolveDraftRows>;
+
+        beforeEach(() => {
+            result = resolveDraftRows({
+                rawRows: [makeRow({ opponent: 'Lyon' })],
+                homeMatches: [marseille, nice],
+                selectedPassIds: [passA.id],
+            });
+        });
+
+        it('reports error:opponent-not-found', () => {
+            expect(result.rows[0]!.rowStatus).toBe('error:opponent-not-found');
+        });
+
+        it('sets no matchId', () => {
+            expect(result.rows[0]).not.toHaveProperty('matchId');
+        });
+    });
+
+    describe('status precedence', () => {
+        describe('when the match is missing and allocation errors', () => {
+            it('reports error:match-missing', () => {
+                const result = resolveDraftRows({
+                    rawRows: [
+                        makeRow({ date: '2025-12-25', nbTickets: 3 as TicketCount }),
+                    ],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id, passB.id],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('error:match-missing');
+            });
+        });
+
+        describe('when allocation errors and the gift recipient is missing', () => {
+            it('reports error:unallocated', () => {
+                const result = resolveDraftRows({
+                    rawRows: [
+                        makeRow({
+                            status: 'GIFTED',
+                            recipient: null,
+                            nbTickets: 3 as TicketCount,
+                        }),
+                    ],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id, passB.id],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('error:unallocated');
+            });
+        });
+
+        describe('when the opponent mismatches and several tickets share one pass', () => {
+            it('reports warn:opponent-mismatch', () => {
+                const result = resolveDraftRows({
+                    rawRows: [
+                        makeRow({ opponent: 'Marsailles', nbTickets: 2 as TicketCount }),
+                    ],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('warn:opponent-mismatch');
+            });
+        });
+    });
 });
 
 describe('validateCommitRows', () => {
@@ -498,8 +567,42 @@ describe('validateCommitRows', () => {
                 });
             });
 
-            it('passes the matchId through unchanged', () => {
-                expect(result.rows[0]!.matchId).toBe('client-m');
+            it('drops the matchId', () => {
+                expect(result.rows[0]).not.toHaveProperty('matchId');
+            });
+        });
+    });
+
+    describe('when several matches share the date and none has the opponent', () => {
+        let result: ReturnType<typeof validateCommitRows>;
+
+        beforeEach(() => {
+            result = validateCommitRows({
+                rows: [makeDraftRow({ opponent: 'Lyon' })],
+                homeMatches: [marseille, nice],
+                selectedPassIds: [passA.id],
+            });
+        });
+
+        it('reports error:opponent-not-found', () => {
+            expect(result.rows[0]!.rowStatus).toBe('error:opponent-not-found');
+        });
+
+        it('sets no matchId', () => {
+            expect(result.rows[0]).not.toHaveProperty('matchId');
+        });
+
+        describe('when the row carries a client matchId', () => {
+            beforeEach(() => {
+                result = validateCommitRows({
+                    rows: [makeDraftRow({ opponent: 'Lyon', matchId: 'client-m' })],
+                    homeMatches: [marseille, nice],
+                    selectedPassIds: [passA.id],
+                });
+            });
+
+            it('drops the matchId', () => {
+                expect(result.rows[0]).not.toHaveProperty('matchId');
             });
         });
     });
@@ -522,6 +625,20 @@ describe('validateCommitRows', () => {
         it('sets no matchId', () => {
             expect(result.rows[0]!.matchId).toBeUndefined();
         });
+
+        describe('when the row carries a client matchId', () => {
+            beforeEach(() => {
+                result = validateCommitRows({
+                    rows: [makeDraftRow({ date: '2025-12-25', matchId: 'client-m' })],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id],
+                });
+            });
+
+            it('drops the matchId', () => {
+                expect(result.rows[0]).not.toHaveProperty('matchId');
+            });
+        });
     });
 
     describe('when the single match opponent name differs', () => {
@@ -541,6 +658,20 @@ describe('validateCommitRows', () => {
 
         it('sets the matchId', () => {
             expect(result.rows[0]!.matchId).toBe('m1');
+        });
+
+        describe('when the row carries a client matchId', () => {
+            beforeEach(() => {
+                result = validateCommitRows({
+                    rows: [makeDraftRow({ opponent: 'Marsailles', matchId: 'client-m' })],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id],
+                });
+            });
+
+            it('replaces it with the resolved matchId', () => {
+                expect(result.rows[0]!.matchId).toBe('m1');
+            });
         });
     });
 
@@ -590,6 +721,18 @@ describe('validateCommitRows', () => {
                 });
 
                 expect(result.rows[0]!.rowStatus).toBe('error:match-missing');
+            });
+        });
+
+        describe('when the gift recipient is also missing', () => {
+            it('reports error:unallocated', () => {
+                const result = validateCommitRows({
+                    rows: [makeDraftRow({ status: 'GIFTED', allocations: [] })],
+                    homeMatches: [marseille],
+                    selectedPassIds: [passA.id],
+                });
+
+                expect(result.rows[0]!.rowStatus).toBe('error:unallocated');
             });
         });
     });
