@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { Mock } from 'vitest';
 import { SaleStatus } from '@prisma/client';
 
 import { UpdateSaleUsecase, IUpdateSaleUsecase } from './update-sale.usecase';
@@ -39,6 +41,7 @@ describe('UpdateSaleUsecase', () => {
     let seasonPassesDbService: DeepMockProxy<SeasonPassesDb>;
     let recipientsDbService: DeepMockProxy<RecipientsDb>;
     let redisService: DeepMockProxy<RedisService>;
+    let warnSpy: Mock<typeof Logger.prototype.warn>;
 
     beforeEach(async () => {
         const module = await Test.createTestingModule({
@@ -81,6 +84,8 @@ describe('UpdateSaleUsecase', () => {
         redisService = module.get(RedisService);
 
         module.useLogger(false);
+
+        warnSpy = vi.spyOn(Logger.prototype, 'warn').mockClear();
     });
 
     describe('updateSale kickoff guard', () => {
@@ -125,17 +130,29 @@ describe('UpdateSaleUsecase', () => {
         });
 
         describe('when the target sale does not exist', () => {
-            it('throws SALE_NOT_FOUND', async () => {
+            const payload = { saleId, status: 'SOLD' } as UpdateSaleDto;
+
+            beforeEach(() => {
                 db.getOneSale.mockResolvedValueOnce(null);
+            });
 
-                const payload: UpdateSaleDto = {
-                    saleId,
-                    status: 'SOLD',
-                } as UpdateSaleDto;
-
+            it('throws SALE_NOT_FOUND', async () => {
                 await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
                     code: ErrorCode.SALE_NOT_FOUND,
                 });
+            });
+
+            it('logs a warning with the user and sale ids', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(saleId),
+                );
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(userId),
+                );
             });
         });
     });
@@ -773,55 +790,112 @@ describe('UpdateSaleUsecase', () => {
     });
 
     describe('when the sale row is deleted between the load and the write', () => {
-        it('rejects with SALE_NOT_FOUND for the plain update', async () => {
-            db.getOneSale.mockResolvedValueOnce(
-                saleFixture(new Date(Date.now() + 60 * 60_000)),
-            );
-            db.updateSale.mockResolvedValueOnce('not_found');
+        describe('when the plain update reports the row is gone', () => {
+            const payload = { saleId, status: 'SOLD' } as UpdateSaleDto;
 
-            await expect(
-                usecase.execute(userId, { saleId, status: 'SOLD' } as UpdateSaleDto),
-            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+            beforeEach(() => {
+                db.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() + 60 * 60_000)),
+                );
+                db.updateSale.mockResolvedValueOnce('not_found');
+            });
 
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            it('rejects with SALE_NOT_FOUND', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            });
+
+            it('logs a warning with the user and sale ids', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(saleId),
+                );
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(userId),
+                );
+            });
         });
 
-        it('rejects with SALE_NOT_FOUND when the gift write reports the row is gone', async () => {
-            db.getOneSale.mockResolvedValueOnce(
-                saleFixture(new Date(Date.now() + 60 * 60_000), SaleStatus.PENDING),
-            );
-            db.giftSale.mockResolvedValueOnce(null);
+        describe('when the gift write reports the row is gone', () => {
+            const payload = {
+                saleId,
+                status: 'GIFTED',
+                recipientName: 'Marc',
+            } as UpdateSaleDto;
 
-            await expect(
-                usecase.execute(userId, {
-                    saleId,
-                    status: 'GIFTED',
-                    recipientName: 'Marc',
-                } as UpdateSaleDto),
-            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+            beforeEach(() => {
+                db.getOneSale.mockResolvedValueOnce(
+                    saleFixture(new Date(Date.now() + 60 * 60_000), SaleStatus.PENDING),
+                );
+                db.giftSale.mockResolvedValueOnce(null);
+            });
 
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            it('rejects with SALE_NOT_FOUND', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            });
+
+            it('logs a warning with the user and sale ids', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(saleId),
+                );
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(userId),
+                );
+            });
         });
 
-        it('rejects with SALE_NOT_FOUND when the gift-update write reports the row is gone', async () => {
-            db.getOneSale.mockResolvedValueOnce(
-                saleFixture(
-                    new Date(Date.now() + 60 * 60_000),
-                    SaleStatus.GIFTED,
-                    giftFixture({ recipientId: 'recipient-0' as RecipientId }),
-                ),
-            );
-            db.updateGift.mockResolvedValueOnce(null);
+        describe('when the gift-update write reports the row is gone', () => {
+            const payload = {
+                saleId,
+                status: 'GIFTED',
+                recipientName: 'Marc',
+            } as UpdateSaleDto;
 
-            await expect(
-                usecase.execute(userId, {
-                    saleId,
-                    status: 'GIFTED',
-                    recipientName: 'Marc',
-                } as UpdateSaleDto),
-            ).rejects.toMatchObject({ code: ErrorCode.SALE_NOT_FOUND });
+            beforeEach(() => {
+                db.getOneSale.mockResolvedValueOnce(
+                    saleFixture(
+                        new Date(Date.now() + 60 * 60_000),
+                        SaleStatus.GIFTED,
+                        giftFixture({ recipientId: 'recipient-0' as RecipientId }),
+                    ),
+                );
+                db.updateGift.mockResolvedValueOnce(null);
+            });
 
-            expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            it('rejects with SALE_NOT_FOUND', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(redisService.invalidatePattern).not.toHaveBeenCalled();
+            });
+
+            it('logs a warning with the user and sale ids', async () => {
+                await expect(usecase.execute(userId, payload)).rejects.toMatchObject({
+                    code: ErrorCode.SALE_NOT_FOUND,
+                });
+
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(saleId),
+                );
+                expect(warnSpy.mock.calls[0]?.[0]).toEqual(
+                    expect.stringContaining(userId),
+                );
+            });
         });
     });
 

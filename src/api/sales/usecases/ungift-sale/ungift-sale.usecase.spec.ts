@@ -1,5 +1,7 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
+import { Mock } from 'vitest';
 import { SaleStatus } from '@prisma/client';
 
 import { UngiftSaleUsecase } from './ungift-sale.usecase';
@@ -15,6 +17,7 @@ describe('UngiftSaleUsecase', () => {
     let usecase: UngiftSaleUsecase;
     let usecaseDb: DeepMockProxy<IUngiftSaleUsecaseDb>;
     let invalidator: DeepMockProxy<SalesCacheInvalidator>;
+    let warnSpy: Mock<typeof Logger.prototype.warn>;
 
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
@@ -62,6 +65,8 @@ describe('UngiftSaleUsecase', () => {
         invalidator = module.get(SalesCacheInvalidator);
 
         module.useLogger(false);
+
+        warnSpy = vi.spyOn(Logger.prototype, 'warn').mockClear();
     });
 
     describe('when the sale is GIFTED', () => {
@@ -93,14 +98,25 @@ describe('UngiftSaleUsecase', () => {
     });
 
     describe('when the row is deleted between the load and the write', () => {
-        it('rejects with SALE_NOT_FOUND', async () => {
+        beforeEach(() => {
             usecaseDb.loadSale.mockResolvedValueOnce(saleFixture(SaleStatus.GIFTED));
             usecaseDb.ungiftSale.mockResolvedValueOnce('not_found');
+        });
 
+        it('rejects with SALE_NOT_FOUND', async () => {
             await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
                 code: ErrorCode.SALE_NOT_FOUND,
             });
             expect(invalidator.afterWrite).not.toHaveBeenCalled();
+        });
+
+        it('logs a warning with the user and sale ids', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(saleId));
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(userId));
         });
     });
 
@@ -116,12 +132,23 @@ describe('UngiftSaleUsecase', () => {
     });
 
     describe('when the sale does not exist', () => {
-        it('rejects with SALE_NOT_FOUND', async () => {
+        beforeEach(() => {
             usecaseDb.loadSale.mockResolvedValueOnce(null);
+        });
 
+        it('rejects with SALE_NOT_FOUND', async () => {
             await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
                 code: ErrorCode.SALE_NOT_FOUND,
             });
+        });
+
+        it('logs a warning with the user and sale ids', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(saleId));
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(userId));
         });
     });
 
