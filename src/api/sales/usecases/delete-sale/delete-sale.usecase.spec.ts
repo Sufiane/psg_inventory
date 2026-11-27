@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'vitest-mock-extended';
-import { SaleStatus } from '@prisma/client';
+import { Mock } from 'vitest';
 
 import { DeleteSaleUsecase } from './delete-sale.usecase';
 import { IDeleteSaleUsecaseDb } from './delete-sale.usecase.db';
@@ -12,6 +13,7 @@ describe('DeleteSaleUsecase', () => {
     let usecase: DeleteSaleUsecase;
     let usecaseDb: DeepMockProxy<IDeleteSaleUsecaseDb>;
     let invalidator: DeepMockProxy<SalesCacheInvalidator>;
+    let warnSpy: Mock<typeof Logger.prototype.warn>;
 
     const userId = 'user-uuid' as UserId;
     const saleId = 'sale-uuid' as SaleId;
@@ -36,14 +38,14 @@ describe('DeleteSaleUsecase', () => {
         invalidator = module.get(SalesCacheInvalidator);
 
         module.useLogger(false);
+
+        warnSpy = vi.spyOn(Logger.prototype, 'warn').mockClear();
     });
 
-    describe('when the sale was GIFTED', () => {
+    describe('when the sale exists', () => {
         beforeEach(() => {
-            usecaseDb.loadSale.mockResolvedValueOnce({
-                id: saleId,
-                status: SaleStatus.GIFTED,
-            });
+            usecaseDb.loadSale.mockResolvedValueOnce({ id: saleId });
+            usecaseDb.deleteSale.mockResolvedValueOnce({ id: saleId });
         });
 
         it('deletes the sale', async () => {
@@ -57,29 +59,6 @@ describe('DeleteSaleUsecase', () => {
 
             expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, saleId, {
                 recipientChanged: true,
-            });
-        });
-    });
-
-    describe('when the sale was not GIFTED', () => {
-        beforeEach(() => {
-            usecaseDb.loadSale.mockResolvedValueOnce({
-                id: saleId,
-                status: SaleStatus.PENDING,
-            });
-        });
-
-        it('deletes the sale', async () => {
-            await usecase.execute(userId, saleId);
-
-            expect(usecaseDb.deleteSale).toHaveBeenCalledWith(userId, saleId);
-        });
-
-        it('invalidates caches without recipients', async () => {
-            await usecase.execute(userId, saleId);
-
-            expect(invalidator.afterWrite).toHaveBeenCalledWith(userId, saleId, {
-                recipientChanged: false,
             });
         });
     });
@@ -103,16 +82,52 @@ describe('DeleteSaleUsecase', () => {
             expect(usecaseDb.deleteSale).not.toHaveBeenCalled();
             expect(invalidator.afterWrite).not.toHaveBeenCalled();
         });
+
+        it('logs a warning with the user and sale ids', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(saleId));
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(userId));
+        });
+    });
+
+    describe('when the sale vanishes before the delete', () => {
+        beforeEach(() => {
+            usecaseDb.loadSale.mockResolvedValueOnce({ id: saleId });
+            usecaseDb.deleteSale.mockResolvedValueOnce(null);
+        });
+
+        it('rejects with SALE_NOT_FOUND', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+        });
+
+        it('does not invalidate', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+
+            expect(invalidator.afterWrite).not.toHaveBeenCalled();
+        });
+
+        it('logs a warning with the user and sale ids', async () => {
+            await expect(usecase.execute(userId, saleId)).rejects.toMatchObject({
+                code: ErrorCode.SALE_NOT_FOUND,
+            });
+
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(saleId));
+            expect(warnSpy.mock.calls[0]?.[0]).toEqual(expect.stringContaining(userId));
+        });
     });
 
     describe('when the delete rejects', () => {
         const failure = new Error('db down');
 
         beforeEach(() => {
-            usecaseDb.loadSale.mockResolvedValueOnce({
-                id: saleId,
-                status: SaleStatus.PENDING,
-            });
+            usecaseDb.loadSale.mockResolvedValueOnce({ id: saleId });
             usecaseDb.deleteSale.mockRejectedValueOnce(failure);
         });
 
